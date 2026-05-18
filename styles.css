@@ -57,9 +57,14 @@ button {
 }
 
 .sidebar {
+  align-self: start;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
   padding: 28px;
   background:
     linear-gradient(180deg, rgba(95, 43, 19, 0.98) 0%, rgba(58, 28, 14, 0.97) 100%);
@@ -91,14 +96,15 @@ button {
 .nav-grid {
   display: grid;
   gap: 10px;
-  margin: 28px 0;
+  margin: 22px 0 0;
 }
 
 .nav-chip,
 .lang-btn,
 .ghost-btn,
 .primary-btn,
-.secondary-btn {
+.secondary-btn,
+.danger-btn {
   transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
 
@@ -114,7 +120,8 @@ button {
 .lang-btn:hover,
 .ghost-btn:hover,
 .primary-btn:hover,
-.secondary-btn:hover {
+.secondary-btn:hover,
+.danger-btn:hover {
   transform: translateY(-1px);
 }
 
@@ -125,6 +132,7 @@ button {
 }
 
 .sidebar-card {
+  margin-top: auto;
   padding: 18px;
   border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.08);
@@ -255,6 +263,12 @@ button {
   background: #fff2e6;
   color: var(--brand-deep);
   border: 1px solid rgba(188, 90, 44, 0.18);
+}
+
+.danger-btn {
+  background: #fff1ef;
+  color: var(--danger);
+  border: 1px solid rgba(184, 62, 49, 0.18);
 }
 
 .ghost-btn {
@@ -400,6 +414,136 @@ button {
   border-radius: var(--radius-md);
   background: var(--surface-strong);
   color: var(--text);
+}
+
+.native-select-hidden {
+  display: none;
+}
+
+.select-menu {
+  position: relative;
+}
+
+.select-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 15px 18px;
+  border: 1px solid rgba(105, 74, 32, 0.16);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 253, 249, 0.98), rgba(247, 240, 233, 0.96));
+  color: var(--text);
+  font-weight: 700;
+  text-align: left;
+  box-shadow: 0 12px 28px rgba(93, 62, 30, 0.08);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease;
+}
+
+.select-trigger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px rgba(93, 62, 30, 0.1);
+}
+
+.select-trigger:focus,
+.select-trigger:focus-visible,
+.select-option:focus,
+.select-option:focus-visible {
+  outline: none;
+}
+
+.select-trigger-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-trigger-caret {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(188, 90, 44, 0.1);
+  color: var(--brand-deep);
+  font-size: 1rem;
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.select-menu.is-open .select-trigger {
+  border-color: rgba(188, 90, 44, 0.28);
+  background: rgba(255, 253, 249, 0.99);
+  box-shadow: 0 18px 36px rgba(93, 62, 30, 0.12);
+}
+
+.select-menu.is-open .select-trigger-caret {
+  transform: rotate(180deg);
+  background: rgba(188, 90, 44, 0.16);
+}
+
+.select-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  display: none;
+  padding: 8px;
+  border-radius: 20px;
+  border: 1px solid rgba(105, 74, 32, 0.14);
+  background: rgba(255, 253, 249, 0.98);
+  box-shadow: 0 22px 42px rgba(86, 58, 28, 0.16);
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 30;
+}
+
+.select-menu.is-open .select-dropdown {
+  display: grid;
+  gap: 6px;
+}
+
+.select-dropdown::-webkit-scrollbar {
+  width: 8px;
+}
+
+.select-dropdown::-webkit-scrollbar-thumb {
+  background: rgba(188, 90, 44, 0.22);
+  border-radius: 999px;
+}
+
+.select-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  font-weight: 700;
+  text-align: left;
+}
+
+.select-option:hover,
+.select-option.is-active {
+  background: #fff1e4;
+  border-color: rgba(188, 90, 44, 0.16);
+  color: var(--brand-deep);
+}
+
+.select-option-mark {
+  flex: 0 0 auto;
+  color: var(--brand);
+  font-size: 0.98rem;
 }
 
 .cart-field-wide {
@@ -682,7 +826,8 @@ button {
 }
 
 .inventory-actions .ghost-btn,
-.inventory-actions .secondary-btn {
+.inventory-actions .secondary-btn,
+.inventory-actions .danger-btn {
   padding: 10px 14px;
 }
 
@@ -932,6 +1077,9 @@ button {
   }
 
   .sidebar {
+    position: static;
+    height: auto;
+    overflow-y: visible;
     gap: 18px;
   }
 

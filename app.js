@@ -4,6 +4,7 @@ const STORAGE_KEYS = {
   settings: "shopflow-settings",
   language: "shopflow-language",
   template: "shopflow-template",
+  receiptTemplates: "shopflow-receipt-templates",
   barcodeLabelTemplate: "shopflow-barcode-label-template",
   barcodeTemplates: "shopflow-barcode-templates",
 };
@@ -136,6 +137,15 @@ const translations = {
     price: "Price",
     stock: "Stock",
     saveProduct: "Save product",
+    editProduct: "Edit product",
+    removeProduct: "Remove product",
+    cancelEdit: "Cancel",
+    editingProduct: "Editing this product. Save to update inventory details.",
+    creatingProduct: "Create a new product. Barcode is generated from the price.",
+    productCreated: "New product saved and barcode label is ready.",
+    productUpdated: "Product details updated.",
+    productRemoved: "Product removed from inventory.",
+    productDeleteConfirm: "Remove this product from inventory?",
     liveCatalog: "Live catalog",
     inventoryList: "Inventory list",
     barcodeTemplates: "Barcode templates",
@@ -184,6 +194,25 @@ const translations = {
     chooseTemplate: "Choose a receipt style",
     preview: "Preview",
     printReadyReceipt: "Print-ready receipt",
+    receiptTemplateManager: "Receipt template manager",
+    manageReceiptTemplates: "Adjust, add, or remove invoice templates",
+    receiptTemplateChooseEdit: "Template to edit",
+    receiptTemplateTheme: "Receipt style",
+    receiptThemeCompact: "Compact",
+    receiptThemeRetail: "Retail",
+    receiptThemeGift: "Gift",
+    receiptVisibleFields: "Visible fields",
+    receiptShowContact: "Show phone, email, website",
+    receiptShowTaxId: "Show tax ID",
+    receiptShowOrderMeta: "Show date and order ID",
+    receiptShowPayment: "Show payment details",
+    receiptShowCustomer: "Show customer name",
+    receiptShowFooter: "Show footer note",
+    receiptTemplateDraftOption: "Create new receipt template",
+    receiptTemplateCreated: "New receipt template created.",
+    receiptTemplateUpdated: "Receipt template updated.",
+    receiptTemplateRemoved: "Receipt template removed.",
+    receiptTemplateDeleteBlocked: "At least one receipt template must remain.",
     storeSetup: "Store setup",
     storeName: "Store name",
     storeAddress: "Address",
@@ -194,6 +223,8 @@ const translations = {
     taxRate: "Tax rate (%)",
     receiptFooter: "Receipt footer",
     saveSettings: "Save settings",
+    settingsAutosaveReady: "Changes save automatically in this browser.",
+    settingsAutosaveSaved: "Saved in this browser.",
     shopProfile: "Shop profile",
     shopProfilePreview: "Shop profile preview",
     helpfulFlow: "Helpful flow",
@@ -258,6 +289,15 @@ const translations = {
     price: "Giá bán",
     stock: "Tồn kho",
     saveProduct: "Lưu sản phẩm",
+    editProduct: "Sửa sản phẩm",
+    removeProduct: "Xóa sản phẩm",
+    cancelEdit: "Hủy",
+    editingProduct: "Đang chỉnh sửa sản phẩm này. Hãy lưu để cập nhật kho hàng.",
+    creatingProduct: "Tạo sản phẩm mới. Mã vạch sẽ được tạo từ giá bán.",
+    productCreated: "Đã lưu sản phẩm mới và chuẩn bị tem mã vạch.",
+    productUpdated: "Đã cập nhật thông tin sản phẩm.",
+    productRemoved: "Đã xóa sản phẩm khỏi kho.",
+    productDeleteConfirm: "Bạn có muốn xóa sản phẩm này khỏi kho không?",
     liveCatalog: "Danh mục hiện tại",
     inventoryList: "Danh sách tồn kho",
     barcodeTemplates: "Mẫu tem mã vạch",
@@ -306,6 +346,25 @@ const translations = {
     chooseTemplate: "Chọn kiểu hóa đơn",
     preview: "Xem trước",
     printReadyReceipt: "Hóa đơn sẵn sàng để in",
+    receiptTemplateManager: "Quản lý mẫu hóa đơn",
+    manageReceiptTemplates: "Chỉnh sửa, thêm hoặc xóa mẫu hóa đơn",
+    receiptTemplateChooseEdit: "Mẫu cần chỉnh",
+    receiptTemplateTheme: "Kiểu hóa đơn",
+    receiptThemeCompact: "Nhỏ gọn",
+    receiptThemeRetail: "Bán lẻ",
+    receiptThemeGift: "Quà tặng",
+    receiptVisibleFields: "Thông tin hiển thị",
+    receiptShowContact: "Hiện số điện thoại, email, website",
+    receiptShowTaxId: "Hiện mã số thuế",
+    receiptShowOrderMeta: "Hiện ngày giờ và mã đơn",
+    receiptShowPayment: "Hiện thông tin thanh toán",
+    receiptShowCustomer: "Hiện tên khách hàng",
+    receiptShowFooter: "Hiện lời nhắn cuối hóa đơn",
+    receiptTemplateDraftOption: "Tạo mẫu hóa đơn mới",
+    receiptTemplateCreated: "Đã tạo mẫu hóa đơn mới.",
+    receiptTemplateUpdated: "Đã cập nhật mẫu hóa đơn.",
+    receiptTemplateRemoved: "Đã xóa mẫu hóa đơn.",
+    receiptTemplateDeleteBlocked: "Cần giữ lại ít nhất một mẫu hóa đơn.",
     storeSetup: "Thông tin cửa hàng",
     storeName: "Tên cửa hàng",
     storeAddress: "Địa chỉ",
@@ -316,6 +375,8 @@ const translations = {
     taxRate: "Tỷ lệ thuế (%)",
     receiptFooter: "Lời nhắn cuối hóa đơn",
     saveSettings: "Lưu cài đặt",
+    settingsAutosaveReady: "Các thay đổi sẽ tự lưu trên trình duyệt này.",
+    settingsAutosaveSaved: "Đã lưu trên trình duyệt này.",
     shopProfile: "Hồ sơ cửa hàng",
     shopProfilePreview: "Xem trước hồ sơ cửa hàng",
     helpfulFlow: "Quy trình gợi ý",
@@ -338,7 +399,7 @@ const paymentMethods = {
   ],
 };
 
-const receiptTemplates = [
+const defaultReceiptTemplates = [
   {
     id: "compact",
     theme: "compact",
@@ -350,6 +411,12 @@ const receiptTemplates = [
       name: "Nhỏ gọn",
       description: "Kiểu bill nhiệt nhanh cho máy in nhỏ.",
     },
+    showContact: true,
+    showTaxId: true,
+    showOrderMeta: true,
+    showPayment: true,
+    showCustomer: true,
+    showFooter: true,
   },
   {
     id: "retail",
@@ -362,6 +429,12 @@ const receiptTemplates = [
       name: "Bán lẻ",
       description: "Bố cục rõ ràng, nhấn mạnh thông tin cửa hàng.",
     },
+    showContact: true,
+    showTaxId: true,
+    showOrderMeta: true,
+    showPayment: true,
+    showCustomer: true,
+    showFooter: true,
   },
   {
     id: "gift",
@@ -374,6 +447,12 @@ const receiptTemplates = [
       name: "Phong cách quà tặng",
       description: "Giao diện ấm áp cho cửa hàng phong cách.",
     },
+    showContact: true,
+    showTaxId: true,
+    showOrderMeta: true,
+    showPayment: true,
+    showCustomer: true,
+    showFooter: true,
   },
 ];
 
@@ -421,16 +500,20 @@ const appState = {
   products: normalizeProducts(loadState(STORAGE_KEYS.products, seedProducts)),
   sales: loadState(STORAGE_KEYS.sales, []),
   settings: normalizeSettings(loadState(STORAGE_KEYS.settings, defaultSettings)),
+  receiptTemplates: [],
   barcodeTemplates: [],
   selectedTemplate: localStorage.getItem(STORAGE_KEYS.template) || "compact",
+  editingReceiptTemplateId: null,
   selectedBarcodeTemplate: localStorage.getItem(STORAGE_KEYS.barcodeLabelTemplate) || "sticker",
   editingBarcodeTemplateId: null,
+  editingProductId: null,
   selectedLabelProductId: null,
   cart: [],
   activeSection: "dashboard",
   productSearch: "",
   cameraStream: null,
   scanLoopActive: false,
+  paymentMenuOpen: false,
   lastReceipt: null,
   scannerBuffer: "",
   scannerLastKeyAt: 0,
@@ -457,6 +540,10 @@ const elements = {
   scannerStatus: document.getElementById("scanner-status"),
   customerName: document.getElementById("customer-name"),
   paymentMethod: document.getElementById("payment-method"),
+  paymentMethodMenu: document.getElementById("payment-method-menu"),
+  paymentMethodTrigger: document.getElementById("payment-method-trigger"),
+  paymentMethodLabel: document.getElementById("payment-method-label"),
+  paymentMethodOptions: document.getElementById("payment-method-options"),
   amountTendered: document.getElementById("amount-tendered"),
   quickCashRow: document.getElementById("quick-cash-row"),
   summaryItems: document.getElementById("summary-items"),
@@ -467,10 +554,16 @@ const elements = {
   scannerVideo: document.getElementById("scanner-video"),
   productForm: document.getElementById("product-form"),
   settingsForm: document.getElementById("settings-form"),
+  receiptTemplateForm: document.getElementById("receipt-template-form"),
+  receiptTemplateEditorSelect: document.getElementById("receipt-template-editor-select"),
   barcodeTemplateForm: document.getElementById("barcode-template-form"),
   barcodeTemplateEditorSelect: document.getElementById("barcode-template-editor-select"),
   inventoryBarcode: document.getElementById("inventory-barcode"),
   barcodePreviewNote: document.getElementById("barcode-preview-note"),
+  productFormMode: document.getElementById("product-form-mode"),
+  productFormSubmit: document.getElementById("product-form-submit"),
+  productFormCancel: document.getElementById("product-form-cancel"),
+  settingsSaveState: document.getElementById("settings-save-state"),
   settingsPreview: document.getElementById("settings-preview"),
 };
 
@@ -544,6 +637,33 @@ function normalizeBarcodeTemplate(template, index) {
 function normalizeBarcodeTemplates(templates) {
   const source = Array.isArray(templates) && templates.length > 0 ? templates : defaultBarcodeLabelTemplates;
   return source.map(normalizeBarcodeTemplate);
+}
+
+function normalizeReceiptTemplate(template, index) {
+  const fallback = defaultReceiptTemplates[index] || defaultReceiptTemplates[0];
+  return {
+    id: template?.id || `receipt-template-${index + 1}`,
+    theme: ["compact", "retail", "gift"].includes(template?.theme) ? template.theme : fallback.theme,
+    en: {
+      name: template?.en?.name || template?.name || fallback.en.name,
+      description: template?.en?.description || template?.description || fallback.en.description,
+    },
+    vi: {
+      name: template?.vi?.name || template?.nameVi || fallback.vi.name,
+      description: template?.vi?.description || template?.descriptionVi || fallback.vi.description,
+    },
+    showContact: template?.showContact ?? fallback.showContact,
+    showTaxId: template?.showTaxId ?? fallback.showTaxId,
+    showOrderMeta: template?.showOrderMeta ?? fallback.showOrderMeta,
+    showPayment: template?.showPayment ?? fallback.showPayment,
+    showCustomer: template?.showCustomer ?? fallback.showCustomer,
+    showFooter: template?.showFooter ?? fallback.showFooter,
+  };
+}
+
+function normalizeReceiptTemplates(templates) {
+  const source = Array.isArray(templates) && templates.length > 0 ? templates : defaultReceiptTemplates;
+  return source.map(normalizeReceiptTemplate);
 }
 
 function getCurrentDictionary() {
@@ -696,6 +816,58 @@ function getPaymentMethods() {
   return paymentMethods[appState.language];
 }
 
+function closePaymentMethodMenu() {
+  appState.paymentMenuOpen = false;
+  elements.paymentMethodMenu.classList.remove("is-open");
+  elements.paymentMethodTrigger.setAttribute("aria-expanded", "false");
+}
+
+function openPaymentMethodMenu() {
+  appState.paymentMenuOpen = true;
+  elements.paymentMethodMenu.classList.add("is-open");
+  elements.paymentMethodTrigger.setAttribute("aria-expanded", "true");
+}
+
+function syncPaymentMethodDropdown() {
+  const methods = getPaymentMethods();
+  const fallback = methods[0];
+  const selectedMethod =
+    methods.find((method) => method.value === elements.paymentMethod.value) || fallback;
+
+  elements.paymentMethod.value = selectedMethod.value;
+  elements.paymentMethodLabel.textContent = selectedMethod.label;
+  elements.paymentMethodOptions.innerHTML = methods
+    .map(
+      (method) => `
+        <button
+          type="button"
+          class="select-option ${method.value === selectedMethod.value ? "is-active" : ""}"
+          data-payment-method-option="${method.value}"
+          role="option"
+          aria-selected="${method.value === selectedMethod.value}"
+        >
+          <span>${method.label}</span>
+          <span class="select-option-mark" aria-hidden="true">${method.value === selectedMethod.value ? "✓" : ""}</span>
+        </button>
+      `,
+    )
+    .join("");
+}
+
+function setPaymentMethod(value, { notify = false } = {}) {
+  const methodExists = getPaymentMethods().some((method) => method.value === value);
+  if (!methodExists) {
+    return;
+  }
+
+  elements.paymentMethod.value = value;
+  syncPaymentMethodDropdown();
+
+  if (notify) {
+    elements.paymentMethod.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+}
+
 function getSummary() {
   const items = appState.cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = appState.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -722,7 +894,7 @@ function buildPriceBarcode(price, sequence) {
   return `${baseDigits}${computeEan13CheckDigit(baseDigits)}`;
 }
 
-function generateBarcodeForPrice(price) {
+function generateBarcodeForPrice(price, options = {}) {
   const normalizedPrice = Math.round(Number(price));
   if (!Number.isFinite(normalizedPrice) || normalizedPrice <= 0 || normalizedPrice > 9999999) {
     return "";
@@ -730,7 +902,9 @@ function generateBarcodeForPrice(price) {
 
   for (let sequence = 0; sequence <= 999; sequence += 1) {
     const barcode = buildPriceBarcode(normalizedPrice, sequence);
-    const exists = appState.products.some((product) => product.barcode === barcode);
+    const exists = appState.products.some(
+      (product) => product.barcode === barcode && product.id !== options.ignoreProductId,
+    );
     if (!exists) {
       return barcode;
     }
@@ -750,6 +924,23 @@ function ensureSelectedLabelProduct() {
   return fallbackProduct;
 }
 
+function getEditingProduct() {
+  return appState.products.find((product) => product.id === appState.editingProductId) || null;
+}
+
+function getSelectedReceiptTemplate() {
+  return (
+    appState.receiptTemplates.find((template) => template.id === appState.selectedTemplate) ||
+    appState.receiptTemplates[0]
+  );
+}
+
+function getEditingReceiptTemplate() {
+  return (
+    appState.receiptTemplates.find((template) => template.id === appState.editingReceiptTemplateId) || null
+  );
+}
+
 function getSelectedBarcodeTemplate() {
   return (
     appState.barcodeTemplates.find((template) => template.id === appState.selectedBarcodeTemplate) ||
@@ -767,11 +958,45 @@ function updateInventoryBarcodePreview() {
     return;
   }
 
-  const barcode = generateBarcodeForPrice(priceField.value);
+  const editingProduct = getEditingProduct();
+  const normalizedPrice = Math.round(Number(priceField.value));
+  const barcode =
+    editingProduct && Number(editingProduct.price) === normalizedPrice
+      ? editingProduct.barcode
+      : generateBarcodeForPrice(priceField.value, { ignoreProductId: appState.editingProductId });
   elements.inventoryBarcode.value = barcode;
   elements.barcodePreviewNote.textContent = barcode
     ? `${getCurrentDictionary().barcodeFromPriceHint} ${barcode}`
     : getCurrentDictionary().barcodeNeedsPrice;
+}
+
+function renderProductForm() {
+  const form = elements.productForm;
+  if (!form || !elements.productFormMode || !elements.productFormSubmit || !elements.productFormCancel) {
+    return;
+  }
+
+  const editingProduct = getEditingProduct();
+  const dictionary = getCurrentDictionary();
+
+  if (editingProduct) {
+    form.elements.namedItem("productId").value = editingProduct.id;
+    form.elements.namedItem("name").value = editingProduct.name;
+    form.elements.namedItem("nameVi").value = editingProduct.nameVi;
+    form.elements.namedItem("category").value = editingProduct.category;
+    form.elements.namedItem("price").value = editingProduct.price;
+    form.elements.namedItem("stock").value = editingProduct.stock;
+    elements.inventoryBarcode.value = editingProduct.barcode;
+    elements.productFormMode.textContent = dictionary.editingProduct;
+    elements.productFormCancel.hidden = false;
+  } else {
+    form.elements.namedItem("productId").value = "";
+    elements.productFormMode.textContent = dictionary.creatingProduct;
+    elements.productFormCancel.hidden = true;
+  }
+
+  elements.productFormSubmit.textContent = dictionary.saveProduct;
+  updateInventoryBarcodePreview();
 }
 
 function renderTranslations() {
@@ -937,6 +1162,12 @@ function renderInventory() {
             <span>${appState.language === "vi" ? "Tồn kho" : "Stock"}: ${product.stock}</span>
           </div>
           <div class="inventory-actions">
+            <button class="secondary-btn" data-product-edit="${product.id}">
+              ${getCurrentDictionary().editProduct}
+            </button>
+            <button class="danger-btn" data-product-remove="${product.id}">
+              ${getCurrentDictionary().removeProduct}
+            </button>
             <button class="secondary-btn" data-label-select="${product.id}">
               ${getCurrentDictionary().previewLabel}
             </button>
@@ -958,6 +1189,8 @@ function renderPaymentOptions() {
     )
     .join("");
   elements.paymentMethod.value = currentValue || getPaymentMethods()[0].value;
+  syncPaymentMethodDropdown();
+  closePaymentMethodMenu();
 }
 
 function renderQuickCashButtons() {
@@ -1043,7 +1276,7 @@ function buildReceiptSale() {
 
 function renderReceiptPreview() {
   const sale = appState.lastReceipt || buildReceiptSale();
-  const template = receiptTemplates.find((entry) => entry.id === appState.selectedTemplate);
+  const template = getSelectedReceiptTemplate();
   const paymentMethod = getPaymentMethods().find((method) => method.value === sale.paymentMethod);
   const shopContact = [
     appState.settings.storePhone,
@@ -1057,10 +1290,10 @@ function renderReceiptPreview() {
     <div class="receipt-head">
       <h5>${appState.settings.storeName}</h5>
       <p>${appState.settings.storeAddress}</p>
-      ${shopContact ? `<p>${shopContact}</p>` : ""}
-      ${appState.settings.taxId ? `<p>${appState.language === "vi" ? "MST" : "Tax ID"}: ${appState.settings.taxId}</p>` : ""}
-      <p>${formatDate(sale.createdAt)}</p>
-      <p>${sale.orderId}</p>
+      ${template?.showContact && shopContact ? `<p>${shopContact}</p>` : ""}
+      ${template?.showTaxId && appState.settings.taxId ? `<p>${appState.language === "vi" ? "MST" : "Tax ID"}: ${appState.settings.taxId}</p>` : ""}
+      ${template?.showOrderMeta ? `<p>${formatDate(sale.createdAt)}</p>` : ""}
+      ${template?.showOrderMeta ? `<p>${sale.orderId}</p>` : ""}
     </div>
     <div class="receipt-lines">
       ${sale.items
@@ -1090,19 +1323,25 @@ function renderReceiptPreview() {
         <strong>${appState.language === "vi" ? "Tổng cộng" : "Total"}</strong>
         <strong>${formatCurrency(sale.total)}</strong>
       </div>
-      <div class="receipt-total-row">
-        <span>${appState.language === "vi" ? "Thanh toán" : "Payment"}</span>
-        <span>${paymentMethod ? paymentMethod.label : sale.paymentMethod}</span>
-      </div>
-      <div class="receipt-total-row">
-        <span>${appState.language === "vi" ? "Tiền thừa" : "Change"}</span>
-        <span>${formatCurrency(sale.change)}</span>
-      </div>
+      ${
+        template?.showPayment
+          ? `
+            <div class="receipt-total-row">
+              <span>${appState.language === "vi" ? "Thanh toán" : "Payment"}</span>
+              <span>${paymentMethod ? paymentMethod.label : sale.paymentMethod}</span>
+            </div>
+            <div class="receipt-total-row">
+              <span>${appState.language === "vi" ? "Tiền thừa" : "Change"}</span>
+              <span>${formatCurrency(sale.change)}</span>
+            </div>
+          `
+          : ""
+      }
     </div>
     <div class="receipt-footer">
-      <p>${sale.customerName || (appState.language === "vi" ? "Khách lẻ" : "Walk-in customer")}</p>
+      ${template?.showCustomer ? `<p>${sale.customerName || (appState.language === "vi" ? "Khách lẻ" : "Walk-in customer")}</p>` : ""}
       <p>${template?.[appState.language].name || ""}</p>
-      <p>${appState.settings.receiptFooter}</p>
+      ${template?.showFooter ? `<p>${appState.settings.receiptFooter}</p>` : ""}
     </div>
   `;
 
@@ -1111,7 +1350,7 @@ function renderReceiptPreview() {
 }
 
 function renderTemplates() {
-  elements.templateGrid.innerHTML = receiptTemplates
+  elements.templateGrid.innerHTML = appState.receiptTemplates
     .map((template) => {
       const content = template[appState.language];
       return `
@@ -1128,6 +1367,50 @@ function renderTemplates() {
       `;
     })
     .join("");
+}
+
+function renderReceiptTemplateEditor() {
+  const dictionary = getCurrentDictionary();
+  const editingTemplate = getEditingReceiptTemplate();
+  const form = elements.receiptTemplateForm;
+  if (!form || !elements.receiptTemplateEditorSelect) {
+    return;
+  }
+
+  elements.receiptTemplateEditorSelect.innerHTML = `
+    <option value="">${dictionary.receiptTemplateDraftOption}</option>
+    ${appState.receiptTemplates
+      .map((template) => {
+        const content = template[appState.language];
+        return `<option value="${template.id}">${escapeHtml(content.name)}</option>`;
+      })
+      .join("")}
+  `;
+
+  if (editingTemplate) {
+    elements.receiptTemplateEditorSelect.value = editingTemplate.id;
+    form.elements.namedItem("name").value = editingTemplate.en.name;
+    form.elements.namedItem("nameVi").value = editingTemplate.vi.name;
+    form.elements.namedItem("description").value = editingTemplate.en.description;
+    form.elements.namedItem("descriptionVi").value = editingTemplate.vi.description;
+    form.elements.namedItem("theme").value = editingTemplate.theme;
+    form.elements.namedItem("showContact").checked = editingTemplate.showContact;
+    form.elements.namedItem("showTaxId").checked = editingTemplate.showTaxId;
+    form.elements.namedItem("showOrderMeta").checked = editingTemplate.showOrderMeta;
+    form.elements.namedItem("showPayment").checked = editingTemplate.showPayment;
+    form.elements.namedItem("showCustomer").checked = editingTemplate.showCustomer;
+    form.elements.namedItem("showFooter").checked = editingTemplate.showFooter;
+  } else {
+    elements.receiptTemplateEditorSelect.value = "";
+    form.reset();
+    form.elements.namedItem("theme").value = "compact";
+    form.elements.namedItem("showContact").checked = true;
+    form.elements.namedItem("showTaxId").checked = true;
+    form.elements.namedItem("showOrderMeta").checked = true;
+    form.elements.namedItem("showPayment").checked = true;
+    form.elements.namedItem("showCustomer").checked = true;
+    form.elements.namedItem("showFooter").checked = true;
+  }
 }
 
 function renderBarcodeTemplateGrid() {
@@ -1366,6 +1649,9 @@ function renderSettingsForm() {
   elements.settingsForm.elements.namedItem("taxRate").value = appState.settings.taxRate;
   elements.settingsForm.elements.namedItem("receiptFooter").value = appState.settings.receiptFooter;
   elements.storeName.textContent = appState.settings.storeName;
+  if (elements.settingsSaveState) {
+    elements.settingsSaveState.textContent = getCurrentDictionary().settingsAutosaveReady;
+  }
 }
 
 function renderSettingsPreview() {
@@ -1426,7 +1712,9 @@ function renderAll() {
   renderNavigation();
   renderDashboard();
   renderProducts();
+  renderProductForm();
   renderInventory();
+  renderReceiptTemplateEditor();
   renderBarcodeTemplateGrid();
   renderBarcodeTemplateEditor();
   renderBarcodeProductSelect();
@@ -1583,15 +1871,20 @@ function handleCompleteSale() {
 
 function createProductFromForm(formData) {
   const price = Number(formData.get("price"));
-  const barcode = generateBarcodeForPrice(price);
+  const editingProduct = getEditingProduct();
+  const barcode =
+    formData.get("barcode").trim() ||
+    (editingProduct && editingProduct.price === price
+      ? editingProduct.barcode
+      : generateBarcodeForPrice(price, { ignoreProductId: editingProduct?.id || null }));
 
   if (!barcode) {
     showToast(getCurrentDictionary().barcodeGenerationFailed);
     return;
   }
 
-  const newProduct = {
-    id: crypto.randomUUID(),
+  const nextProduct = {
+    id: editingProduct?.id || crypto.randomUUID(),
     name: formData.get("name").trim(),
     nameVi: formData.get("nameVi").trim(),
     category: formData.get("category").trim(),
@@ -1600,20 +1893,41 @@ function createProductFromForm(formData) {
     stock: Number(formData.get("stock")),
   };
 
-  appState.products.unshift(newProduct);
-  appState.selectedLabelProductId = newProduct.id;
+  if (editingProduct) {
+    appState.products = appState.products.map((product) =>
+      product.id === editingProduct.id ? nextProduct : product,
+    );
+    appState.cart = appState.cart
+      .map((item) => {
+        if (item.id !== editingProduct.id) {
+          return item;
+        }
+
+        const quantity = Math.min(item.quantity, nextProduct.stock);
+        return quantity > 0
+          ? {
+              ...item,
+              ...nextProduct,
+              quantity,
+            }
+          : null;
+      })
+      .filter(Boolean);
+    appState.editingProductId = null;
+  } else {
+    appState.products.unshift(nextProduct);
+  }
+
+  appState.selectedLabelProductId = nextProduct.id;
   saveState(STORAGE_KEYS.products, appState.products);
   elements.productForm.reset();
-  updateInventoryBarcodePreview();
+  elements.inventoryBarcode.value = "";
+  invalidateDraftReceipt();
   renderAll();
-  showToast(
-    appState.language === "vi"
-      ? "Đã lưu sản phẩm mới và chuẩn bị tem mã vạch."
-      : "New product saved and barcode label is ready.",
-  );
+  showToast(getCurrentDictionary()[editingProduct ? "productUpdated" : "productCreated"]);
 }
 
-function saveSettingsFromForm(formData) {
+function saveSettingsFromForm(formData, options = {}) {
   appState.settings = normalizeSettings({
     storeName: formData.get("storeName").trim(),
     storeAddress: formData.get("storeAddress").trim(),
@@ -1625,8 +1939,24 @@ function saveSettingsFromForm(formData) {
     receiptFooter: formData.get("receiptFooter").trim(),
   });
   saveState(STORAGE_KEYS.settings, appState.settings);
-  renderAll();
-  showToast(appState.language === "vi" ? "Đã cập nhật cài đặt cửa hàng." : "Store settings updated.");
+  elements.storeName.textContent = appState.settings.storeName;
+  renderSettingsPreview();
+  renderReceiptPreview();
+
+  if (elements.settingsSaveState) {
+    elements.settingsSaveState.textContent = options.auto
+      ? getCurrentDictionary().settingsAutosaveSaved
+      : getCurrentDictionary().settingsAutosaveReady;
+  }
+
+  if (!options.silent) {
+    showToast(appState.language === "vi" ? "Đã cập nhật cài đặt cửa hàng." : "Store settings updated.");
+  }
+}
+
+function saveReceiptTemplatesState() {
+  saveState(STORAGE_KEYS.receiptTemplates, appState.receiptTemplates);
+  localStorage.setItem(STORAGE_KEYS.template, appState.selectedTemplate);
 }
 
 function saveBarcodeTemplatesState() {
@@ -1636,8 +1966,10 @@ function saveBarcodeTemplatesState() {
 
 function selectTemplate(templateId) {
   appState.selectedTemplate = templateId;
+  appState.editingReceiptTemplateId = templateId;
   localStorage.setItem(STORAGE_KEYS.template, templateId);
   renderTemplates();
+  renderReceiptTemplateEditor();
   renderReceiptPreview();
 }
 
@@ -1655,6 +1987,107 @@ function selectLabelProduct(productId) {
   renderInventory();
   renderBarcodeProductSelect();
   renderBarcodeLabelPreview();
+}
+
+function startEditingProduct(productId) {
+  appState.editingProductId = productId;
+  changeSection("inventory");
+  renderProductForm();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function resetProductForm() {
+  appState.editingProductId = null;
+  elements.productForm.reset();
+  elements.inventoryBarcode.value = "";
+  renderProductForm();
+}
+
+function removeProduct(productId) {
+  if (!window.confirm(getCurrentDictionary().productDeleteConfirm)) {
+    return;
+  }
+
+  appState.products = appState.products.filter((product) => product.id !== productId);
+  appState.cart = appState.cart.filter((item) => item.id !== productId);
+  if (appState.editingProductId === productId) {
+    appState.editingProductId = null;
+  }
+  if (appState.selectedLabelProductId === productId) {
+    appState.selectedLabelProductId = null;
+  }
+
+  ensureSelectedLabelProduct();
+  saveState(STORAGE_KEYS.products, appState.products);
+  invalidateDraftReceipt();
+  renderAll();
+  showToast(getCurrentDictionary().productRemoved);
+}
+
+function startNewReceiptTemplate() {
+  appState.editingReceiptTemplateId = null;
+  renderReceiptTemplateEditor();
+}
+
+function saveReceiptTemplateFromForm(formData) {
+  const templateId = appState.editingReceiptTemplateId || `receipt-${crypto.randomUUID().slice(0, 8)}`;
+  const nextTemplate = normalizeReceiptTemplate(
+    {
+      id: templateId,
+      theme: formData.get("theme"),
+      en: {
+        name: formData.get("name").trim(),
+        description: formData.get("description").trim(),
+      },
+      vi: {
+        name: formData.get("nameVi").trim(),
+        description: formData.get("descriptionVi").trim(),
+      },
+      showContact: formData.get("showContact") === "on",
+      showTaxId: formData.get("showTaxId") === "on",
+      showOrderMeta: formData.get("showOrderMeta") === "on",
+      showPayment: formData.get("showPayment") === "on",
+      showCustomer: formData.get("showCustomer") === "on",
+      showFooter: formData.get("showFooter") === "on",
+    },
+    0,
+  );
+
+  const existingIndex = appState.receiptTemplates.findIndex((template) => template.id === templateId);
+  const isNewTemplate = existingIndex === -1;
+
+  if (isNewTemplate) {
+    appState.receiptTemplates.push(nextTemplate);
+  } else {
+    appState.receiptTemplates[existingIndex] = nextTemplate;
+  }
+
+  appState.selectedTemplate = templateId;
+  appState.editingReceiptTemplateId = templateId;
+  saveReceiptTemplatesState();
+  renderAll();
+  showToast(getCurrentDictionary()[isNewTemplate ? "receiptTemplateCreated" : "receiptTemplateUpdated"]);
+}
+
+function removeEditingReceiptTemplate() {
+  if (!appState.editingReceiptTemplateId) {
+    startNewReceiptTemplate();
+    return;
+  }
+
+  if (appState.receiptTemplates.length <= 1) {
+    showToast(getCurrentDictionary().receiptTemplateDeleteBlocked);
+    return;
+  }
+
+  appState.receiptTemplates = appState.receiptTemplates.filter(
+    (template) => template.id !== appState.editingReceiptTemplateId,
+  );
+  appState.selectedTemplate = appState.receiptTemplates[0].id;
+  appState.editingReceiptTemplateId = appState.selectedTemplate;
+  saveReceiptTemplatesState();
+  renderAll();
+  showToast(getCurrentDictionary().receiptTemplateRemoved);
 }
 
 function startNewBarcodeTemplate() {
@@ -1848,14 +2281,29 @@ function printBarcodeLabel(productId = appState.selectedLabelProductId) {
 }
 
 function createDemoSale() {
+  if (appState.products.length === 0) {
+    showToast(appState.language === "vi" ? "Hãy tạo sản phẩm trước." : "Add products first.");
+    return;
+  }
+
   appState.cart = [];
-  addProductToCart(appState.products[0].id);
-  addProductToCart(appState.products[1].id);
-  addProductToCart(appState.products[2].id);
+  appState.products.slice(0, 3).forEach((product) => {
+    addProductToCart(product.id);
+  });
   elements.customerName.value = appState.language === "vi" ? "Khách thử nghiệm" : "Demo customer";
   elements.amountTendered.value = "200000";
   changeSection("pos");
   renderAll();
+}
+
+function scheduleSettingsAutoSave() {
+  window.clearTimeout(scheduleSettingsAutoSave.timer);
+  scheduleSettingsAutoSave.timer = window.setTimeout(() => {
+    if (!elements.settingsForm.reportValidity()) {
+      return;
+    }
+    saveSettingsFromForm(new FormData(elements.settingsForm), { auto: true, silent: true });
+  }, 420);
 }
 
 function bindEvents() {
@@ -1872,6 +2320,27 @@ function bindEvents() {
   });
 
   document.body.addEventListener("click", (event) => {
+    const paymentTrigger = event.target.closest("[data-payment-method-toggle]");
+    if (paymentTrigger) {
+      if (appState.paymentMenuOpen) {
+        closePaymentMethodMenu();
+      } else {
+        openPaymentMethodMenu();
+      }
+      return;
+    }
+
+    const paymentOptionTarget = event.target.closest("[data-payment-method-option]");
+    if (paymentOptionTarget) {
+      setPaymentMethod(paymentOptionTarget.dataset.paymentMethodOption, { notify: true });
+      closePaymentMethodMenu();
+      return;
+    }
+
+    if (appState.paymentMenuOpen && !event.target.closest("#payment-method-menu")) {
+      closePaymentMethodMenu();
+    }
+
     const addTarget = event.target.closest("[data-product-add]");
     if (addTarget) {
       addProductToCart(addTarget.dataset.productAdd);
@@ -1896,6 +2365,16 @@ function bindEvents() {
     const templateTarget = event.target.closest("[data-template-select]");
     if (templateTarget) {
       selectTemplate(templateTarget.dataset.templateSelect);
+    }
+
+    const productEditTarget = event.target.closest("[data-product-edit]");
+    if (productEditTarget) {
+      startEditingProduct(productEditTarget.dataset.productEdit);
+    }
+
+    const productRemoveTarget = event.target.closest("[data-product-remove]");
+    if (productRemoveTarget) {
+      removeProduct(productRemoveTarget.dataset.productRemove);
     }
 
     const barcodeTemplateTarget = event.target.closest("[data-barcode-template-select]");
@@ -1938,8 +2417,15 @@ function bindEvents() {
     renderReceiptPreview();
   });
   elements.paymentMethod.addEventListener("change", () => {
+    syncPaymentMethodDropdown();
     invalidateDraftReceipt();
     renderReceiptPreview();
+  });
+  elements.paymentMethodTrigger.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " " || event.key === "ArrowDown") {
+      event.preventDefault();
+      openPaymentMethodMenu();
+    }
   });
   elements.customerName.addEventListener("input", () => {
     invalidateDraftReceipt();
@@ -1956,8 +2442,20 @@ function bindEvents() {
     event.preventDefault();
     createProductFromForm(new FormData(event.currentTarget));
   });
+  elements.productFormCancel.addEventListener("click", resetProductForm);
   elements.productForm.elements.namedItem("price").addEventListener("input", updateInventoryBarcodePreview);
   document.getElementById("generate-barcode-btn").addEventListener("click", updateInventoryBarcodePreview);
+  elements.receiptTemplateEditorSelect.addEventListener("change", (event) => {
+    const templateId = event.target.value || null;
+    appState.editingReceiptTemplateId = templateId;
+    if (templateId) {
+      appState.selectedTemplate = templateId;
+      localStorage.setItem(STORAGE_KEYS.template, templateId);
+      renderTemplates();
+      renderReceiptPreview();
+    }
+    renderReceiptTemplateEditor();
+  });
   elements.barcodeLabelProductSelect.addEventListener("change", (event) => {
     selectLabelProduct(event.target.value);
   });
@@ -1977,10 +2475,18 @@ function bindEvents() {
     event.preventDefault();
     saveSettingsFromForm(new FormData(event.currentTarget));
   });
+  elements.settingsForm.addEventListener("input", scheduleSettingsAutoSave);
+  elements.settingsForm.addEventListener("change", scheduleSettingsAutoSave);
+  elements.receiptTemplateForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    saveReceiptTemplateFromForm(new FormData(event.currentTarget));
+  });
   elements.barcodeTemplateForm.addEventListener("submit", (event) => {
     event.preventDefault();
     saveBarcodeTemplateFromForm(new FormData(event.currentTarget));
   });
+  document.getElementById("receipt-template-new-btn").addEventListener("click", startNewReceiptTemplate);
+  document.getElementById("receipt-template-remove-btn").addEventListener("click", removeEditingReceiptTemplate);
   document.getElementById("barcode-template-new-btn").addEventListener("click", startNewBarcodeTemplate);
   document.getElementById("barcode-template-remove-btn").addEventListener("click", removeEditingBarcodeTemplate);
 
@@ -2001,11 +2507,22 @@ function bindEvents() {
   document.getElementById("stop-camera-scan").addEventListener("click", stopCameraScan);
 
   window.addEventListener("keydown", handleScannerKeyboard);
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && appState.paymentMenuOpen) {
+      closePaymentMethodMenu();
+      elements.paymentMethodTrigger.focus();
+    }
+  });
 }
 
 function init() {
   appState.products = normalizeProducts(appState.products);
   appState.settings = normalizeSettings(appState.settings);
+  appState.receiptTemplates = normalizeReceiptTemplates(
+    loadState(STORAGE_KEYS.receiptTemplates, defaultReceiptTemplates),
+  );
+  appState.selectedTemplate = getSelectedReceiptTemplate().id;
+  appState.editingReceiptTemplateId = appState.selectedTemplate;
   appState.barcodeTemplates = normalizeBarcodeTemplates(
     loadState(STORAGE_KEYS.barcodeTemplates, defaultBarcodeLabelTemplates),
   );
@@ -2014,6 +2531,7 @@ function init() {
   ensureSelectedLabelProduct();
   saveState(STORAGE_KEYS.products, appState.products);
   saveState(STORAGE_KEYS.settings, appState.settings);
+  saveState(STORAGE_KEYS.receiptTemplates, appState.receiptTemplates);
   saveState(STORAGE_KEYS.barcodeTemplates, appState.barcodeTemplates);
   bindEvents();
   renderAll();

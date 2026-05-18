@@ -186,7 +186,22 @@
                 </label>
                 <label class="field">
                   <span data-i18n="paymentMethod">Payment method</span>
-                  <select id="payment-method"></select>
+                  <div class="select-menu" id="payment-method-menu">
+                    <select id="payment-method" class="native-select-hidden" tabindex="-1" aria-hidden="true"></select>
+                    <button
+                      type="button"
+                      class="select-trigger"
+                      id="payment-method-trigger"
+                      data-payment-method-toggle
+                      aria-haspopup="listbox"
+                      aria-expanded="false"
+                      aria-controls="payment-method-options"
+                    >
+                      <span class="select-trigger-label" id="payment-method-label"></span>
+                      <span class="select-trigger-caret" aria-hidden="true">▾</span>
+                    </button>
+                    <div class="select-dropdown" id="payment-method-options" role="listbox"></div>
+                  </div>
                 </label>
                 <label class="field cart-field-wide">
                   <span data-i18n="amountTendered">Amount tendered</span>
@@ -243,6 +258,7 @@
                 </div>
 
                 <form id="product-form" class="form-grid">
+                  <input name="productId" type="hidden" />
                   <label class="field">
                     <span data-i18n="productName">Product name</span>
                     <input name="name" type="text" required />
@@ -280,9 +296,15 @@
                     <span data-i18n="stock">Stock</span>
                     <input name="stock" type="number" min="0" step="1" required />
                   </label>
-                  <button class="primary-btn" type="submit" data-i18n="saveProduct">
-                    Save product
-                  </button>
+                  <div class="template-manager-actions full">
+                    <button class="ghost-btn" id="product-form-cancel" type="button" hidden data-i18n="cancelEdit">
+                      Cancel
+                    </button>
+                    <button class="primary-btn" id="product-form-submit" type="submit" data-i18n="saveProduct">
+                      Save product
+                    </button>
+                  </div>
+                  <p class="field-note full" id="product-form-mode"></p>
                 </form>
               </article>
 
@@ -359,6 +381,87 @@
               </div>
             </article>
           </div>
+
+          <article class="card template-manager-card">
+            <div class="card-head">
+              <div>
+                <p class="eyebrow" data-i18n="receiptTemplateManager">Receipt template manager</p>
+                <h4 data-i18n="manageReceiptTemplates">Adjust, add, or remove invoice templates</h4>
+              </div>
+            </div>
+
+            <form id="receipt-template-form" class="form-grid">
+              <label class="field wide">
+                <span data-i18n="receiptTemplateChooseEdit">Template to edit</span>
+                <select id="receipt-template-editor-select" name="templateEditor"></select>
+              </label>
+              <label class="field">
+                <span data-i18n="templateNameEn">Template name (EN)</span>
+                <input name="name" type="text" required />
+              </label>
+              <label class="field">
+                <span data-i18n="templateNameVi">Template name (VI)</span>
+                <input name="nameVi" type="text" required />
+              </label>
+              <label class="field full">
+                <span data-i18n="templateDescriptionEn">Description (EN)</span>
+                <input name="description" type="text" required />
+              </label>
+              <label class="field full">
+                <span data-i18n="templateDescriptionVi">Description (VI)</span>
+                <input name="descriptionVi" type="text" required />
+              </label>
+              <label class="field">
+                <span data-i18n="receiptTemplateTheme">Receipt style</span>
+                <select name="theme">
+                  <option value="compact" data-i18n="receiptThemeCompact">Compact</option>
+                  <option value="retail" data-i18n="receiptThemeRetail">Retail</option>
+                  <option value="gift" data-i18n="receiptThemeGift">Gift</option>
+                </select>
+              </label>
+              <div class="field wide">
+                <span data-i18n="receiptVisibleFields">Visible fields</span>
+                <div class="toggle-grid">
+                  <label class="toggle-option">
+                    <input name="showContact" type="checkbox" />
+                    <span data-i18n="receiptShowContact">Show phone, email, website</span>
+                  </label>
+                  <label class="toggle-option">
+                    <input name="showTaxId" type="checkbox" />
+                    <span data-i18n="receiptShowTaxId">Show tax ID</span>
+                  </label>
+                  <label class="toggle-option">
+                    <input name="showOrderMeta" type="checkbox" />
+                    <span data-i18n="receiptShowOrderMeta">Show date and order ID</span>
+                  </label>
+                  <label class="toggle-option">
+                    <input name="showPayment" type="checkbox" />
+                    <span data-i18n="receiptShowPayment">Show payment details</span>
+                  </label>
+                  <label class="toggle-option">
+                    <input name="showCustomer" type="checkbox" />
+                    <span data-i18n="receiptShowCustomer">Show customer name</span>
+                  </label>
+                  <label class="toggle-option">
+                    <input name="showFooter" type="checkbox" />
+                    <span data-i18n="receiptShowFooter">Show footer note</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="template-manager-actions full">
+                <button class="ghost-btn" id="receipt-template-new-btn" type="button" data-i18n="templateCreateNew">
+                  New template
+                </button>
+                <button class="secondary-btn" id="receipt-template-remove-btn" type="button" data-i18n="templateRemove">
+                  Remove template
+                </button>
+                <button class="primary-btn" type="submit" data-i18n="templateSave">
+                  Save template
+                </button>
+              </div>
+            </form>
+          </article>
         </section>
 
         <section class="section" id="section-settings">
@@ -407,6 +510,7 @@
                 <button class="primary-btn" type="submit" data-i18n="saveSettings">
                   Save settings
                 </button>
+                <p class="field-note full" id="settings-save-state"></p>
               </form>
             </article>
 

@@ -2536,19 +2536,27 @@
         return;
       }
 
-      var popup = window.open("", "_blank", "width=760,height=560");
+      var popup = window.open("", "_blank");
       if (!popup) {
         window.alert(L("Trình duyệt đang chặn cửa sổ xem trước tem. / Your browser blocked the label preview window."));
         return;
       }
 
-      popup.document.write(buildBarcodeLabelDocument([barcodePreviewProduct], activeBarcodeTemplate, (function () {
+      var quantities = (function () {
         var quantities = {};
         quantities[barcodePreviewProduct.id] = Math.max(1, Number(previewLabelQuantity) || 1);
         return quantities;
-      })()));
-      popup.document.close();
-      popup.focus();
+      })();
+
+      exportBarcodeLabelsPdf([barcodePreviewProduct], activeBarcodeTemplate, quantities, popup).then(function (exportedPdf) {
+        if (exportedPdf) {
+          return;
+        }
+
+        popup.document.write(buildBarcodeLabelDocument([barcodePreviewProduct], activeBarcodeTemplate, quantities));
+        popup.document.close();
+        popup.focus();
+      });
     }
 
     function printBarcodeLabels(productsToPrint, quantities) {

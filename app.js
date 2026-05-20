@@ -2378,9 +2378,9 @@
       var categoryLabel = getProductCategoryLabel(product);
       var printSize = getBarcodePrintSize(template);
       var barcodeSvg = renderBarcodeMarkup(product.barcode, {
-        width: printSize.widthMm >= 90 ? 2.2 : 1.95,
-        height: Math.max(72, Math.round(printSize.heightMm * 2.55)),
-        margin: 18,
+        width: printSize.widthMm >= 90 ? 2.55 : 2.15,
+        height: Math.max(96, Math.round(printSize.heightMm * 3.2)),
+        margin: 10,
         lineColor: "#1f1b18"
       });
 
@@ -2411,102 +2411,79 @@
 
       return (
         "<!DOCTYPE html><html><head><meta charset='utf-8'><title>" + L("In tem mã vạch / Print Barcode Labels") + "</title>" +
+        "<link rel='preconnect' href='https://fonts.googleapis.com'>" +
+        "<link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>" +
+        "<link href='https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@500;700&family=Space+Grotesk:wght@700&display=swap' rel='stylesheet'>" +
         "<style>" +
         ":root{color-scheme:light only;--label-accent:" + (template.accent || "#db5d17") + "}" +
         "@page{size:" + printSize.widthMm + "mm " + printSize.heightMm + "mm;margin:0}" +
         "html,body{margin:0;padding:0;background:#fff;color:#2d2117;font-family:'Be Vietnam Pro',Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}" +
         "body{overflow:visible}" +
-        ".print-label-page{width:" + printSize.widthMm + "mm;height:" + printSize.heightMm + "mm;padding:2.5mm;box-sizing:border-box;page-break-after:always;break-after:page;background:#fff}" +
+        ".print-label-page{width:" + printSize.widthMm + "mm;height:" + printSize.heightMm + "mm;margin:0;padding:0;box-sizing:border-box;page-break-after:always;break-after:page;background:#fff;overflow:hidden}" +
         ".print-label-page:last-child{page-break-after:auto;break-after:auto}" +
         ".print-label-page-inner{width:100%;height:100%}" +
-        ".print-label-card{width:100%;height:100%;padding:3.6mm 4mm;background:linear-gradient(180deg,#fffdf9 0%,#fff4e7 100%);border:0.35mm solid rgba(231,194,164,0.95);border-radius:4.5mm;display:flex;flex-direction:column;justify-content:flex-start;box-shadow:none;overflow:hidden}" +
-        ".print-label-top{display:flex;align-items:flex-start;justify-content:space-between;gap:3mm}" +
+        ".print-label-card{width:100%;height:100%;box-sizing:border-box;padding:4.8mm 6mm 4.2mm;background:linear-gradient(180deg,#fffdf9 0%,#fff4e7 100%);border:0.35mm solid rgba(231,194,164,0.95);border-radius:5.2mm;display:flex;flex-direction:column;justify-content:flex-start;box-shadow:none;overflow:hidden}" +
+        ".print-label-top{display:flex;align-items:flex-start;justify-content:space-between;gap:3.2mm}" +
         ".print-label-brand-block{min-width:0;flex:1 1 auto}" +
-        ".print-label-brand{font-size:3.4mm;line-height:1.1;color:#73685d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}" +
-        ".print-label-name{margin-top:1.2mm;font-size:5.3mm;line-height:1.08;font-weight:700;color:#231a14;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}" +
-        ".print-label-price{font-size:5.1mm;line-height:1.08;font-weight:700;color:var(--label-accent);white-space:nowrap;margin-left:2mm}" +
-        ".print-label-barcode-wrap{margin-top:3mm;padding:2.2mm 2.4mm 1.2mm;background:#fff;display:flex;justify-content:center;align-items:center;flex:1 1 auto;min-height:0}" +
+        ".print-label-brand{font-size:3.7mm;line-height:1.1;color:#73685d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}" +
+        ".print-label-name{margin-top:1.1mm;font-size:5.8mm;line-height:1.06;font-weight:700;font-family:'Space Grotesk','Be Vietnam Pro',Arial,sans-serif;color:#231a14;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}" +
+        ".print-label-price{font-size:5.7mm;line-height:1.05;font-weight:700;font-family:'Space Grotesk','Be Vietnam Pro',Arial,sans-serif;color:var(--label-accent);white-space:nowrap;margin-left:2mm}" +
+        ".print-label-barcode-wrap{margin-top:2.6mm;padding:1.8mm 1.8mm 1.1mm;background:#fff;display:flex;justify-content:center;align-items:center;flex:1 1 auto;min-height:22mm}" +
         ".print-label-barcode-wrap svg{width:100%;height:100%;max-height:100%;display:block}" +
-        ".print-label-code{margin-top:1.5mm;text-align:center;font-size:3.3mm;letter-spacing:.11em;color:#74695d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}" +
-        ".print-label-category{margin-top:2.3mm;font-size:3.15mm;color:#74695d;line-height:1.2}" +
+        ".print-label-code{margin-top:1.3mm;text-align:center;font-size:3.45mm;letter-spacing:.16em;color:#74695d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}" +
+        ".print-label-category{margin-top:2mm;font-size:3.2mm;color:#74695d;line-height:1.2}" +
+        "@media screen{body{padding:12px;background:#f2f0ea}.print-label-page{box-shadow:0 10px 25px rgba(41,29,17,0.12);margin-bottom:12px}}" +
         "@media print{.print-label-page{margin:0}}" +
         "</style></head><body>" + pages + "</body></html>"
       );
     }
 
-    function buildLabelPageList(productsToPrint, quantities) {
-      return (productsToPrint || []).reduce(function (allPages, product) {
-        var repeatCount = Math.max(1, Number(quantities[product.id]) || 1);
-        Array.from({ length: repeatCount }).forEach(function () {
-          allPages.push(product);
-        });
-        return allPages;
-      }, []);
-    }
+    function openBarcodeLabelPrintWindow(productsToPrint, template, quantities, options) {
+      var popup = window.open("", "_blank");
+      if (!popup) {
+        window.alert(L("Trình duyệt đang chặn cửa sổ in tem. / Your browser blocked the label print window."));
+        return Promise.resolve(false);
+      }
 
-    function renderLabelPageImages(productsToPrint, template, quantities) {
-      var printSize = getBarcodePrintSize(template);
-      var pages = buildLabelPageList(productsToPrint, quantities || {});
+      popup.document.write(buildBarcodeLabelDocument(productsToPrint, template, quantities || {}));
+      popup.document.close();
 
-      return pages.reduce(function (chain, product) {
-        return chain.then(function (images) {
-          return renderLabelCardToPngDataUrl(product, template, printSize, settings, language).then(function (labelImage) {
-            images.push({
-              product: product,
-              image: labelImage
-            });
-            return images;
-          });
-        });
-      }, Promise.resolve([]));
-    }
+      var shouldAutoPrint = options && options.autoPrint;
+      var title = options && options.title ? options.title : "";
 
-    function buildBarcodeLabelImageDocument(labelPages, template) {
-      var printSize = getBarcodePrintSize(template);
-      var pages = (labelPages || []).map(function (page, pageIndex) {
-        return (
-          "<section class='print-label-image-page" + (pageIndex === labelPages.length - 1 ? " is-last" : "") + "'>" +
-          "<img class='print-label-image' src='" + page.image + "' alt='" + escapeHtml(page.product.name) + "' />" +
-          "</section>"
-        );
-      }).join("");
-
-      return (
-        "<!DOCTYPE html><html><head><meta charset='utf-8'><title>" + L("In tem mã vạch / Print Barcode Labels") + "</title>" +
-        "<style>" +
-        "@page{size:" + printSize.widthMm + "mm " + printSize.heightMm + "mm;margin:0}" +
-        "html,body{margin:0;padding:0;background:#fff}" +
-        "body{-webkit-print-color-adjust:exact;print-color-adjust:exact}" +
-        ".print-label-image-page{width:" + printSize.widthMm + "mm;height:" + printSize.heightMm + "mm;page-break-after:always;break-after:page;overflow:hidden;background:#fff}" +
-        ".print-label-image-page.is-last{page-break-after:auto;break-after:auto}" +
-        ".print-label-image{display:block;width:100%;height:100%;object-fit:fill}" +
-        "</style></head><body>" + pages + "</body></html>"
-      );
-    }
-
-    function openBarcodeLabelImagePreview(productsToPrint, template, quantities, popup) {
-      return renderLabelPageImages(productsToPrint, template, quantities || {}).then(function (pages) {
-        if (!pages.length) {
-          return false;
-        }
-
-        popup.document.write(buildBarcodeLabelImageDocument(pages, template));
-        popup.document.close();
-        return Promise.all(Array.from(popup.document.images || []).map(function (image) {
-          if (image.complete) {
-            return Promise.resolve();
+      return new Promise(function (resolve) {
+        function finishOpen() {
+          try {
+            popup.document.title = title || popup.document.title;
+          } catch (error) {
+            // Ignore title sync errors in popup contexts.
           }
 
-          return new Promise(function (resolve) {
-            image.onload = resolve;
-            image.onerror = resolve;
-          });
-        })).then(function () {
           popup.focus();
-          return true;
+
+          if (!shouldAutoPrint) {
+            resolve(true);
+            return;
+          }
+
+          window.setTimeout(function () {
+            try {
+              popup.focus();
+              popup.print();
+              resolve(true);
+            } catch (error) {
+              resolve(false);
+            }
+          }, 180);
+        }
+
+        var waitForFonts = popup.document.fonts && popup.document.fonts.ready
+          ? popup.document.fonts.ready.catch(function () { return undefined; })
+          : Promise.resolve();
+
+        waitForFonts.then(function () {
+          window.setTimeout(finishOpen, 120);
         });
-      }).catch(function () {
-        return false;
       });
     }
 
@@ -2532,59 +2509,8 @@
       }, 60000);
     }
 
-    function exportBarcodeLabelsPdf(productsToPrint, template, quantities, existingWindow) {
-      if (!window.jspdf || !window.jspdf.jsPDF) {
-        return Promise.resolve(false);
-      }
-
-      var pageList = buildLabelPageList(productsToPrint, quantities || {});
-      if (!pageList.length) {
-        return Promise.resolve(false);
-      }
-
-      var jsPDF = window.jspdf.jsPDF;
-      var pdfPageConfig = buildLabelPdfPageConfig(getBarcodePrintSize(template));
-      var pdf = new jsPDF(pdfPageConfig);
-
-      function drawLabelPage(page, pageIndex) {
-        if (pageIndex > 0) {
-          pdf.addPage(pdfPageConfig.format);
-        }
-
-        return Promise.resolve().then(function () {
-          var labelImage = page.image;
-          if (!labelImage) {
-            return;
-          }
-
-          var pageWidth = pdf.internal.pageSize.getWidth();
-          var pageHeight = pdf.internal.pageSize.getHeight();
-          pdf.addImage(labelImage, "PNG", 0, 0, pageWidth, pageHeight, undefined, "FAST");
-        });
-      }
-
-      return renderLabelPageImages(productsToPrint, template, quantities || {}).then(function (pages) {
-        return pages.reduce(function (chain, page, index) {
-          return chain.then(function () {
-            return drawLabelPage(page, index);
-          });
-        }, Promise.resolve());
-      }).then(function () {
-        openBlobInNewTab(pdf.output("blob"), buildLabelPdfFileName(), existingWindow);
-        return true;
-      }).catch(function () {
-        return false;
-      });
-    }
-
     function previewBarcodeTemplate() {
       if (!barcodePreviewProduct) {
-        return;
-      }
-
-      var popup = window.open("", "_blank");
-      if (!popup) {
-        window.alert(L("Trình duyệt đang chặn cửa sổ xem trước tem. / Your browser blocked the label preview window."));
         return;
       }
 
@@ -2594,17 +2520,9 @@
         return quantities;
       })();
 
-      exportBarcodeLabelsPdf([barcodePreviewProduct], activeBarcodeTemplate, quantities, popup).then(function (exportedPdf) {
-        if (exportedPdf) {
-          return;
-        }
-
-        return openBarcodeLabelImagePreview([barcodePreviewProduct], activeBarcodeTemplate, quantities, popup).then(function (openedPreview) {
-          if (!openedPreview) {
-            popup.close();
-            window.alert(L("Không thể tạo file xem trước tem. / Could not generate the label preview file."));
-          }
-        });
+      openBarcodeLabelPrintWindow([barcodePreviewProduct], activeBarcodeTemplate, quantities, {
+        autoPrint: false,
+        title: L("Xem trước tem mã vạch / Barcode Label Preview")
       });
     }
 
@@ -2614,28 +2532,16 @@
         return;
       }
 
-      var exportWindow = window.open("", "_blank");
-      exportBarcodeLabelsPdf(productsToPrint, activeBarcodeTemplate, quantities || {}, exportWindow).then(function (exportedPdf) {
-        if (exportedPdf) {
-          setScanMessage(L("Đã mở file PDF tem theo đúng khổ in. Hãy in ở chế độ Actual Size / Scale 100%. / Opened an exact-size label PDF. Print it using Actual Size / 100% scale."));
+      openBarcodeLabelPrintWindow(productsToPrint, activeBarcodeTemplate, quantities || {}, {
+        autoPrint: true,
+        title: L("In tem mã vạch / Print Barcode Labels")
+      }).then(function (opened) {
+        if (opened) {
+          setScanMessage(L("Đã mở cửa sổ in tem đúng khổ 90×55mm. Hãy in ở Actual Size / Scale 100%. / Opened a 90×55mm label print window. Print using Actual Size / 100% scale."));
           return;
         }
 
-        var popup = exportWindow || window.open("", "_blank", "width=760,height=560");
-        if (!popup) {
-          window.alert(L("Trình duyệt đang chặn cửa sổ in tem. / Your browser blocked the label print window."));
-          return;
-        }
-
-        openBarcodeLabelImagePreview(productsToPrint, activeBarcodeTemplate, quantities || {}, popup).then(function (openedPreview) {
-          if (!openedPreview) {
-            popup.close();
-            window.alert(L("Không thể tạo file in tem. / Could not generate the label print file."));
-            return;
-          }
-
-          popup.print();
-        });
+        window.alert(L("Không thể mở cửa sổ in tem. / Could not open the label print window."));
       });
     }
 

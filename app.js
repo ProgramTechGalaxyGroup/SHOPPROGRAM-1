@@ -2490,7 +2490,6 @@
       var printSize = getBarcodePrintSize(template);
       var jsPDF = window.jspdf.jsPDF;
       var pdf = new jsPDF({
-        orientation: printSize.widthMm >= printSize.heightMm ? "landscape" : "portrait",
         unit: "mm",
         format: [printSize.widthMm, printSize.heightMm],
         compress: true
@@ -2498,7 +2497,7 @@
 
       function drawLabelPage(product, pageIndex) {
         if (pageIndex > 0) {
-          pdf.addPage([printSize.widthMm, printSize.heightMm], printSize.widthMm >= printSize.heightMm ? "landscape" : "portrait");
+          pdf.addPage([printSize.widthMm, printSize.heightMm]);
         }
 
         return renderLabelCardToPngDataUrl(product, template, printSize, settings, language).then(function (labelImage) {
@@ -2506,7 +2505,9 @@
             return;
           }
 
-          pdf.addImage(labelImage, "PNG", 0, 0, printSize.widthMm, printSize.heightMm, undefined, "FAST");
+          var pageWidth = pdf.internal.pageSize.getWidth();
+          var pageHeight = pdf.internal.pageSize.getHeight();
+          pdf.addImage(labelImage, "PNG", 0, 0, pageWidth, pageHeight, undefined, "FAST");
         });
       }
 

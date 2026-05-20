@@ -916,49 +916,8 @@
     return lines;
   }
 
-  function barcodeSvgToPngDataUrl(barcodeValue, template, printSize) {
-    var widthPx = Math.max(900, Math.round(printSize.widthMm * 14));
-    var heightPx = Math.max(260, Math.round(printSize.heightMm * 7));
-    var barcodeMarkup = renderBarcodeMarkup(barcodeValue, {
-      width: printSize.widthMm >= 90 ? 2.45 : 2.2,
-      height: Math.max(130, Math.round(printSize.heightMm * 4.4)),
-      margin: Math.max(18, Math.round(widthPx * 0.02)),
-      lineColor: "#1f1b18"
-    });
-
-    if (!barcodeMarkup) {
-      return Promise.resolve("");
-    }
-
-    var svgDocument =
-      "<svg xmlns='http://www.w3.org/2000/svg' width='" + widthPx + "' height='" + heightPx + "' viewBox='0 0 " + widthPx + " " + heightPx + "'>" +
-      "<rect width='100%' height='100%' fill='white'/>" +
-      "<g transform='translate(20 12)'>" + barcodeMarkup + "</g>" +
-      "</svg>";
-
-    var blob = new Blob([svgDocument], { type: "image/svg+xml;charset=utf-8" });
-    var blobUrl = window.URL.createObjectURL(blob);
-
-    return loadImageFromUrl(blobUrl).then(function (image) {
-      var canvas = document.createElement("canvas");
-      canvas.width = widthPx;
-      canvas.height = heightPx;
-      var context = canvas.getContext("2d");
-      context.fillStyle = "#ffffff";
-      context.fillRect(0, 0, widthPx, heightPx);
-      context.drawImage(image, 0, 0, widthPx, heightPx);
-      window.URL.revokeObjectURL(blobUrl);
-      return canvas.toDataURL("image/png");
-    }).catch(function () {
-      window.URL.revokeObjectURL(blobUrl);
-      return "";
-    });
-  }
-
   function renderLabelCardToPngDataUrl(product, template, printSize, settings, language) {
     return whenFontsReady().then(function () {
-      return barcodeSvgToPngDataUrl(product.barcode, template, printSize);
-    }).then(function (barcodeImageUrl) {
       var widthPx = Math.max(1080, Math.round(printSize.widthMm * 18));
       var heightPx = Math.max(660, Math.round(printSize.heightMm * 18));
       var canvas = document.createElement("canvas");
@@ -987,8 +946,38 @@
       var barcodeBoxWidth = cardWidth - leftPadding - rightPadding;
       var barcodeBoxY = cardY + Math.round(cardHeight * 0.29);
       var barcodeBoxHeight = Math.round(cardHeight * 0.48);
+      var barcodeImageX = barcodeBoxX + Math.round(barcodeBoxWidth * 0.04);
+      var barcodeImageY = barcodeBoxY + Math.round(barcodeBoxHeight * 0.08);
+      var barcodeImageWidth = barcodeBoxWidth - Math.round(barcodeBoxWidth * 0.08);
+      var barcodeImageHeight = barcodeBoxHeight - Math.round(barcodeBoxHeight * 0.16);
       var codeY = cardY + Math.round(cardHeight * 0.81);
       var categoryY = cardY + Math.round(cardHeight * 0.91);
+      var barcodeMarkup = renderBarcodeMarkup(product.barcode, {
+        width: printSize.widthMm >= 90 ? 2.45 : 2.2,
+        height: Math.max(130, Math.round(printSize.heightMm * 4.4)),
+        margin: 18,
+        lineColor: "#1f1b18"
+      });
+
+      function finishLabelImage() {
+        if (template.showBarcodeValue) {
+          context.fillStyle = "#74695d";
+          context.textAlign = "center";
+          context.textBaseline = "top";
+          context.font = "500 " + metaFontSize + "px 'Be Vietnam Pro', Arial, sans-serif";
+          context.fillText(normalizeBarcode(product.barcode), cardX + cardWidth / 2, codeY);
+          context.textAlign = "left";
+        }
+
+        if (template.showCategory) {
+          context.fillStyle = "#74695d";
+          context.textBaseline = "top";
+          context.font = "500 " + metaFontSize + "px 'Be Vietnam Pro', Arial, sans-serif";
+          context.fillText(pickLanguage("Danh mục / Category", language) + ": " + categoryLabel, cardX + leftPadding, categoryY);
+        }
+
+        return canvas.toDataURL("image/png");
+      }
 
       context.fillStyle = "#fffdf7";
       context.fillRect(0, 0, widthPx, heightPx);
@@ -1031,37 +1020,26 @@
       context.fillStyle = "#ffffff";
       context.fillRect(barcodeBoxX, barcodeBoxY, barcodeBoxWidth, barcodeBoxHeight);
 
-      if (barcodeImageUrl) {
-        return loadImageFromUrl(barcodeImageUrl).then(function (barcodeImage) {
-          context.drawImage(
-            barcodeImage,
-            barcodeBoxX + Math.round(barcodeBoxWidth * 0.05),
-            barcodeBoxY + Math.round(barcodeBoxHeight * 0.07),
-            barcodeBoxWidth - Math.round(barcodeBoxWidth * 0.1),
-            barcodeBoxHeight - Math.round(barcodeBoxHeight * 0.14)
-          );
-
-          if (template.showBarcodeValue) {
-            context.fillStyle = "#74695d";
-            context.textAlign = "center";
-            context.textBaseline = "top";
-            context.font = "500 " + metaFontSize + "px 'Be Vietnam Pro', Arial, sans-serif";
-            context.fillText(normalizeBarcode(product.barcode), cardX + cardWidth / 2, codeY);
-            context.textAlign = "left";
-          }
-
-          if (template.showCategory) {
-            context.fillStyle = "#74695d";
-            context.textBaseline = "top";
-            context.font = "500 " + metaFontSize + "px 'Be Vietnam Pro', Arial, sans-serif";
-            context.fillText(pickLanguage("Danh mục / Category", language) + ": " + categoryLabel, cardX + leftPadding, categoryY);
-          }
-
-          return canvas.toDataURL("image/png");
+      if (barcodeMarkup) {
+        var barcodeSvgDocument =
+          "<svg xmlns='http://www.w3.org/2000/svg' width='" + barcodeImageWidth + "' height='" + barcodeImageHeight + "' viewBox='0 0 " + barcodeImageWidth + " " + barcodeImageHeight + "'>" +
+          "<rect width='100%' height='100%' fill='white'/>" +
+          barcodeMarkup +
+          "</svg>";
+        var blob = new Blob([barcodeSvgDocument], { type: "image/svg+xml;charset=utf-8" });
+        var blobUrl = window.URL.createObjectURL(blob);
+        return loadImageFromUrl(blobUrl).then(function (barcodeImage) {
+          context.imageSmoothingEnabled = false;
+          context.drawImage(barcodeImage, barcodeImageX, barcodeImageY, barcodeImageWidth, barcodeImageHeight);
+          window.URL.revokeObjectURL(blobUrl);
+          return finishLabelImage();
+        }).catch(function () {
+          window.URL.revokeObjectURL(blobUrl);
+          return finishLabelImage();
         });
       }
 
-      return canvas.toDataURL("image/png");
+      return finishLabelImage();
     });
   }
 
@@ -2466,6 +2444,72 @@
       }, []);
     }
 
+    function renderLabelPageImages(productsToPrint, template, quantities) {
+      var printSize = getBarcodePrintSize(template);
+      var pages = buildLabelPageList(productsToPrint, quantities || {});
+
+      return pages.reduce(function (chain, product) {
+        return chain.then(function (images) {
+          return renderLabelCardToPngDataUrl(product, template, printSize, settings, language).then(function (labelImage) {
+            images.push({
+              product: product,
+              image: labelImage
+            });
+            return images;
+          });
+        });
+      }, Promise.resolve([]));
+    }
+
+    function buildBarcodeLabelImageDocument(labelPages, template) {
+      var printSize = getBarcodePrintSize(template);
+      var pages = (labelPages || []).map(function (page, pageIndex) {
+        return (
+          "<section class='print-label-image-page" + (pageIndex === labelPages.length - 1 ? " is-last" : "") + "'>" +
+          "<img class='print-label-image' src='" + page.image + "' alt='" + escapeHtml(page.product.name) + "' />" +
+          "</section>"
+        );
+      }).join("");
+
+      return (
+        "<!DOCTYPE html><html><head><meta charset='utf-8'><title>" + L("In tem mã vạch / Print Barcode Labels") + "</title>" +
+        "<style>" +
+        "@page{size:" + printSize.widthMm + "mm " + printSize.heightMm + "mm;margin:0}" +
+        "html,body{margin:0;padding:0;background:#fff}" +
+        "body{-webkit-print-color-adjust:exact;print-color-adjust:exact}" +
+        ".print-label-image-page{width:" + printSize.widthMm + "mm;height:" + printSize.heightMm + "mm;page-break-after:always;break-after:page;overflow:hidden;background:#fff}" +
+        ".print-label-image-page.is-last{page-break-after:auto;break-after:auto}" +
+        ".print-label-image{display:block;width:100%;height:100%;object-fit:fill}" +
+        "</style></head><body>" + pages + "</body></html>"
+      );
+    }
+
+    function openBarcodeLabelImagePreview(productsToPrint, template, quantities, popup) {
+      return renderLabelPageImages(productsToPrint, template, quantities || {}).then(function (pages) {
+        if (!pages.length) {
+          return false;
+        }
+
+        popup.document.write(buildBarcodeLabelImageDocument(pages, template));
+        popup.document.close();
+        return Promise.all(Array.from(popup.document.images || []).map(function (image) {
+          if (image.complete) {
+            return Promise.resolve();
+          }
+
+          return new Promise(function (resolve) {
+            image.onload = resolve;
+            image.onerror = resolve;
+          });
+        })).then(function () {
+          popup.focus();
+          return true;
+        });
+      }).catch(function () {
+        return false;
+      });
+    }
+
     function openBlobInNewTab(blob, fallbackName, existingWindow) {
       var blobUrl = window.URL.createObjectURL(blob);
       var popup = existingWindow || window.open("", "_blank");
@@ -2493,22 +2537,22 @@
         return Promise.resolve(false);
       }
 
-      var pages = buildLabelPageList(productsToPrint, quantities || {});
-      if (!pages.length) {
+      var pageList = buildLabelPageList(productsToPrint, quantities || {});
+      if (!pageList.length) {
         return Promise.resolve(false);
       }
 
-      var printSize = getBarcodePrintSize(template);
       var jsPDF = window.jspdf.jsPDF;
-      var pdfPageConfig = buildLabelPdfPageConfig(printSize);
+      var pdfPageConfig = buildLabelPdfPageConfig(getBarcodePrintSize(template));
       var pdf = new jsPDF(pdfPageConfig);
 
-      function drawLabelPage(product, pageIndex) {
+      function drawLabelPage(page, pageIndex) {
         if (pageIndex > 0) {
           pdf.addPage(pdfPageConfig.format);
         }
 
-        return renderLabelCardToPngDataUrl(product, template, printSize, settings, language).then(function (labelImage) {
+        return Promise.resolve().then(function () {
+          var labelImage = page.image;
           if (!labelImage) {
             return;
           }
@@ -2519,11 +2563,13 @@
         });
       }
 
-      return pages.reduce(function (chain, product, index) {
-        return chain.then(function () {
-          return drawLabelPage(product, index);
-        });
-      }, Promise.resolve()).then(function () {
+      return renderLabelPageImages(productsToPrint, template, quantities || {}).then(function (pages) {
+        return pages.reduce(function (chain, page, index) {
+          return chain.then(function () {
+            return drawLabelPage(page, index);
+          });
+        }, Promise.resolve());
+      }).then(function () {
         openBlobInNewTab(pdf.output("blob"), buildLabelPdfFileName(), existingWindow);
         return true;
       }).catch(function () {
@@ -2553,9 +2599,12 @@
           return;
         }
 
-        popup.document.write(buildBarcodeLabelDocument([barcodePreviewProduct], activeBarcodeTemplate, quantities));
-        popup.document.close();
-        popup.focus();
+        return openBarcodeLabelImagePreview([barcodePreviewProduct], activeBarcodeTemplate, quantities, popup).then(function (openedPreview) {
+          if (!openedPreview) {
+            popup.close();
+            window.alert(L("Không thể tạo file xem trước tem. / Could not generate the label preview file."));
+          }
+        });
       });
     }
 
@@ -2578,10 +2627,15 @@
           return;
         }
 
-        popup.document.write(buildBarcodeLabelDocument(productsToPrint, activeBarcodeTemplate, quantities || {}));
-        popup.document.close();
-        popup.focus();
-        popup.print();
+        openBarcodeLabelImagePreview(productsToPrint, activeBarcodeTemplate, quantities || {}, popup).then(function (openedPreview) {
+          if (!openedPreview) {
+            popup.close();
+            window.alert(L("Không thể tạo file in tem. / Could not generate the label print file."));
+            return;
+          }
+
+          popup.print();
+        });
       });
     }
 

@@ -1,45 +1,84 @@
 # ShopFlow POS
 
-A bilingual English/Vietnamese POS-style web app for small shops.
+Ứng dụng POS song ngữ Việt/Anh cho cửa hàng nhỏ (mặc định dành cho The Fruit House).
 
-## Included
+## Tính năng
 
-- Product inventory with barcode, price, and stock
-- POS cart with quantity controls
-- Barcode input flow for scanner keyboard input
-- Camera scan support for browsers with `BarcodeDetector`
-- Payment handling with change calculation
-- Receipt preview and print templates
-- Local storage for products, settings, and sales history
+- **Bán hàng (POS)**: scan barcode, giỏ hàng đa đơn, add-on, in hóa đơn nhiệt
+- **Nhập hàng** (mới): tạo phiếu PN, quản lý nhà cung cấp, cập nhật giá vốn trung bình
+- **Xuất hàng** (mới): xuất hủy / mẫu / nội bộ / chuyển kho
+- **Lưu kho** (mới): tồn hiện tại + sổ cái chuyển động + kiểm kê
+- **Tổng quan**: doanh thu, lãi gộp (CoGS), top sản phẩm
+- **In nhãn barcode** (PDF/canvas)
+- **Cloudflare D1** làm DB chính + **LocalStorage** làm cache offline-first
 
-## Run locally
+## Kiến trúc
 
-Because camera access works better on `localhost`, serve the folder with a small local server instead of opening `index.html` directly.
+| Lớp | File / thư mục |
+|---|---|
+| UI React + htm | `index.html`, `app.js`, `styles.css` |
+| Sync engine + outbox | `sync.js` |
+| API REST | `functions/api/*` (Cloudflare Pages Functions) |
+| Database | Cloudflare D1 (`shopflow-db`) |
+| Migrations | `migrations/0001_init.sql`, `migrations/0002_seed.sql` |
 
-Example:
+## Chạy local
+
+```bash
+# 1. Tạo D1 local + nạp data mẫu
+npx wrangler d1 execute shopflow-db --local --file=./migrations/0001_init.sql
+npx wrangler d1 execute shopflow-db --local --file=./migrations/0002_seed.sql
+
+# 2. Chạy dev server
+npx wrangler pages dev . --d1=DB=shopflow-db
+```
+
+Mở http://localhost:8788.
+
+Hoặc chạy thuần static (không có API D1):
 
 ```bash
 python3 -m http.server 8080
 ```
 
-Then open:
+Khi không có API, app vẫn chạy bằng LocalStorage và mọi mutation sẽ được giữ trong outbox để đẩy lên sau.
 
-`http://localhost:8080`
+## Deploy lên Cloudflare
 
-## Main files
+Xem chi tiết tại [CLOUDFLARE_DEPLOY.md](./CLOUDFLARE_DEPLOY.md).
 
-- `index.html`
-- `styles.css`
-- `app.js`
+Tóm tắt:
 
-## Cloudflare deploy
+```bash
+npx wrangler d1 create shopflow-db
+# Copy database_id vào wrangler.toml
+npx wrangler d1 execute shopflow-db --remote --file=./migrations/0001_init.sql
+npx wrangler d1 execute shopflow-db --remote --file=./migrations/0002_seed.sql
+npx wrangler pages deploy .
+```
 
-This project can be deployed directly to Cloudflare Pages because it is a static site.
+## API tóm tắt
 
-Quick setup:
+| Endpoint | Mô tả |
+|---|---|
+| `GET  /api/products` | Danh sách sản phẩm + tồn kho |
+| `POST /api/products` | Upsert sản phẩm |
+| `DELETE /api/products/:id` | Soft delete |
+| `GET  /api/inventory` | Tồn hiện tại |
+| `GET  /api/inventory/movements` | Sổ cái stock movements |
+| `GET/POST /api/categories` | Danh mục |
+| `GET/POST /api/addons` | Add-ons |
+| `GET/POST /api/suppliers` | Nhà cung cấp |
+| `GET/POST /api/purchases` | Nhập hàng (PN) |
+| `GET  /api/purchases/:id` | Chi tiết phiếu nhập |
+| `GET/POST /api/issues` | Xuất hàng (PX) |
+| `GET  /api/issues/:id` | Chi tiết phiếu xuất |
+| `GET/POST /api/sales` | Bán hàng (HD) |
+| `GET  /api/sales/:id` | Chi tiết hóa đơn |
+| `GET  /api/reports/summary?from&to` | Tổng quan doanh thu/lãi |
+| `GET  /api/reports/low-stock` | Sản phẩm dưới mức tối thiểu |
+| `GET/POST /api/settings` | Cấu hình cửa hàng |
+| `GET  /api/sync/pull?since=` | Delta đồng bộ |
+| `POST /api/sync/push` | Đẩy batch outbox |
 
-- Framework preset: `None`
-- Build output directory: `.`
-- No build step is required
-
-See [CLOUDFLARE_DEPLOY.md](/Users/charlotte/Desktop/NGÂN HÀ/CTY TechGalaxy Group/SHOPPROGRAM/CLOUDFLARE_DEPLOY.md) for full instructions.
+Mọi POST tạo dữ liệu mới nên kèm `clientOpId` (UUID) để chống trùng (idempotency).

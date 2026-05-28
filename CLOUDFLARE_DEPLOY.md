@@ -1,82 +1,109 @@
-# Deploy Cloudflare Pages
+# Deploy lên Cloudflare Pages + D1
 
-Project path:
+Ứng dụng giờ gồm 2 phần:
 
-`/Users/charlotte/Desktop/NGÂN HÀ/CTY TechGalaxy Group/SHOPPROGRAM`
+1. **Static frontend** ở thư mục gốc (`index.html`, `app.js`, `styles.css`, `sync.js`).
+2. **Pages Functions API** trong `functions/api/*` đọc/ghi vào **Cloudflare D1**.
 
-## Current file format
+Kiến trúc:
 
-This project is a static site and is already in the correct format for Cloudflare Pages:
-
-```text
-SHOPPROGRAM/
-  index.html
-  styles.css
-  app.js
-  README.md
-  wrangler.toml
+```
+Browser ──► /api/* (Pages Functions) ──► Cloudflare D1 (shopflow-db)
+        ▲                                  ▲
+        └─ LocalStorage cache + outbox khi mất mạng
 ```
 
-Important:
-
-- `index.html` must stay at the top level.
-- `styles.css` and `app.js` must stay beside `index.html`.
-- No build step is required.
-
-## Option 1: Direct Upload from Cloudflare dashboard
-
-Use this if you want the fastest deploy.
-
-1. Open Cloudflare Dashboard.
-2. Go to `Workers & Pages`.
-3. Click `Create application`.
-4. Choose `Pages`.
-5. Choose `Drag and drop your files`.
-6. Upload this whole folder or a `.zip` made from this folder.
-7. Set your project name, for example: `shopprogram`.
-8. Click `Deploy site`.
-
-Your site will be published on:
-
-`https://<project-name>.pages.dev`
-
-## Option 2: Deploy with Wrangler CLI
-
-Use this if you want to redeploy from terminal later.
-
-### First time
+## 1. Cài Wrangler (lần đầu)
 
 ```bash
-cd "/Users/charlotte/Desktop/NGÂN HÀ/CTY TechGalaxy Group/SHOPPROGRAM"
+npm install --global wrangler
 npx wrangler login
-npx wrangler pages project create shopprogram
 ```
 
-When asked for production branch, you can use:
-
-`main`
-
-### Deploy
+## 2. Tạo D1 database
 
 ```bash
-cd "/Users/charlotte/Desktop/NGÂN HÀ/CTY TechGalaxy Group/SHOPPROGRAM"
+npx wrangler d1 create shopflow-db
+```
+
+Lệnh in ra một block giống:
+
+```toml
+[[d1_databases]]
+binding = "DB"
+database_name = "shopflow-db"
+database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+```
+
+Copy `database_id` đó dán vào `wrangler.toml` (thay chuỗi `REPLACE_WITH_DATABASE_ID`).
+
+## 3. Chạy migration + seed
+
+```bash
+# Tạo bảng
+npx wrangler d1 execute shopflow-db --remote --file=./migrations/0001_init.sql
+
+# Nạp dữ liệu mẫu (giống DEFAULT_PRODUCTS trong app.js)
+npx wrangler d1 execute shopflow-db --remote --file=./migrations/0002_seed.sql
+```
+
+Bỏ `--remote` nếu muốn dùng D1 local trong khi dev với `wrangler pages dev`.
+
+## 4. Deploy Pages
+
+### Option A — Lệnh CLI
+
+```bash
 npx wrangler pages deploy .
 ```
 
-Because this is a plain static site, the output directory is:
+Cloudflare sẽ tự nhận thư mục `functions/` và build Pages Functions kèm static site.
 
-`.`
-
-## If you use GitHub + Cloudflare Pages
-
-If you connect this project with Git integration, use:
+### Option B — Git integration
 
 - Framework preset: `None`
-- Build command: leave empty if Cloudflare allows it, or use `exit 0`
+- Build command: để trống (hoặc `exit 0`)
 - Build output directory: `.`
+- Functions directory: `functions` (mặc định)
+- Bindings: thêm D1 binding `DB` -> `shopflow-db` trong Settings của project.
+
+## 5. Test API
+
+Sau khi deploy, mở:
+
+```
+https://<project>.pages.dev/api/products
+https://<project>.pages.dev/api/inventory
+https://<project>.pages.dev/api/sync/pull?since=0
+```
+
+Nếu trả về `{"ok":true,"products":[...]}` là đã thông.
+
+## 6. Local development
+
+```bash
+npx wrangler pages dev . --d1=DB=shopflow-db
+```
+
+Mở http://localhost:8788. D1 dev sẽ là một file SQLite cục bộ; chạy lại migration với:
+
+```bash
+npx wrangler d1 execute shopflow-db --local --file=./migrations/0001_init.sql
+npx wrangler d1 execute shopflow-db --local --file=./migrations/0002_seed.sql
+```
+
+## 7. Sao lưu / khôi phục D1
+
+```bash
+# Dump
+npx wrangler d1 export shopflow-db --remote --output=backup.sql
+
+# Import
+npx wrangler d1 execute shopflow-db --remote --file=backup.sql
+```
 
 ## Notes
 
-- Camera scan works best on real HTTPS or localhost.
-- Browser local storage data is per domain, so your Cloudflare live site will have its own saved inventory/settings separate from localhost.
-- If you use Direct Upload now, Cloudflare does not let that project switch to Git integration later. In that case, create a new Pages project if you want Git-based auto deploys.
+- Camera quét barcode chỉ hoạt động trên HTTPS hoặc `localhost`.
+- LocalStorage vẫn là cache; khi mất mạng, mọi mutation đi vào outbox (`shopflow-outbox`) và sẽ tự đẩy lên D1 khi có mạng trở lại.
+- Mỗi mutation gửi kèm `clientOpId` (UUID). Bảng `sync_log` ở D1 đảm bảo không bị trùng hóa đơn khi sync.

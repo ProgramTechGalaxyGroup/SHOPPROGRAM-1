@@ -1,0 +1,1232 @@
+[
+  {
+    "results": [
+      {
+        "id": "ORIA61001",
+        "name": "PHO GA DE NHAT ACE 67G",
+        "category_id": "snacks",
+        "price": 12000,
+        "unit": "Gói",
+        "sku_code": "ORIA61001"
+      },
+      {
+        "id": "ORIA61002",
+        "name": "MI UDON SUKI SUKI NHAT BAN 75G",
+        "category_id": "snacks",
+        "price": 13000,
+        "unit": null,
+        "sku_code": "ORIA61002"
+      },
+      {
+        "id": "ORIA61003",
+        "name": "MI LY XOT TUONG DEN OTOKI 70G",
+        "category_id": "snacks",
+        "price": 22000,
+        "unit": null,
+        "sku_code": "ORIA61003"
+      },
+      {
+        "id": "ORIA61004",
+        "name": "MI LY SHIN NONGSHIM 68G",
+        "category_id": "snacks",
+        "price": 32000,
+        "unit": "LY",
+        "sku_code": "ORIA61004"
+      },
+      {
+        "id": "ORIA61005",
+        "name": "MI JIN XOT TUONG DEN 135G",
+        "category_id": "snacks",
+        "price": 28000,
+        "unit": "Chai",
+        "sku_code": "ORIA61005"
+      },
+      {
+        "id": "ORIA61006",
+        "name": "MI SHIN RAMYUN 120G",
+        "category_id": "snacks",
+        "price": 33000,
+        "unit": "Gói",
+        "sku_code": "ORIA61006"
+      },
+      {
+        "id": "ORIA61007",
+        "name": "MI LY MODERN L.THAI TOM67G",
+        "category_id": "snacks",
+        "price": 12000,
+        "unit": "LY",
+        "sku_code": "ORIA61007"
+      },
+      {
+        "id": "ORIA61008",
+        "name": "MIEN S.HEO PHU HUONG ACE55G",
+        "category_id": "snacks",
+        "price": 15000,
+        "unit": null,
+        "sku_code": "ORIA61008"
+      },
+      {
+        "id": "ORIA61009",
+        "name": "TOKPOKKI PHO MAI O FOOD 105G*3",
+        "category_id": "snacks",
+        "price": 30000,
+        "unit": "Hộp",
+        "sku_code": "ORIA61009"
+      },
+      {
+        "id": "ORIA61010",
+        "name": "R.BIEN TRON K.GA OFOOD 30/40G",
+        "category_id": "snacks",
+        "price": 49500,
+        "unit": null,
+        "sku_code": "ORIA61010"
+      },
+      {
+        "id": "ORIA61011",
+        "name": "R.BIEN TRON H.SAN OFOOD30/40G",
+        "category_id": "snacks",
+        "price": 55000,
+        "unit": null,
+        "sku_code": "ORIA61011"
+      },
+      {
+        "id": "ORIA61012",
+        "name": "R.BIEN TRON NNHAN OFOOD30/40G",
+        "category_id": "snacks",
+        "price": 55000,
+        "unit": null,
+        "sku_code": "ORIA61012"
+      },
+      {
+        "id": "ORIA61013",
+        "name": "L.KIM OFOOD T.DAU OLIU",
+        "category_id": "snacks",
+        "price": 10000,
+        "unit": null,
+        "sku_code": "ORIA61013"
+      },
+      {
+        "id": "ORIA61014",
+        "name": "B.OREO SCL VAN 110.4/105G",
+        "category_id": "snacks",
+        "price": 21000,
+        "unit": null,
+        "sku_code": "ORIA61014"
+      },
+      {
+        "id": "ORIA61015",
+        "name": "B.OREO KEM V.QUAT110.4/105G",
+        "category_id": "snacks",
+        "price": 22000,
+        "unit": "Gói",
+        "sku_code": "ORIA61015"
+      },
+      {
+        "id": "ORIA61016",
+        "name": "B.OREO SOCOLA 110.4/105G",
+        "category_id": "snacks",
+        "price": 22000,
+        "unit": null,
+        "sku_code": "ORIA61016"
+      },
+      {
+        "id": "ORIA61017",
+        "name": "KHOAITAYCHIEN SLIDEORIGINAL60G",
+        "category_id": "snacks",
+        "price": 36500,
+        "unit": null,
+        "sku_code": "ORIA61017"
+      },
+      {
+        "id": "ORIA61018",
+        "name": "KTC SLIDE PHO MAI 65G/60G/75G",
+        "category_id": "snacks",
+        "price": 36500,
+        "unit": null,
+        "sku_code": "ORIA61018"
+      },
+      {
+        "id": "ORIA61019",
+        "name": "KTC SLIDE HOT&SPICY65G/60G/75G",
+        "category_id": "snacks",
+        "price": 37000,
+        "unit": null,
+        "sku_code": "ORIA61019"
+      },
+      {
+        "id": "ORIA61020",
+        "name": "KTC SLIDE SOUR CR 65G/60G",
+        "category_id": "snacks",
+        "price": 38000,
+        "unit": null,
+        "sku_code": "ORIA61020"
+      },
+      {
+        "id": "ORIA61021",
+        "name": "KTC SLIDE BBQ 65G/60G",
+        "category_id": "snacks",
+        "price": 38000,
+        "unit": null,
+        "sku_code": "ORIA61021"
+      },
+      {
+        "id": "ORIA61022",
+        "name": "B.QUE MIX VI TTHONG 150G",
+        "category_id": "snacks",
+        "price": 46500,
+        "unit": null,
+        "sku_code": "ORIA61022"
+      },
+      {
+        "id": "ORIA61023",
+        "name": "B.QUE MIX GA CAY 25/20G",
+        "category_id": "snacks",
+        "price": 8000,
+        "unit": "Gói",
+        "sku_code": "ORIA61023"
+      },
+      {
+        "id": "ORIA61024",
+        "name": "B.QUE DO BACON STICK 20G",
+        "category_id": "snacks",
+        "price": 10000,
+        "unit": "Gói",
+        "sku_code": "ORIA61024"
+      },
+      {
+        "id": "ORIA61025",
+        "name": "B.QUE CAM BACON STICK 20G131",
+        "category_id": "snacks",
+        "price": 11000,
+        "unit": null,
+        "sku_code": "ORIA61025"
+      },
+      {
+        "id": "ORIA61026",
+        "name": "SNACK TOM RUAY PUAN 20G",
+        "category_id": "snacks",
+        "price": 7000,
+        "unit": "Gói",
+        "sku_code": "ORIA61026"
+      },
+      {
+        "id": "ORIA61027",
+        "name": "SNACK TOM V.THINH HANAMI 110G",
+        "category_id": "snacks",
+        "price": 76000,
+        "unit": null,
+        "sku_code": "ORIA61027"
+      },
+      {
+        "id": "ORIA61028",
+        "name": "BANH TRANG TAN NHIEN OCOP 250G",
+        "category_id": "snacks",
+        "price": 31000,
+        "unit": null,
+        "sku_code": "ORIA61028"
+      },
+      {
+        "id": "ORIA61029",
+        "name": "BANH CHOCOPIEORION 36.3G*12GOI",
+        "category_id": "snacks",
+        "price": 6000,
+        "unit": null,
+        "sku_code": "ORIA61029"
+      },
+      {
+        "id": "ORIA61030",
+        "name": "ORION CUSTAS G.DUONG 23.5G*12",
+        "category_id": "snacks",
+        "price": 8000,
+        "unit": null,
+        "sku_code": "ORIA61030"
+      },
+      {
+        "id": "ORIA61031",
+        "name": "G.XYLITOL SP COOL 55.1G",
+        "category_id": "snacks",
+        "price": 35000,
+        "unit": "Hộp",
+        "sku_code": "ORIA61031"
+      },
+      {
+        "id": "ORIA61032",
+        "name": "KEO THE VIDUAHAU PLAYMORE22G*1",
+        "category_id": "snacks",
+        "price": 37000,
+        "unit": null,
+        "sku_code": "ORIA61032"
+      },
+      {
+        "id": "ORIA61033",
+        "name": "KEO PLAYMORE DAU TAY 22G_COC",
+        "category_id": "snacks",
+        "price": 37000,
+        "unit": null,
+        "sku_code": "ORIA61033"
+      },
+      {
+        "id": "ORIA62002",
+        "name": "N.T.KHIET DASANI 350ML*1CH",
+        "category_id": "beverages",
+        "price": 5000,
+        "unit": null,
+        "sku_code": "ORIA62002"
+      },
+      {
+        "id": "ORIA62003",
+        "name": "NTT AQUARIUS K.CALO 390ML",
+        "category_id": "beverages",
+        "price": 10000,
+        "unit": "Chai",
+        "sku_code": "ORIA62003"
+      },
+      {
+        "id": "ORIA62004",
+        "name": "NGK SPRITE SLEEK 320ML",
+        "category_id": "beverages",
+        "price": 14000,
+        "unit": "Lon",
+        "sku_code": "ORIA62004"
+      },
+      {
+        "id": "ORIA62005",
+        "name": "N.N. COCA LIGHT SLEEK 320ML",
+        "category_id": "beverages",
+        "price": 15000,
+        "unit": "Lon",
+        "sku_code": "ORIA62005"
+      },
+      {
+        "id": "ORIA62006",
+        "name": "NGK COCA VANI K.DUONG 320ML",
+        "category_id": "beverages",
+        "price": 15000,
+        "unit": "Lon",
+        "sku_code": "ORIA62006"
+      },
+      {
+        "id": "ORIA62007",
+        "name": "NTL REDBULL THAI KEM 250ML",
+        "category_id": "beverages",
+        "price": 15500,
+        "unit": "Lon",
+        "sku_code": "ORIA62007"
+      },
+      {
+        "id": "ORIA62008",
+        "name": "NUOC T.KHIETAQUAFINA355ML",
+        "category_id": "beverages",
+        "price": 6000,
+        "unit": "Chai",
+        "sku_code": "ORIA62008"
+      },
+      {
+        "id": "ORIA62009",
+        "name": "BIA TIGER CRYSTAL 330ML",
+        "category_id": "beverages",
+        "price": 25000,
+        "unit": "Lon",
+        "sku_code": "ORIA62009"
+      },
+      {
+        "id": "ORIA62010",
+        "name": "BIA HEINEKEN SILVER 330ML",
+        "category_id": "beverages",
+        "price": 27000,
+        "unit": "Lon",
+        "sku_code": "ORIA62010"
+      },
+      {
+        "id": "ORIA62011",
+        "name": "MILO UHT 115/110ML*4HOP (Pack of 4)",
+        "category_id": "beverages",
+        "price": 8000,
+        "unit": "Hộp",
+        "sku_code": "ORIA62011"
+      },
+      {
+        "id": "ORIA62012",
+        "name": "MILO UHT IT DUONG 115/110ML*4H (Pack of 4)",
+        "category_id": "beverages",
+        "price": 8000,
+        "unit": "Hộp",
+        "sku_code": "ORIA62012"
+      },
+      {
+        "id": "ORIA62013",
+        "name": "MILO UHT IT DUONG 180ML*4 (Pack of 4)",
+        "category_id": "beverages",
+        "price": 12000,
+        "unit": "Hộp",
+        "sku_code": "ORIA62013"
+      },
+      {
+        "id": "ORIA62014",
+        "name": "MILO UHT 180ML*8HOP (Pack of 8)",
+        "category_id": "beverages",
+        "price": 12000,
+        "unit": "Hộp",
+        "sku_code": "ORIA62014"
+      },
+      {
+        "id": "ORIA62015",
+        "name": "CACAO MILO 3IN1 22G",
+        "category_id": "beverages",
+        "price": 6000,
+        "unit": "Gói",
+        "sku_code": "ORIA62015"
+      },
+      {
+        "id": "ORIA62016",
+        "name": "NESCAFE 3IN1 NG",
+        "category_id": "beverages",
+        "price": 5000,
+        "unit": "Gói",
+        "sku_code": "ORIA62016"
+      },
+      {
+        "id": "ORIA62017",
+        "name": "BNC NESVITA 25G*14",
+        "category_id": "beverages",
+        "price": 7000,
+        "unit": null,
+        "sku_code": "ORIA62017"
+      },
+      {
+        "id": "ORIA62018",
+        "name": "NGU COC TRAI CAY CALBEE 450G",
+        "category_id": "beverages",
+        "price": 251000,
+        "unit": "Túi",
+        "sku_code": "ORIA62018"
+      },
+      {
+        "id": "ORIA62019",
+        "name": "N.COC T.CAY CALBEE ITDUONG600G",
+        "category_id": "beverages",
+        "price": 409000,
+        "unit": "Túi",
+        "sku_code": "ORIA62019"
+      },
+      {
+        "id": "ORIA63002",
+        "name": "TUONG OT CHINSU 250G*1(NAM)",
+        "category_id": "pantry",
+        "price": 23000,
+        "unit": null,
+        "sku_code": "ORIA63002"
+      },
+      {
+        "id": "ORIA63003",
+        "name": "N.TUONG DAM DAC MAGGI 300ML",
+        "category_id": "pantry",
+        "price": 22000,
+        "unit": null,
+        "sku_code": "ORIA63003"
+      },
+      {
+        "id": "ORIA63004",
+        "name": "SDCD ONG THO DO TUYP 165G",
+        "category_id": "pantry",
+        "price": 29000,
+        "unit": null,
+        "sku_code": "ORIA63004"
+      },
+      {
+        "id": "ORIA63005",
+        "name": "SUA DAC ONG THO DO HG 380G",
+        "category_id": "pantry",
+        "price": 37000,
+        "unit": "Hộp",
+        "sku_code": "ORIA63005"
+      },
+      {
+        "id": "ORIA63006",
+        "name": "S.DAC VI NHUA ONG-THO DO40G",
+        "category_id": "pantry",
+        "price": 8000,
+        "unit": "Hộp",
+        "sku_code": "ORIA63006"
+      },
+      {
+        "id": "ORIA63007",
+        "name": "XOT MAYONNAISE AJI NGOTDIU260G",
+        "category_id": "pantry",
+        "price": 49000,
+        "unit": null,
+        "sku_code": "ORIA63007"
+      },
+      {
+        "id": "ORIA63008",
+        "name": "XOT MERANG KEWPIE 210ML*2",
+        "category_id": "pantry",
+        "price": 73000,
+        "unit": null,
+        "sku_code": "ORIA63008"
+      },
+      {
+        "id": "ORIA63009",
+        "name": "N.MAM THANH QUOC40N60ML*6-OCOP",
+        "category_id": "pantry",
+        "price": 23000,
+        "unit": null,
+        "sku_code": "ORIA63009"
+      },
+      {
+        "id": "ORIA63010",
+        "name": "CA MOI/TRICH/NUC 3 COGAI 155G*10",
+        "category_id": "pantry",
+        "price": 25000,
+        "unit": null,
+        "sku_code": "ORIA63010"
+      },
+      {
+        "id": "ORIA63011",
+        "name": "BO THUC VAT MEIZAN 80G*5",
+        "category_id": "pantry",
+        "price": 14000,
+        "unit": null,
+        "sku_code": "ORIA63011"
+      },
+      {
+        "id": "ORIA63012",
+        "name": "DAU NANH SIMPLY 1L",
+        "category_id": "pantry",
+        "price": 88000,
+        "unit": "Chai",
+        "sku_code": "ORIA63012"
+      },
+      {
+        "id": "ORIA63013",
+        "name": "HATNEM CHAY NAMHUONG KNORR170G",
+        "category_id": "pantry",
+        "price": 25000,
+        "unit": null,
+        "sku_code": "ORIA63013"
+      },
+      {
+        "id": "ORIA63014",
+        "name": "BOT GAO TAI KY 400GR",
+        "category_id": "pantry",
+        "price": 25000,
+        "unit": "Gói",
+        "sku_code": "ORIA63014"
+      },
+      {
+        "id": "ORIA63015",
+        "name": "BOT NEP TAI KY 400GR",
+        "category_id": "pantry",
+        "price": 30000,
+        "unit": "Gói",
+        "sku_code": "ORIA63015"
+      },
+      {
+        "id": "ORIA63016",
+        "name": "BOT KHOAI TRANG DDTHUAN 200G",
+        "category_id": "pantry",
+        "price": 21000,
+        "unit": null,
+        "sku_code": "ORIA63016"
+      },
+      {
+        "id": "ORIA63017",
+        "name": "BOT DAU XANH HAT SEN MM 35G",
+        "category_id": "pantry",
+        "price": 5000,
+        "unit": "Gói",
+        "sku_code": "ORIA63017"
+      },
+      {
+        "id": "ORIA63018",
+        "name": "PHO TAI DDTHUAN 100G",
+        "category_id": "pantry",
+        "price": 41000,
+        "unit": null,
+        "sku_code": "ORIA63018"
+      },
+      {
+        "id": "ORIA63019",
+        "name": "TAO KHO DD.THUAN 100 GR",
+        "category_id": "pantry",
+        "price": 25000,
+        "unit": null,
+        "sku_code": "ORIA63019"
+      },
+      {
+        "id": "ORIA63020",
+        "name": "HAT E DDTHUAN 100G",
+        "category_id": "pantry",
+        "price": 31000,
+        "unit": null,
+        "sku_code": "ORIA63020"
+      },
+      {
+        "id": "ORIA63021",
+        "name": "HAT TIEU DEN EZ LIFE 40G",
+        "category_id": "pantry",
+        "price": 19000,
+        "unit": null,
+        "sku_code": "ORIA63021"
+      },
+      {
+        "id": "ORIA63022",
+        "name": "DAU XANH CA MM 1KG",
+        "category_id": "pantry",
+        "price": 80000,
+        "unit": null,
+        "sku_code": "ORIA63022"
+      },
+      {
+        "id": "ORIA63023",
+        "name": "D.PHEN HAT N.CHAT DANG THU 1KG",
+        "category_id": "pantry",
+        "price": 80000,
+        "unit": "Gói",
+        "sku_code": "ORIA63023"
+      },
+      {
+        "id": "ORIA63024",
+        "name": "MUOI HONG HAT TO EZ LIFE CANKG (per kg)",
+        "category_id": "pantry",
+        "price": 45000,
+        "unit": null,
+        "sku_code": "ORIA63024"
+      },
+      {
+        "id": "ORIA63025",
+        "name": "MUOI HONG MIN EZ LIFE CAN KG (per kg)",
+        "category_id": "pantry",
+        "price": 45000,
+        "unit": "Gói",
+        "sku_code": "ORIA63025"
+      },
+      {
+        "id": "ORIA63026",
+        "name": "DAU DEN X.LONG EZ LIFE CAN KG (per kg)",
+        "category_id": "pantry",
+        "price": 130000,
+        "unit": null,
+        "sku_code": "ORIA63026"
+      },
+      {
+        "id": "ORIA63027",
+        "name": "DAU DO MAT CUA EZ LIFE CAN KG (per kg)",
+        "category_id": "pantry",
+        "price": 130000,
+        "unit": null,
+        "sku_code": "ORIA63027"
+      },
+      {
+        "id": "ORIA63028",
+        "name": "HAT HUONG DUONG HB-XA (per kg)",
+        "category_id": "pantry",
+        "price": 200000,
+        "unit": null,
+        "sku_code": "ORIA63028"
+      },
+      {
+        "id": "ORIA63029",
+        "name": "HAT BI HB-XA (per kg)",
+        "category_id": "pantry",
+        "price": 250000,
+        "unit": null,
+        "sku_code": "ORIA63029"
+      },
+      {
+        "id": "ORIA63030",
+        "name": "DUONG VANG GOLD MINERAL BH 1KG",
+        "category_id": "pantry",
+        "price": 45000,
+        "unit": null,
+        "sku_code": "ORIA63030"
+      },
+      {
+        "id": "ORIA63031",
+        "name": "DA ME TAN LOC 900G",
+        "category_id": "pantry",
+        "price": 110000,
+        "unit": null,
+        "sku_code": "ORIA63031"
+      },
+      {
+        "id": "ORIA63032",
+        "name": "VẢI THIEU FOODCLUB LON 565G",
+        "category_id": "pantry",
+        "price": 50000,
+        "unit": null,
+        "sku_code": "ORIA63032"
+      },
+      {
+        "id": "ORIA64002",
+        "name": "TAM CHI KR ORALCLEAN DENTALUSH",
+        "category_id": "personal-care",
+        "price": 45000,
+        "unit": null,
+        "sku_code": "ORIA64002"
+      },
+      {
+        "id": "ORIA64003",
+        "name": "BAN CHAI DANH RANG HPR VI 12",
+        "category_id": "personal-care",
+        "price": 12000,
+        "unit": null,
+        "sku_code": "ORIA64003"
+      },
+      {
+        "id": "ORIA64004",
+        "name": "BCDR TRE EM JORDAN STEP 1",
+        "category_id": "personal-care",
+        "price": 45000,
+        "unit": null,
+        "sku_code": "ORIA64004"
+      },
+      {
+        "id": "ORIA64005",
+        "name": "BCDR TRE EM JORDAN STEP 2",
+        "category_id": "personal-care",
+        "price": 50000,
+        "unit": null,
+        "sku_code": "ORIA64005"
+      },
+      {
+        "id": "ORIA64006",
+        "name": "BCDR TRE EM JORDAN STEP 3",
+        "category_id": "personal-care",
+        "price": 45000,
+        "unit": null,
+        "sku_code": "ORIA64006"
+      },
+      {
+        "id": "ORIA64007",
+        "name": "BCDR SENSODYNE REPAIR& PROTECT 1C",
+        "category_id": "personal-care",
+        "price": 55000,
+        "unit": null,
+        "sku_code": "ORIA64007"
+      },
+      {
+        "id": "ORIA64008",
+        "name": "KDR P/S TRE EM 2-6T H. CAM 45G",
+        "category_id": "personal-care",
+        "price": 25000,
+        "unit": null,
+        "sku_code": "ORIA64008"
+      },
+      {
+        "id": "ORIA64009",
+        "name": "KDR P/S TRE EM 2-6T H.DAU 45G",
+        "category_id": "personal-care",
+        "price": 26000,
+        "unit": "Tuýp",
+        "sku_code": "ORIA64009"
+      },
+      {
+        "id": "ORIA64010",
+        "name": "KDR KODOMO TRE EM CAM 45G",
+        "category_id": "personal-care",
+        "price": 27500,
+        "unit": null,
+        "sku_code": "ORIA64010"
+      },
+      {
+        "id": "ORIA64011",
+        "name": "KDR COL MF H. DUA HAU 100G",
+        "category_id": "personal-care",
+        "price": 53000,
+        "unit": "Tuýp",
+        "sku_code": "ORIA64011"
+      },
+      {
+        "id": "ORIA64012",
+        "name": "KDR CLOSEUP WN MNING KISS 100G",
+        "category_id": "personal-care",
+        "price": 69000,
+        "unit": "Tuýp",
+        "sku_code": "ORIA64012"
+      },
+      {
+        "id": "ORIA64013",
+        "name": "KDR CLOSEUP WN BEAU. GLOW 100G",
+        "category_id": "personal-care",
+        "price": 69000,
+        "unit": "Tuýp",
+        "sku_code": "ORIA64013"
+      },
+      {
+        "id": "ORIA64014",
+        "name": "KDR COLGATE TRANGSANG 100G",
+        "category_id": "personal-care",
+        "price": 65000,
+        "unit": "Tuýp",
+        "sku_code": "ORIA64014"
+      },
+      {
+        "id": "ORIA64015",
+        "name": "NSM LISTERINE COOL MINT 100ML",
+        "category_id": "personal-care",
+        "price": 39000,
+        "unit": "Chai",
+        "sku_code": "ORIA64015"
+      },
+      {
+        "id": "ORIA64016",
+        "name": "DCR DORCO RAPID2 TNB200YL4S 1L",
+        "category_id": "personal-care",
+        "price": 32000,
+        "unit": null,
+        "sku_code": "ORIA64016"
+      },
+      {
+        "id": "ORIA64017",
+        "name": "KEM CAO RAU GILLETTE LIME 50G",
+        "category_id": "personal-care",
+        "price": 75000,
+        "unit": "Tuýp",
+        "sku_code": "ORIA64017"
+      },
+      {
+        "id": "ORIA64018",
+        "name": "BVS KOTEX DANG QUAN L/XL 2M",
+        "category_id": "personal-care",
+        "price": 48000,
+        "unit": null,
+        "sku_code": "ORIA64018"
+      },
+      {
+        "id": "ORIA64019",
+        "name": "BVS KOTEX QUAN HERBAL L/XL 2M",
+        "category_id": "personal-care",
+        "price": 50000,
+        "unit": null,
+        "sku_code": "ORIA64019"
+      },
+      {
+        "id": "ORIA64020",
+        "name": "BVS KOTEX QUAN COOL M/L 2M",
+        "category_id": "personal-care",
+        "price": 65000,
+        "unit": "Gói",
+        "sku_code": "ORIA64020"
+      },
+      {
+        "id": "ORIA64021",
+        "name": "BUS LAURIER B.DEM 35CM 4M*4",
+        "category_id": "personal-care",
+        "price": 35000,
+        "unit": null,
+        "sku_code": "ORIA64021"
+      },
+      {
+        "id": "ORIA64022",
+        "name": "BUS LAURIER SMONG 22.5CM 10M*4",
+        "category_id": "personal-care",
+        "price": 50000,
+        "unit": null,
+        "sku_code": "ORIA64022"
+      },
+      {
+        "id": "ORIA64023",
+        "name": "BUS DIANA SENSI HNGAY KK 20M*6",
+        "category_id": "personal-care",
+        "price": 25000,
+        "unit": null,
+        "sku_code": "ORIA64023"
+      },
+      {
+        "id": "ORIA64024",
+        "name": "BVS SOFY SKIN C.ULTRA 26CM 17M",
+        "category_id": "personal-care",
+        "price": 112000,
+        "unit": "Gói",
+        "sku_code": "ORIA64024"
+      },
+      {
+        "id": "ORIA64025",
+        "name": "K.TRANG MAYAN3D PM2.5 KIDS++*5",
+        "category_id": "personal-care",
+        "price": 40000,
+        "unit": "Gói",
+        "sku_code": "ORIA64025"
+      },
+      {
+        "id": "ORIA64026",
+        "name": "TAM RAI TAI MM 200 CAY*2",
+        "category_id": "personal-care",
+        "price": 17000,
+        "unit": "Gói",
+        "sku_code": "ORIA64026"
+      },
+      {
+        "id": "ORIA64027",
+        "name": "TAM RAY TAI MM TRE EM 160CAY*2",
+        "category_id": "personal-care",
+        "price": 18000,
+        "unit": null,
+        "sku_code": "ORIA64027"
+      },
+      {
+        "id": "ORIA64028",
+        "name": "DAY CHA LUNG BESICO YK06",
+        "category_id": "personal-care",
+        "price": 36000,
+        "unit": "Cái",
+        "sku_code": "ORIA64028"
+      },
+      {
+        "id": "ORIA64029",
+        "name": "BANG DO VAI BESICO YK12",
+        "category_id": "personal-care",
+        "price": 47000,
+        "unit": "Cái",
+        "sku_code": "ORIA64029"
+      },
+      {
+        "id": "ORIA65002",
+        "name": "BO OMO DO 800/770G",
+        "category_id": "household",
+        "price": 55000,
+        "unit": null,
+        "sku_code": "ORIA65002"
+      },
+      {
+        "id": "ORIA65003",
+        "name": "BQ PRO THAI SACH HIEUQUA 4.5KG",
+        "category_id": "household",
+        "price": 170000,
+        "unit": "Gói",
+        "sku_code": "ORIA65003"
+      },
+      {
+        "id": "ORIA65004",
+        "name": "XBT VIM D.NANG SIEU MANH500ML",
+        "category_id": "household",
+        "price": 53000,
+        "unit": "Chai",
+        "sku_code": "ORIA65004"
+      },
+      {
+        "id": "ORIA65005",
+        "name": "VIEN TREO BC VIM LAVENDER 55G",
+        "category_id": "household",
+        "price": 37000,
+        "unit": "Cái",
+        "sku_code": "ORIA65005"
+      },
+      {
+        "id": "ORIA65006",
+        "name": "VIEN TREO BC VIM TX&CHANH 55G",
+        "category_id": "household",
+        "price": 37000,
+        "unit": "Cái",
+        "sku_code": "ORIA65006"
+      },
+      {
+        "id": "ORIA65007",
+        "name": "SAP THOM AMBIPUR H.BI 180G*2",
+        "category_id": "household",
+        "price": 89000,
+        "unit": "Cái",
+        "sku_code": "ORIA65007"
+      },
+      {
+        "id": "ORIA65008",
+        "name": "NON BAO HIEM CHITA CT54",
+        "category_id": "household",
+        "price": 200000,
+        "unit": "Cái",
+        "sku_code": "ORIA65008"
+      },
+      {
+        "id": "ORIA66002",
+        "name": "DUA BO DE TACH 20CM -20 D/GOI",
+        "category_id": "packaging",
+        "price": 35000,
+        "unit": "Gói",
+        "sku_code": "ORIA66002"
+      },
+      {
+        "id": "ORIA66003",
+        "name": "BICH100 MUONGGO KOKUSAI-006484 10C",
+        "category_id": "packaging",
+        "price": 18000,
+        "unit": null,
+        "sku_code": "ORIA66003"
+      },
+      {
+        "id": "ORIA66004",
+        "name": "LY GIAY HNF 30Z* 10C",
+        "category_id": "packaging",
+        "price": 15000,
+        "unit": "Gói",
+        "sku_code": "ORIA66004"
+      },
+      {
+        "id": "ORIA66005",
+        "name": "LY GIAY HNF 22OZ*5C",
+        "category_id": "packaging",
+        "price": 25000,
+        "unit": "Gói",
+        "sku_code": "ORIA66005"
+      },
+      {
+        "id": "ORIA66006",
+        "name": "LY BAMIA GRACZ L051 260ML-10",
+        "category_id": "packaging",
+        "price": 32000,
+        "unit": "Gói",
+        "sku_code": "ORIA66006"
+      },
+      {
+        "id": "ORIA66007",
+        "name": "TOGIAY TRON MMPRO 2PE 70Z*10",
+        "category_id": "packaging",
+        "price": 26000,
+        "unit": "Gói",
+        "sku_code": "ORIA66007"
+      },
+      {
+        "id": "ORIA66008",
+        "name": "CHENNAP TB NGO H.DELI 120ML-5C",
+        "category_id": "packaging",
+        "price": 20000,
+        "unit": "Gói",
+        "sku_code": "ORIA66008"
+      },
+      {
+        "id": "ORIA66009",
+        "name": "TO BAMIA GRACZ LO26 350ML 10",
+        "category_id": "packaging",
+        "price": 35000,
+        "unit": "Gói",
+        "sku_code": "ORIA66009"
+      },
+      {
+        "id": "ORIA66010",
+        "name": "TO BAMIA GRACZ LO38 875ML 10C",
+        "category_id": "packaging",
+        "price": 50000,
+        "unit": "Gói",
+        "sku_code": "ORIA66010"
+      },
+      {
+        "id": "ORIA66011",
+        "name": "DIA GIAY MMPRO 13CM*10",
+        "category_id": "packaging",
+        "price": 30000,
+        "unit": null,
+        "sku_code": "ORIA66011"
+      },
+      {
+        "id": "ORIA66012",
+        "name": "DIA GIAY MMPRO 18CM*10",
+        "category_id": "packaging",
+        "price": 50000,
+        "unit": null,
+        "sku_code": "ORIA66012"
+      },
+      {
+        "id": "ORIA66013",
+        "name": "DIA GIAY HNF 23CM*10",
+        "category_id": "packaging",
+        "price": 55000,
+        "unit": "Gói",
+        "sku_code": "ORIA66013"
+      },
+      {
+        "id": "ORIA66014",
+        "name": "DIA BA MIA GRACZ 10IN 10C/L",
+        "category_id": "packaging",
+        "price": 55000,
+        "unit": null,
+        "sku_code": "ORIA66014"
+      },
+      {
+        "id": "ORIA66015",
+        "name": "BO50 KHAY GIAYLOT CD L.F TRON",
+        "category_id": "packaging",
+        "price": 85000,
+        "unit": "Bộ",
+        "sku_code": "ORIA66015"
+      },
+      {
+        "id": "ORIA66016",
+        "name": "BO50 KHAY GIAYLOT CD L.F VUONG",
+        "category_id": "packaging",
+        "price": 65000,
+        "unit": "Bộ",
+        "sku_code": "ORIA66016"
+      },
+      {
+        "id": "ORIA66017",
+        "name": "KHAY NHOM N.GIAY KCW 14.5*20",
+        "category_id": "packaging",
+        "price": 106500,
+        "unit": "Khay",
+        "sku_code": "ORIA66017"
+      },
+      {
+        "id": "ORIA66018",
+        "name": "KHAY NHOM N.GIAY KCW 21.5CM*10",
+        "category_id": "packaging",
+        "price": 130000,
+        "unit": "Gói",
+        "sku_code": "ORIA66018"
+      },
+      {
+        "id": "ORIA66019",
+        "name": "KHAY NHOM N.GIAY KCW-31.5CM*10",
+        "category_id": "packaging",
+        "price": 184000,
+        "unit": "Gói",
+        "sku_code": "ORIA66019"
+      },
+      {
+        "id": "ORIA66020",
+        "name": "GIAY NUONG ANNAPURNA 30X40CM",
+        "category_id": "packaging",
+        "price": 46000,
+        "unit": "Cuộn",
+        "sku_code": "ORIA66020"
+      },
+      {
+        "id": "ORIA66021",
+        "name": "GIAY CHONG DINH MM 30CM*10M",
+        "category_id": "packaging",
+        "price": 55000,
+        "unit": "Cuộn",
+        "sku_code": "ORIA66021"
+      },
+      {
+        "id": "ORIA66022",
+        "name": "MANG PVC THP 30CM*150M",
+        "category_id": "packaging",
+        "price": 165000,
+        "unit": "Cuộn",
+        "sku_code": "ORIA66022"
+      },
+      {
+        "id": "ORIA66023",
+        "name": "B.THAM DAU MM TUI22*19.5CM 50T",
+        "category_id": "packaging",
+        "price": 66000,
+        "unit": "Túi",
+        "sku_code": "ORIA66023"
+      },
+      {
+        "id": "ORIA66024",
+        "name": "TUI TP PHSH DEODE017*25CM 500G",
+        "category_id": "packaging",
+        "price": 93000,
+        "unit": null,
+        "sku_code": "ORIA66024"
+      },
+      {
+        "id": "ORIA66025",
+        "name": "TUI TP PHSH DEODE025*35CM 500G",
+        "category_id": "packaging",
+        "price": 93000,
+        "unit": "Túi",
+        "sku_code": "ORIA66025"
+      },
+      {
+        "id": "ORIA66026",
+        "name": "BAO TAY TIEN DUNG LDPE KOKUSAI",
+        "category_id": "packaging",
+        "price": 39000,
+        "unit": "Hộp",
+        "sku_code": "ORIA66026"
+      },
+      {
+        "id": "ORIA66027",
+        "name": "BAO TAY NYLON FY HOP X.LA-100C",
+        "category_id": "packaging",
+        "price": 35000,
+        "unit": "Hộp",
+        "sku_code": "ORIA66027"
+      },
+      {
+        "id": "ORIA66028",
+        "name": "KHAN UOT BOBBY K. HUONG 100T",
+        "category_id": "packaging",
+        "price": 55000,
+        "unit": "Gói",
+        "sku_code": "ORIA66028"
+      },
+      {
+        "id": "ORIA66029",
+        "name": "GIAY LUA B.YOU H.ME/ALAVIE 250T",
+        "category_id": "packaging",
+        "price": 29000,
+        "unit": "Gói",
+        "sku_code": "ORIA66029"
+      },
+      {
+        "id": "ORIA66030",
+        "name": "K.GIAY BLESSYOU/ALAVIE HOP180T",
+        "category_id": "packaging",
+        "price": 30000,
+        "unit": "Hộp",
+        "sku_code": "ORIA66030"
+      },
+      {
+        "id": "ORIA66031",
+        "name": "GVS BLESS YOU H.M/ALAVIE CUON*20",
+        "category_id": "packaging",
+        "price": 22000,
+        "unit": "Cuộn",
+        "sku_code": "ORIA66031"
+      },
+      {
+        "id": "p-djp0k0ew",
+        "name": "BANH PINATSU DUA 80G",
+        "category_id": "snacks",
+        "price": 15000,
+        "unit": "Gói",
+        "sku_code": "p-djp0k0ew"
+      },
+      {
+        "id": "p-m5abfj39",
+        "name": "BANH KHO ME 300G",
+        "category_id": "snacks",
+        "price": 90000,
+        "unit": "Hộp",
+        "sku_code": "p-m5abfj39"
+      },
+      {
+        "id": "p-uyol67bm",
+        "name": "SNACK BENTO H.SAN CAY NONG 22G",
+        "category_id": "snacks",
+        "price": 30000,
+        "unit": null,
+        "sku_code": "p-uyol67bm"
+      },
+      {
+        "id": "product-oiqum90zl",
+        "name": "BANH PINATSU DUA 80G",
+        "category_id": "snacks",
+        "price": 15000,
+        "unit": "Gói",
+        "sku_code": "product-oiqum90zl"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "APAC",
+      "served_by_colo": "SIN",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.7479
+      },
+      "duration": 0.7479,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 397312,
+      "rows_read": 165,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

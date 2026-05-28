@@ -1,0 +1,183 @@
+TOTAL: 180
+  0  A=Proposed Selling Price Master List
+  B=None                                                     C=None        D=None
+  1  A=ORIA61000         B=1. ĐỒ ĂN NHANH VÀ ĐỒ ĂN VẶT                              C=None        D=None
+  2  A=None              B=Item Name                                                C=Unit        D=Proposed Selling Price (VND)
+  3  A=ORIA61001         B=PHO GA DE NHAT ACE 67G                                   C=Gói         D=12000
+  4  A=ORIA61002         B=MI UDON SUKI SUKI NHAT BAN 75G                           C=Gói         D=13000
+  5  A=ORIA61003         B=MI LY XOT TUONG DEN OTOKI 70G                            C=LY          D=22000
+  6  A=ORIA61004         B=MI LY SHIN NONGSHIM 68G                                  C=LY          D=32000
+  7  A=ORIA61005         B=MI JIN XOT TUONG DEN 135G                                C=Chai        D=28000
+  8  A=ORIA61006         B=MI SHIN RAMYUN 120G                                      C=Gói         D=33000
+  9  A=ORIA61007         B=MI LY MODERN L.THAI TOM67G                               C=LY          D=12000
+ 10  A=ORIA61008         B=MIEN S.HEO PHU HUONG ACE55G                              C=Gói         D=15000
+ 11  A=ORIA61009         B=TOKPOKKI PHO MAI O FOOD 105G*3                           C=Hộp         D=30000
+ 12  A=ORIA61010         B=R.BIEN TRON K.GA OFOOD 30/40G                            C=Gói         D=49.5
+ 13  A=ORIA61011         B=R.BIEN TRON H.SAN OFOOD30/40G                            C=Gói         D=55000
+ 14  A=ORIA61012         B=R.BIEN TRON NNHAN OFOOD30/40G                            C=Gói         D=55000
+ 15  A=ORIA61013         B=L.KIM OFOOD T.DAU OLIU(6+3)*5G                           C=Gói         D=10000
+ 16  A=ORIA61014         B=B.OREO SCL VAN 110.4/105G                                C=Gói         D=21000
+ 17  A=ORIA61015         B=B.OREO KEM V.QUAT110.4/105G                              C=Gói         D=22000
+ 18  A=ORIA61016         B=B.OREO SOCOLA 110.4/105G                                 C=Gói         D=22000
+ 19  A=ORIA61017         B=KHOAITAYCHIEN SLIDEORIGINAL60G                           C=Ống         D=36.5
+ 20  A=ORIA61018         B=KTC SLIDE PHO MAI 65G/60G/75G                            C=Ống         D=36.5
+ 21  A=ORIA61019         B=KTC SLIDE HOT&SPICY65G/60G/75G                           C=Ống         D=36.5
+ 22  A=ORIA61020         B=KTC SLIDE SOUR CR 65G/60G                                C=Ống         D=38
+ 23  A=ORIA61021         B=KTC SLIDE BBQ 65G/60G                                    C=Ống         D=38
+ 24  A=ORIA61022         B=B.QUE MIX VI TTHONG 150G                                 C=Hộp         D=46.5
+ 25  A=ORIA61023         B=B.QUE MIX GA CAY 25/20G*12                               C=Gói         D=8000
+ 26  A=ORIA61024         B=B.QUE DO BACON STICK 20G131                              C=Gói         D=10000
+ 27  A=ORIA61025         B=B.QUE CAM BACON STICK 20G131                             C=Gói         D=11000
+ 28  A=ORIA61026         B=SNACK TOM RUAY PUAN 20G*12GOI                            C=Gói         D=7000
+ 29  A=ORIA61027         B=SNACK TOM V.THINH HANAMI 110G                            C=Lon         D=76000
+ 30  A=ORIA61028         B=BANH TRANG TAN NHIEN OCOP 250G                           C=Gói         D=31000
+ 31  A=ORIA61029         B=BANH CHOCOPIEORION 36.3G*12GOI                           C=Gói         D=6000
+ 32  A=ORIA61030         B=ORION CUSTAS G.DUONG 23.5G*12                            C=Gói         D=8000
+ 33  A=ORIA61031         B=G.XYLITOL SP COOL 55.1G*6                                C=Hộp         D=35000
+ 34  A=ORIA61032         B=KEO THE VIDUAHAU PLAYMORE22G*1                           C=Hộp         D=37000
+ 35  A=ORIA61033         B=KEO PLAYMORE DAU TAY 22G_COC                             C=Hộp         D=37000
+ 36  A=ORIA62000         B=2. THỨC UỐNG, SỮA, NGŨ CỐC
+                              C=None        D=None
+ 37  A=ORIA62001         B=Item Name                                                C=Unit        D=Proposed Selling Price (VND)
+ 38  A=ORIA62002         B=N.T.KHIET DASANI 350ML*1CH                               C=Chai        D=5
+ 39  A=ORIA62003         B=NTT AQUARIUS K.CALO 390ML*1                              C=Chai        D=10
+ 40  A=ORIA62004         B=NGK SPRITE SLEEK 320ML*6 (Pack of 6)                     C=Lon         D=14000
+ 41  A=ORIA62005         B=N.N. COCA LIGHT SLEEK 320ML*6 (Pack of 6)                C=Lon         D=15000
+ 42  A=ORIA62006         B=NGK COCA VANI K.DUONG 320ML*6L (Pack of 6)               C=Lon         D=15000
+ 43  A=ORIA62007         B=NTL REDBULL THAI KEM 250ML*6L (Pack of 6)                C=Lon         D=15500
+ 44  A=ORIA62008         B=NUOC T.KHIETAQUAFINA355ML*24CH (Box of 24)               C=Chai        D=5916.66666666667
+ 45  A=ORIA62009         B=BIA TIGER CRYSTAL 330ML*24LON (Box of 24)                C=Lon         D=25000
+ 46  A=ORIA62010         B=BIA HEINEKEN SILVER 330ML*24CA (Box of 24)               C=Lon         D=27000
+ 47  A=ORIA62011         B=MILO UHT 115/110ML*4HOP (Pack of 4)                      C=Hộp         D=8000
+ 48  A=ORIA62012         B=MILO UHT IT DUONG 115/110ML*4H (Pack of 4)               C=Hộp         D=8000
+ 49  A=ORIA62013         B=MILO UHT IT DUONG 180ML*4 (Pack of 4)                    C=Hộp         D=12000
+ 50  A=ORIA62014         B=MILO UHT 180ML*8HOP (Pack of 8)                          C=Hộp         D=12000
+ 51  A=ORIA62015         B=CACAO MILO 3IN1 22G15GOI1B                               C=Gói         D=6000
+ 52  A=ORIA62016         B=NESCAFE 3IN1 NG.BAN 17/16G*46                            C=Gói         D=5000
+ 53  A=ORIA62017         B=BNC NESVITA 25G*14                                       C=Gói         D=7000
+ 54  A=ORIA62018         B=NGU COC TRAI CAY CALBEE 450G                             C=Túi         D=251000
+ 55  A=ORIA62019         B=N.COC T.CAY CALBEE ITDUONG600G                           C=Túi         D=409000
+ 56  A=ORIA63000         B=3. NGUYÊN LIỆU KHÔ VÀ THỰC PHẨM THIẾT YẾU TRONG BẾP      C=None        D=None
+ 57  A=ORIA63001         B=Item Name                                                C=Unit        D=Proposed Selling Price (VND)
+ 58  A=ORIA63002         B=TUONG OT CHINSU 250G*1(NAM)                              C=Chai        D=23000
+ 59  A=ORIA63003         B=N.TUONG DAM DAC MAGGI 300ML                              C=Chai        D=22000
+ 60  A=ORIA63004         B=SDCD ONG THO DO TUYP 165G                                C=Tuýp        D=29000
+ 61  A=ORIA63005         B=SUA DAC ONG THO DO HG 380G                               C=Hộp         D=37000
+ 62  A=ORIA63006         B=S.DAC VI NHUA ONG-THO DO40G*12                           C=Hộp         D=8000
+ 63  A=ORIA63007         B=XOT MAYONNAISE AJI NGOTDIU260G                           C=Chai        D=49000
+ 64  A=ORIA63008         B=XOT MERANG KEWPIE 210ML*2                                C=Chai        D=73000
+ 65  A=ORIA63009         B=N.MAM THANH QUOC40N60ML*6-OCOP                           C=Chai        D=23000
+ 66  A=ORIA63010         B=CA MOI/TRICH/NUC 3 COGAI 155G*10                         C=Lon         D=25000
+ 67  A=ORIA63011         B=BO THUC VAT MEIZAN 80G*5                                 C=Hộp         D=14000
+ 68  A=ORIA63012         B=DAU NANH SIMPLY 1L                                       C=Chai        D=88000
+ 69  A=ORIA63013         B=HATNEM CHAY NAMHUONG KNORR170G                           C=Gói         D=25000
+ 70  A=ORIA63014         B=BOT GAO TAI KY 400GR                                     C=Gói         D=25000
+ 71  A=ORIA63015         B=BOT NEP TAI KY 400GR                                     C=Gói         D=30000
+ 72  A=ORIA63016         B=BOT KHOAI TRANG DDTHUAN 200G                             C=Gói         D=21000
+ 73  A=ORIA63017         B=BOT DAU XANH HAT SEN MM 35G                              C=Gói         D=5000
+ 74  A=ORIA63018         B=PHO TAI DDTHUAN 100G                                     C=Gói         D=41000
+ 75  A=ORIA63019         B=TAO KHO DD.THUAN 100 GR                                  C=Gói         D=25000
+ 76  A=ORIA63020         B=HAT E DDTHUAN 100G                                       C=Gói         D=31000
+ 77  A=ORIA63021         B=HAT TIEU DEN EZ LIFE 40G                                 C=Gói         D=19000
+ 78  A=ORIA63022         B=DAU XANH CA MM 1KG                                       C=Gói         D=80000
+ 79  A=ORIA63023         B=D.PHEN HAT N.CHAT DANG THU 1KG                           C=Gói         D=80000
+ 80  A=ORIA63024         B=MUOI HONG HAT TO EZ LIFE CANKG (per kg)                  C=Gói         D=45000
+ 81  A=ORIA63025         B=MUOI HONG MIN EZ LIFE CAN KG (per kg)                    C=Gói         D=45000
+ 82  A=ORIA63026         B=DAU DEN X.LONG EZ LIFE CAN KG (per kg)                   C=Gói         D=130000
+ 83  A=ORIA63027         B=DAU DO MAT CUA EZ LIFE CAN KG (per kg)                   C=Gói         D=130000
+ 84  A=ORIA63028         B=HAT HUONG DUONG HB-XA (per kg)                           C=Gói         D=200000
+ 85  A=ORIA63029         B=HAT BI HB-XA (per kg)                                    C=Gói         D=250000
+ 86  A=ORIA63030         B=DUONG VANG GOLD MINERAL BH 1KG                           C=Gói         D=45000
+ 87  A=ORIA63031         B=DA ME TAN LOC 900G                                       C=Lon         D=110000
+ 88  A=ORIA63032         B=VẢI THIEU FOODCLUB LON 565G                              C=Lon         D=50000
+ 89  A=ORIA64000         B=4. CHĂM SÓC CÁ NHÂN & VỆ SINH                            C=None        D=None
+ 90  A=ORIA64001         B=Item Name                                                C=Unit        D=Proposed Selling Price (VND)
+ 91  A=ORIA64002         B=TAM CHI KR ORALCLEAN DENTALUSH                           C=Gói         D=45000
+ 92  A=ORIA64003         B=BAN CHAI DANH RANG HPR VI 12                             C=Cái         D=12000
+ 93  A=ORIA64004         B=BCDR TRE EM JORDAN STEP 1                                C=Cái         D=45000
+ 94  A=ORIA64005         B=BCDR TRE EM JORDAN STEP 2                                C=Cái         D=50000
+ 95  A=ORIA64006         B=BCDR TRE EM JORDAN STEP 3                                C=Cái         D=45000
+ 96  A=ORIA64007         B=BCDR SENSODYNE REPAIR& PROTECT 1C                        C=Tuýp        D=55000
+ 97  A=ORIA64008         B=KDR P/S TRE EM 2-6T H. CAM 45G                           C=Tuýp        D=25000
+ 98  A=ORIA64009         B=KDR P/S TRE EM 2-6T H.DAU 45G                            C=Tuýp        D=26000
+ 99  A=ORIA64010         B=KDR KODOMO TRE EM CAM 45G                                C=Tuýp        D=27500
+100  A=ORIA64011         B=KDR COL MF H. DUA HAU 100G                               C=Tuýp        D=53
+101  A=ORIA64012         B=KDR CLOSEUP WN MNING KISS 100G                           C=Tuýp        D=69000
+102  A=ORIA64013         B=KDR CLOSEUP WN BEAU. GLOW 100G                           C=Tuýp        D=69000
+103  A=ORIA64014         B=KDR COLGATE TRANGSANG 100G                               C=Tuýp        D=65000
+104  A=ORIA64015         B=NSM LISTERINE COOL MINT 100ML                            C=Chai        D=39000
+105  A=ORIA64016         B=DCR DORCO RAPID2 TNB200YL4S 1L                           C=Gói         D=32000
+106  A=ORIA64017         B=KEM CAO RAU GILLETTE LIME 50G                            C=Tuýp        D=75000
+107  A=ORIA64018         B=BVS KOTEX DANG QUAN L/XL 2M                              C=Gói         D=48000
+108  A=ORIA64019         B=BVS KOTEX QUAN HERBAL L/XL 2M                            C=Gói         D=50000
+109  A=ORIA64020         B=BVS KOTEX QUAN COOL M/L 2M                               C=Gói         D=65000
+110  A=ORIA64021         B=BUS LAURIER B.DEM 35CM 4M*4                              C=Gói         D=35000
+111  A=ORIA64022         B=BUS LAURIER SMONG 22.5CM 10M*4                           C=Gói         D=50000
+112  A=ORIA64023         B=BUS DIANA SENSI HNGAY KK 20M*6                           C=Gói         D=25000
+113  A=ORIA64024         B=BVS SOFY SKIN C.ULTRA 26CM 17M                           C=Gói         D=112000
+114  A=ORIA64025         B=K.TRANG MAYAN3D PM2.5 KIDS++*5                           C=Gói         D=40000
+115  A=ORIA64026         B=TAM RAI TAI MM 200 CAY*2                                 C=Gói         D=17000
+116  A=ORIA64027         B=TAM RAY TAI MM TRE EM 160CAY*2                           C=Gói         D=18000
+117  A=ORIA64028         B=DAY CHA LUNG BESICO YK06                                 C=Cái         D=36000
+118  A=ORIA64029         B=BANG DO VAI BESICO YK12                                  C=Cái         D=47000
+119  A=ORIA65000         B=5.ĐỒ GIA DỤNG, VỆ SINH NHÀ CỬA VÀ HÀNG THIẾT YẾU KHÁC    C=None        D=None
+120  A=ORIA65001         B=Item Name                                                C=Unit        D=Proposed Selling Price (VND)
+121  A=ORIA65002         B=BO OMO DO 800/770G                                       C=Gói         D=55000
+122  A=ORIA65003         B=BQ PRO THAI SACH HIEUQUA 4.5KG                           C=Gói         D=170000
+123  A=ORIA65004         B=XBT VIM D.NANG SIEU MANH500ML                            C=Chai        D=53000
+124  A=ORIA65005         B=VIEN TREO BC VIM LAVENDER 55G                            C=Cái         D=37000
+125  A=ORIA65006         B=VIEN TREO BC VIM TX&CHANH 55G                            C=Cái         D=37000
+126  A=ORIA65007         B=SAP THOM AMBIPUR H.BI 180G*2                             C=Cái         D=89000
+127  A=ORIA65008         B=NON BAO HIEM CHITA CT54                                  C=Cái         D=200000
+128  A=ORIA66000         B=6. DỤNG CỤ, BAO BÌ, ĐỒ DÙNG MỘT LẦN                      C=None        D=None
+129  A=ORIA66001         B=Item Name                                                C=Unit        D=Proposed Selling Price (VND)
+130  A=ORIA66002         B=DUA BO DE TACH 20CM -20 D/GOI                            C=Gói         D=35000
+131  A=ORIA66003         B=BICH100 MUONGGO KOKUSAI-006484 10C                       C=Gói         D=18000
+132  A=ORIA66004         B=LY GIAY HNF 30Z* 10C                                     C=Gói         D=15000
+133  A=ORIA66005         B=LY GIAY HNF 22OZ*5C                                      C=Gói         D=25000
+134  A=ORIA66006         B=LY BAMIA GRACZ L051 260ML-10                             C=Gói         D=32000
+135  A=ORIA66007         B=TOGIAY TRON MMPRO 2PE 70Z*10                             C=Gói         D=26000
+136  A=ORIA66008         B=CHENNAP TB NGO H.DELI 120ML-5C                           C=Gói         D=20000
+137  A=ORIA66009         B=TO BAMIA GRACZ LO26 350ML 10                             C=Gói         D=35000
+138  A=ORIA66010         B=TO BAMIA GRACZ LO38 875ML 10C                            C=Gói         D=50000
+139  A=ORIA66011         B=DIA GIAY MMPRO 13CM*10                                   C=Gói         D=30000
+140  A=ORIA66012         B=DIA GIAY MMPRO 18CM*10                                   C=Gói         D=50000
+141  A=ORIA66013         B=DIA GIAY HNF 23CM*10                                     C=Gói         D=55000
+142  A=ORIA66014         B=DIA BA MIA GRACZ 10IN 10C/L                              C=Gói         D=55000
+143  A=ORIA66015         B=BO50 KHAY GIAYLOT CD L.F TRON                            C=Bộ          D=85000
+144  A=ORIA66016         B=BO50 KHAY GIAYLOT CD L.F VUONG                           C=Bộ          D=65000
+145  A=ORIA66017         B=KHAY NHOM N.GIAY KCW 14.5*20                             C=Khay        D=106500
+146  A=ORIA66018         B=KHAY NHOM N.GIAY KCW 21.5CM*10                           C=Gói         D=130000
+147  A=ORIA66019         B=KHAY NHOM N.GIAY KCW-31.5CM*10                           C=Gói         D=184000
+148  A=ORIA66020         B=GIAY NUONG ANNAPURNA 30X40CM                             C=Cuộn        D=46000
+149  A=ORIA66021         B=GIAY CHONG DINH MM 30CM*10M                              C=Cuộn        D=55000
+150  A=ORIA66022         B=MANG PVC THP 30CM*150M                                   C=Cuộn        D=165000
+151  A=ORIA66023         B=B.THAM DAU MM TUI22*19.5CM 50T                           C=Túi         D=66000
+152  A=ORIA66024         B=TUI TP PHSH DEODE017*25CM 500G                           C=Túi         D=93000
+153  A=ORIA66025         B=TUI TP PHSH DEODE025*35CM 500G                           C=Túi         D=93000
+154  A=ORIA66026         B=BAO TAY TIEN DUNG LDPE KOKUSAI                           C=Hộp         D=39000
+155  A=ORIA66027         B=BAO TAY NYLON FY HOP X.LA-100C                           C=Hộp         D=35000
+156  A=ORIA66028         B=KHAN UOT BOBBY K. HUONG 100T                             C=Gói         D=55000
+157  A=ORIA66029         B=GIAY LUA B.YOU H.ME/ALAVIE 250T                          C=Gói         D=29000
+158  A=ORIA66030         B=K.GIAY BLESSYOU/ALAVIE HOP180T                           C=Hộp         D=30000
+159  A=ORIA66031         B=GVS BLESS YOU H.M/ALAVIE CUON*20                         C=Cuộn        D=22000
+160  A=None              B=None                                                     C=None        D=None
+161  A=None              B=None                                                     C=None        D=None
+162  A=None              B=None                                                     C=None        D=None
+163  A=None              B=None                                                     C=None        D=None
+164  A=None              B=None                                                     C=None        D=None
+165  A=None              B=None                                                     C=None        D=None
+166  A=None              B=None                                                     C=None        D=None
+167  A=None              B=None                                                     C=None        D=None
+168  A=None              B=None                                                     C=None        D=None
+169  A=None              B=None                                                     C=None        D=None
+170  A=None              B=None                                                     C=None        D=None
+171  A=None              B=None                                                     C=None        D=None
+172  A=None              B=None                                                     C=None        D=None
+173  A=None              B=None                                                     C=None        D=None
+174  A=None              B=None                                                     C=None        D=None
+175  A=None              B=None                                                     C=None        D=None
+176  A=None              B=None                                                     C=None        D=None
+177  A=None              B=None                                                     C=None        D=None
+178  A=None              B=None                                                     C=None        D=None
+179  A=None              B=None                                                     C=None        D=None

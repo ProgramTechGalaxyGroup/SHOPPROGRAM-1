@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mẫu hóa đơn ORIA — chọn mẫu</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f3eee6; color: #2d2117; }
+    .page { max-width: 1400px; margin: 0 auto; padding: 28px; }
+    h1 { margin: 0 0 6px; font-size: 26px; }
+    .lede { color: #6c5b4d; margin: 0 0 26px; }
+    .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 22px; }
+    .card { background: #fff; border-radius: 18px; padding: 16px 16px 18px; box-shadow: 0 14px 30px rgba(93,58,20,0.08); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .card h2 { margin: 0; font-size: 17px; color: #a45318; }
+    .card p { margin: 0; font-size: 13px; color: #7b6b5d; text-align: center; min-height: 36px; }
+    .picker { background: #fff8f1; border: 1px solid #f2dcc6; border-radius: 999px; padding: 8px 14px; font-weight: 600; color: #a45318; cursor: pointer; }
+    .picker:hover { background: #ffe8d2; }
+
+    /* The 80mm receipt sheet */
+    .sheet {
+      width: 80mm;
+      background: #fff;
+      padding: 5mm 4mm;
+      font-family: 'Courier New', Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.4;
+      color: #000;
+      border: 1px dashed #d6c4a8;
+    }
+    .sheet * { margin: 0; padding: 0; }
+    .sheet .logo-box { width: 60mm; height: 16mm; margin: 0 auto 4px; border: 1px solid #000; display: flex; align-items: center; justify-content: center; font-weight: 700; letter-spacing: 0.05em; font-size: 14px; }
+    .sheet .logo-img { width: 22mm; height: 22mm; margin: 0 auto 4px; display: block; }
+    .sheet .center { text-align: center; }
+    .sheet hr { border: none; border-top: 1px dashed #000; margin: 4px 0; }
+    .sheet .double-hr { border: none; border-top: 2px solid #000; margin: 4px 0; }
+    .sheet .name { font-size: 15px; font-weight: 700; letter-spacing: 0.4px; }
+    .sheet .addr { font-size: 11px; line-height: 1.5; }
+    .sheet .meta { font-size: 11px; }
+    .sheet .meta .row { display: flex; justify-content: space-between; gap: 8px; }
+    .sheet .item { margin: 3px 0; }
+    .sheet .item-name { font-weight: 700; }
+    .sheet .item-row { display: flex; justify-content: space-between; gap: 6px; }
+    .sheet .total-grand { font-size: 14px; font-weight: 700; }
+    .sheet .vat-note { font-style: italic; font-size: 11px; }
+    .sheet .footer { text-align: center; font-size: 11px; margin-top: 6px; }
+
+    /* Variant-specific overrides */
+    .v-a .sheet { /* Classic minimal */ }
+    .v-b .sheet .header { border: 1px solid #000; padding: 4px; margin-bottom: 6px; }
+    .v-c .sheet { font-family: 'Arial Narrow', Arial, sans-serif; font-size: 11.5px; }
+    .v-c .sheet .name { font-size: 14px; }
+    .v-d .sheet { font-family: 'Segoe UI', sans-serif; font-size: 11.5px; }
+    .v-d .sheet .topbar, .v-d .sheet .botbar { background: #000; color: #fff; padding: 3px 6px; font-weight: 700; letter-spacing: 0.05em; text-align: center; font-size: 11px; }
+    .v-d .sheet .grand-box { background: #000; color: #fff; padding: 6px 8px; font-size: 14px; display: flex; justify-content: space-between; font-weight: 700; }
+    .qr-placeholder { width: 22mm; height: 22mm; margin: 6px auto 0; background: repeating-linear-gradient(45deg, #000 0 2px, #fff 2px 4px); border: 1px solid #000; }
+
+    .legend { background: #fff; padding: 12px 16px; border-radius: 14px; margin-top: 30px; font-size: 13px; color: #5a4a3b; }
+    .legend strong { color: #2d2117; }
+    .legend li { margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>🧾 Chọn mẫu hóa đơn 80mm</h1>
+    <p class="lede">4 phương án thiết kế cho máy in nhiệt 80mm. Có logo + địa chỉ phía trên, dòng "Giá đã bao gồm VAT" rõ ràng dưới tổng. Bạn xem rồi cho biết chọn mẫu nào (hoặc trộn) — mình sẽ thay vào app chính thức.</p>
+
+    <div class="row">
+
+      <!-- ============================================================ -->
+      <!-- VARIANT A — Classic Minimal -->
+      <!-- ============================================================ -->
+      <div class="card v-a">
+        <h2>Mẫu A — Cổ điển</h2>
+        <p>Đơn giản nhất. Logo text trong khung. Mọi dòng cân giữa.</p>
+        <div class="sheet">
+          <div class="logo-box">[ LOGO ]</div>
+          <div class="center name">ORIA SHOP</div>
+          <div class="center addr">
+            123 Nguyễn Huệ, Q1, TP.HCM<br>
+            ĐT: 0909 123 456<br>
+            MST: 0312345678
+          </div>
+          <hr>
+          <div class="center" style="font-weight:700;font-size:13px">HÓA ĐƠN BÁN HÀNG</div>
+          <div class="meta">
+            <div class="row"><span>Số:</span><strong>HD-20260521-001</strong></div>
+            <div class="row"><span>Ngày:</span><span>21/05/2026 14:32</span></div>
+            <div class="row"><span>Thu ngân:</span><span>Linh Trần</span></div>
+            <div class="row"><span>Khách:</span><span>Khách lẻ</span></div>
+          </div>
+          <hr>
+          <div class="item">
+            <div class="item-name">B.OREO SCL VAN 110.4G</div>
+            <div class="item-row"><span>2 × 21,000</span><span>42,000</span></div>
+          </div>
+          <div class="item">
+            <div class="item-name">PHO GA DE NHAT ACE 67G</div>
+            <div class="item-row"><span>1 × 12,000</span><span>12,000</span></div>
+          </div>
+          <hr>
+          <div class="item-row total-grand"><span>TỔNG CỘNG</span><span>54,000</span></div>
+          <div class="center vat-note">(Giá đã bao gồm VAT 8%)</div>
+          <div class="item-row"><span>Khách đưa</span><span>100,000</span></div>
+          <div class="item-row"><span>Tiền thừa</span><span>46,000</span></div>
+          <hr>
+          <div class="footer">Cảm ơn quý khách<br>Hẹn gặp lại!</div>
+        </div>
+        <button class="picker" onclick="alert('Bạn chọn Mẫu A — hãy báo cho assistant để triển khai.')">Chọn mẫu A</button>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- VARIANT B — Header box / Bold title -->
+      <!-- ============================================================ -->
+      <div class="card v-b">
+        <h2>Mẫu B — Khung viền</h2>
+        <p>Header có khung viền nổi bật. Phù hợp cửa hàng cần trang trọng.</p>
+        <div class="sheet">
+          <div class="header center">
+            <div class="logo-box" style="border:none;width:auto;height:auto;font-size:16px">⊙ ORIA</div>
+            <div class="name">ORIA SHOP</div>
+            <div class="addr">
+              123 Nguyễn Huệ, Q1, TP.HCM<br>
+              0909 123 456 · MST 0312345678<br>
+              Giờ mở cửa: 07:00 – 22:00
+            </div>
+          </div>
+          <div class="center" style="font-weight:700;font-size:14px;letter-spacing:1px">HÓA ĐƠN BÁN HÀNG</div>
+          <div class="meta center" style="margin-top:2px">
+            HD-20260521-001 · 21/05/26 14:32<br>
+            Thu ngân: Linh Trần
+          </div>
+          <div class="double-hr"></div>
+          <div class="item-row" style="font-weight:700;font-size:11px"><span>SẢN PHẨM</span><span>THÀNH TIỀN</span></div>
+          <hr>
+          <div class="item">
+            <div class="item-name">B.OREO SCL VAN</div>
+            <div class="item-row"><span>2 × 21,000</span><span>42,000</span></div>
+          </div>
+          <div class="item">
+            <div class="item-name">PHO GA DE NHAT</div>
+            <div class="item-row"><span>1 × 12,000</span><span>12,000</span></div>
+          </div>
+          <div class="double-hr"></div>
+          <div class="item-row total-grand"><span>TỔNG:</span><span>54,000 ₫</span></div>
+          <div class="center vat-note">▸ Đã bao gồm VAT 8% ◂</div>
+          <hr>
+          <div class="item-row"><span>Khách đưa:</span><span>100,000</span></div>
+          <div class="item-row"><span>Tiền thừa:</span><span>46,000</span></div>
+          <hr>
+          <div class="footer">★ Cảm ơn quý khách ★<br>oria.com.vn</div>
+        </div>
+        <button class="picker" onclick="alert('Bạn chọn Mẫu B — hãy báo cho assistant để triển khai.')">Chọn mẫu B</button>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- VARIANT C — Compact / FnB style -->
+      <!-- ============================================================ -->
+      <div class="card v-c">
+        <h2>Mẫu C — Compact FnB</h2>
+        <p>Sans-serif gọn, tiết kiệm giấy nhất. Phù hợp quầy bán nhanh.</p>
+        <div class="sheet">
+          <div class="logo-img" style="background:repeating-linear-gradient(45deg,#000 0 3px,#fff 3px 6px); border:1px solid #000"></div>
+          <div class="center name">ORIA SHOP</div>
+          <div class="center addr">
+            123 Nguyễn Huệ, Q1, TP.HCM<br>
+            ☎ 0909 123 456 ⎮ MST 0312345678
+          </div>
+          <hr>
+          <div class="meta">
+            <strong>HD-20260521-001</strong> · 21/05/26 14:32 · Linh Trần
+          </div>
+          <hr>
+          <div class="item">
+            <div class="item-row"><strong>B.OREO SCL VAN</strong><span>21,000</span></div>
+            <div class="item-row" style="padding-left:8px;color:#444">+ Topping yogurt<span>12,000</span></div>
+            <div class="item-row" style="padding-left:8px"><span>SL 2</span><strong>66,000</strong></div>
+          </div>
+          <div class="item">
+            <div class="item-row"><strong>PHO GA DE NHAT</strong><span>12,000</span></div>
+            <div class="item-row" style="padding-left:8px"><span>SL 1</span><strong>12,000</strong></div>
+          </div>
+          <hr>
+          <div class="item-row total-grand"><span>TỔNG</span><span>78,000</span></div>
+          <div class="center vat-note">— Giá đã bao gồm VAT 8% —</div>
+          <div class="item-row"><span>Trả</span><span>100,000</span></div>
+          <div class="item-row"><span>Thừa</span><span>22,000</span></div>
+          <hr>
+          <div class="footer">Cảm ơn quý khách<br>oria.com.vn</div>
+        </div>
+        <button class="picker" onclick="alert('Bạn chọn Mẫu C — hãy báo cho assistant để triển khai.')">Chọn mẫu C</button>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- VARIANT D — Modern with QR -->
+      <!-- ============================================================ -->
+      <div class="card v-d">
+        <h2>Mẫu D — Hiện đại (có QR)</h2>
+        <p>Có thanh đen nổi bật trên dưới, ô tổng đảo màu, QR code cuối hóa đơn.</p>
+        <div class="sheet">
+          <div class="topbar">★ ORIA SHOP ★</div>
+          <div class="logo-img" style="background:repeating-linear-gradient(45deg,#000 0 3px,#fff 3px 6px); border:1px solid #000; margin-top:4px"></div>
+          <div class="center name" style="margin-top:4px">ORIA SHOP</div>
+          <div class="center addr">
+            123 Nguyễn Huệ, Q1, TP.HCM<br>
+            ☎ 0909 123 456 · MST 0312345678<br>
+            Giờ mở cửa 07:00 – 22:00
+          </div>
+          <hr>
+          <div class="meta center">
+            <strong>HD-20260521-001</strong><br>
+            21/05/2026 14:32 · Linh Trần
+          </div>
+          <hr>
+          <div class="item-row" style="font-weight:700;font-size:10px;letter-spacing:0.5px"><span>SẢN PHẨM</span><span>SỐ TIỀN</span></div>
+          <hr>
+          <div class="item">
+            <div class="item-name">B.OREO SCL VAN</div>
+            <div class="item-row"><span>2 × 21,000</span><span>42,000</span></div>
+          </div>
+          <div class="item">
+            <div class="item-name">PHO GA DE NHAT</div>
+            <div class="item-row"><span>1 × 12,000</span><span>12,000</span></div>
+          </div>
+          <hr>
+          <div class="grand-box"><span>TỔNG</span><span>54,000 ₫</span></div>
+          <div class="center vat-note">Giá đã bao gồm VAT 8%</div>
+          <div class="item-row"><span>Khách đưa</span><span>100,000 ₫</span></div>
+          <div class="item-row"><span>Tiền thừa</span><span>46,000 ₫</span></div>
+          <hr>
+          <div class="qr-placeholder"></div>
+          <div class="center" style="font-size:10px;color:#444">Quét mã để đánh giá</div>
+          <div class="botbar" style="margin-top:6px">★ CẢM ƠN QUÝ KHÁCH ★</div>
+        </div>
+        <button class="picker" onclick="alert('Bạn chọn Mẫu D — hãy báo cho assistant để triển khai.')">Chọn mẫu D</button>
+      </div>
+
+    </div>
+
+    <div class="legend">
+      <strong>Cách hoạt động khi triển khai:</strong>
+      <ul>
+        <li><strong>Logo</strong>: hiện tại mock-up dùng khung "[ LOGO ]" hoặc ô họa tiết. Khi triển khai, mình thêm field <code>logoUrl</code> trong Settings — bạn upload ảnh (PNG nền trong) và app sẽ in ảnh đó. Nếu chưa có logo → fallback về text như mockup.</li>
+        <li><strong>Địa chỉ</strong>: lấy từ <code>settings.address</code>, <code>settings.phone</code>, <code>settings.taxId</code> đã có sẵn trong DB.</li>
+        <li><strong>"Giá đã bao gồm VAT"</strong>: thay vì in 1 dòng VAT riêng + 1 dòng tổng, gộp thành "Tổng = đã có VAT" + note nhỏ. Server vẫn lưu vat_amount riêng để báo cáo.</li>
+        <li><strong>QR code</strong> (mẫu D): có thể trỏ tới link đánh giá Google / VietQR thanh toán / link menu — tuỳ bạn cấu hình sau.</li>
+      </ul>
+      <p style="margin-top:14px"><strong>Bạn chọn mẫu nào → báo lại số (A/B/C/D)</strong>. Hoặc nói "lấy phần header của B + body của A" → mình kết hợp.</p>
+    </div>
+  </div>
+</body>
+</html>

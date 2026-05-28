@@ -1,3 +1,8 @@
 SHOPPROGRAM-cloudflare-upload.zip
 .DS_Store
 
+# Wrangler local state + dev D1
+.wrangler/
+.dev.vars
+node_modules/
+

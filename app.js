@@ -31,13 +31,25 @@
     { value: "Ví điện tử / E-wallet", label: "Ví điện tử / E-wallet" }
   ];
 
-  var FILTER_ALL_CATEGORY = { id: "all", label: "Tất cả / All", icon: "🍊" };
+  var FILTER_ALL_CATEGORY = { id: "all", label: "Tất cả / All", icon: "🛒" };
+  // Master category list — matches migrations/0004_oria_master.sql.
+  // Source of truth is Cloudflare D1; this default only seeds first-time
+  // localStorage so the app is usable before the initial /api/sync/pull lands.
   var DEFAULT_CATEGORY_OPTIONS = [
-    { id: "fresh-juice", label: "Nước ép / Fresh Juice", icon: "🍹" },
-    { id: "smoothie", label: "Sinh tố / Smoothie", icon: "🥤" },
-    { id: "cut-fruit", label: "Trái cây cắt / Cut Fruit", icon: "🍍" },
-    { id: "fruit-box", label: "Hộp trái cây / Fruit Box", icon: "📦" },
-    { id: "combo", label: "Combo / Combo", icon: "✨" }
+    // Level 1
+    { id: "fruits",            code: "10000", parentId: null,         level: 1, label: "Trái cây / Fruits",                                   icon: "🍎" },
+    { id: "smoothies",         code: "20000", parentId: null,         level: 1, label: "Sinh tố / Smoothies",                                 icon: "🥤" },
+    { id: "juices",            code: "30000", parentId: null,         level: 1, label: "Nước ép / Juices",                                    icon: "🍊" },
+    { id: "nutritious-drinks", code: "40000", parentId: null,         level: 1, label: "Thức uống dinh dưỡng / Nutritious Drinks",            icon: "💪" },
+    { id: "refreshing-drinks", code: "50000", parentId: null,         level: 1, label: "Thức uống giải khát / Refreshing Beverages",          icon: "🧃" },
+    { id: "essentials",        code: "60000", parentId: null,         level: 1, label: "Nhu yếu phẩm / Essentials & Convenience Goods",       icon: "🛒" },
+    // Level 2 (children of essentials)
+    { id: "snacks",        code: "61000", parentId: "essentials", level: 2, label: "Đồ ăn nhanh và đồ ăn vặt / Fast Food & Snacks",                                         icon: "🍿" },
+    { id: "beverages",     code: "62000", parentId: "essentials", level: 2, label: "Thức uống, sữa, ngũ cốc / Beverages, Milk & Cereals",                                   icon: "🥛" },
+    { id: "pantry",        code: "63000", parentId: "essentials", level: 2, label: "Nguyên liệu khô và thực phẩm thiết yếu trong bếp / Pantry & Kitchen Staples",           icon: "🥫" },
+    { id: "personal-care", code: "64000", parentId: "essentials", level: 2, label: "Chăm sóc cá nhân & vệ sinh / Personal Care & Hygiene",                                  icon: "🧴" },
+    { id: "household",     code: "65000", parentId: "essentials", level: 2, label: "Đồ gia dụng, vệ sinh nhà cửa và hàng thiết yếu / Household, Cleaning & Home Essentials", icon: "🧹" },
+    { id: "packaging",     code: "66000", parentId: "essentials", level: 2, label: "Dụng cụ, bao bì, đồ dùng một lần / Utensils, Packaging & Disposable Food Ware",         icon: "🥡" }
   ];
 
   var DEFAULT_ADD_ON_OPTIONS = [
@@ -60,6 +72,11 @@
     { id: "chia-base", label: "Hạt chia / Chia Seeds", unit: "gram", note: "Topping mặc định / Default topping" }
   ];
 
+  // Demo/seed product list — only used the very first time the app loads on
+  // a device that has no localStorage AND can't reach Cloudflare D1.
+  // Once /api/sync/pull lands, these are replaced by the live master list.
+  // (The legacy "p-*" demo products below are kept for offline first-run
+  //  demo only; they are soft-deactivated in D1 by migration 0004.)
   var DEFAULT_PRODUCTS = [
     {
       id: "p-orange-juice",
@@ -204,8 +221,8 @@
   ];
 
   var DEFAULT_SETTINGS = {
-    storeName: "The Fruit House",
-    brandLine: "THE FRUIT HOUSE",
+    storeName: "OriaFarm",
+    brandLine: "ORIAFARM",
     brandDisplayName: "OriaFarm",
     branchName: "Quầy Linh Trần",
     address: "123 Nguyễn Huệ, Quận 1, TP.HCM",
@@ -213,17 +230,24 @@
     taxId: "0312345678",
     cashierName: "Linh Tran",
     openHours: "07:00 - 22:00",
-    receiptFooter: "Cảm ơn bạn đã ghé The Fruit House.",
-    vatNote: "Hóa đơn VAT sẽ được gửi theo yêu cầu."
+    receiptFooter: "Cảm ơn quý khách đã ghé OriaFarm. / Thank you for visiting OriaFarm.",
+    vatNote: "Giá đã bao gồm VAT / Prices include VAT",
+    // Logo URLs. Two separate fields:
+    //   - logoUrl       — color logo, used in app UI brand preview
+    //   - logoPrintUrl  — pure-B/W high-contrast version optimised for
+    //                     thermal receipt printers. Falls back to logoUrl
+    //                     when empty.
+    logoUrl: "/logo.png",
+    logoPrintUrl: "/logo-thermal.png"
   };
 
   var DEFAULT_INVOICE_TEMPLATES = [
     {
       id: "invoice-classic",
-      name: "FnB Counter Receipt",
+      name: "Mẫu A — Cổ điển 80mm / Classic 80mm",
       title: "HÓA ĐƠN BÁN HÀNG / SALES RECEIPT",
-      subtitle: "Mẫu sẵn sàng cho quầy nước và đồ ăn nhanh / Ready for juice, smoothie, and quick-service FnB",
-      footer: "Cảm ơn quý khách. Hẹn gặp lại tại OriaFarm. / Thank you and see you again at OriaFarm.",
+      subtitle: "Mẫu A — Logo + địa chỉ + tổng (giá đã bao gồm VAT) / Logo + address + total (VAT included)",
+      footer: "Cảm ơn quý khách đã ghé OriaFarm. / Thank you for visiting OriaFarm.",
       showSubtitle: true,
       showAddress: true,
       showBranch: true,
@@ -577,6 +601,38 @@
       ]
     }
   ];
+
+  function safeJsonParse(text, fallback) {
+    try { return text ? JSON.parse(text) : fallback; }
+    catch (e) { return fallback; }
+  }
+
+  // Vietnamese-accent-insensitive normaliser for search inputs.
+  // "Cam Mật Ong" → "cam mat ong" → user can type "mat" and still match.
+  // Uses NFD decomposition then strips combining marks; also folds đ/Đ.
+  function normalizeSearchText(s) {
+    if (!s) return "";
+    var str = String(s).toLowerCase();
+    try {
+      str = str.normalize("NFD").replace(/[̀-ͯ]/g, "");
+    } catch (_) { /* old browser: best-effort */ }
+    return str.replace(/đ/g, "d").replace(/[^a-z0-9 ]+/g, " ").trim();
+  }
+  function productMatchesQuery(product, normalizedQuery) {
+    if (!normalizedQuery) return true;
+    var hay = normalizeSearchText(
+      (product.name || "") + " " +
+      (product.barcode || "") + " " +
+      (product.skuCode || product.id || "") + " " +
+      (product.description || "")
+    );
+    // AND-of-tokens: every space-separated word in the query must appear.
+    var tokens = normalizedQuery.split(/\s+/).filter(Boolean);
+    for (var i = 0; i < tokens.length; i++) {
+      if (hay.indexOf(tokens[i]) === -1) return false;
+    }
+    return true;
+  }
 
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
@@ -1186,15 +1242,25 @@
   function calculateOrder(order, addOnOptions) {
     var safeOrder = order || normalizeOrder({ createdAt: Date.now() });
     var subtotal = (safeOrder.items || []).reduce(function (sum, item) {
-      var linePrice = item.price + getItemAddonTotal(item, addOnOptions);
-      return sum + linePrice * item.qty;
+      // B6: coerce numbers to avoid string concatenation if localStorage
+      // restored strings.
+      var basePrice = Number(item.price) || 0;
+      var qty = Number(item.qty) || 0;
+      var linePrice = basePrice + (Number(getItemAddonTotal(item, addOnOptions)) || 0);
+      return sum + linePrice * qty;
     }, 0);
-    var discount = subtotal * ((Number(safeOrder.discountPct) || 0) / 100);
-    var taxable = Math.max(0, subtotal - discount);
-    var vat = taxable * VAT_RATE;
-    var total = taxable + vat;
+    subtotal = Math.round(subtotal);
+    var discountPct = Number(safeOrder.discountPct) || 0;
+    var discount = Math.round(subtotal * (discountPct / 100));
+    // Prices are VAT-INCLUSIVE: the price printed on the product / shown in
+    // POS already contains the tax. So `total` = subtotal - discount (no
+    // additional VAT row). VAT is computed BACKWARDS purely for accounting
+    // export — never added to what the customer pays.
+    //   gross = net + vat   ⇒   net = gross / (1+rate),   vat = gross - net
+    var total = Math.max(0, subtotal - discount);
+    var vat = VAT_RATE > 0 ? Math.round(total - (total / (1 + VAT_RATE))) : 0;
     var itemCount = (safeOrder.items || []).reduce(function (sum, item) {
-      return sum + item.qty;
+      return sum + (Number(item.qty) || 0);
     }, 0);
 
     return {
@@ -1326,7 +1392,9 @@
     );
     return Object.assign({}, baseProduct, {
       barcode: normalizedBarcode,
-      componentIds: Array.isArray(baseProduct.componentIds) ? baseProduct.componentIds : []
+      componentIds: Array.isArray(baseProduct.componentIds) ? baseProduct.componentIds : [],
+      unit: baseProduct.unit || "",
+      skuCode: baseProduct.skuCode || baseProduct.sku_code || baseProduct.id
     });
   }
 
@@ -1345,103 +1413,194 @@
     };
   }
 
+  // Build a print/preview document optimized for 80mm thermal receipt printers
+  // (Xprinter / Star / Epson TM-T82 etc.). Layout = "Mẫu A — Cổ điển":
+  //
+  //         [ LOGO image ]
+  //        TÊN CỬA HÀNG
+  //         Địa chỉ, ĐT, MST
+  //   ─────────────────────────
+  //      HÓA ĐƠN BÁN HÀNG
+  //   Số / Ngày / Thu ngân / Khách
+  //   ─────────────────────────
+  //   Tên SP
+  //     SL × đơn giá        tổng
+  //   ─────────────────────────
+  //   TỔNG CỘNG          XX,XXX
+  //   (Giá đã bao gồm VAT 8%)
+  //   Khách đưa          YY,YYY
+  //   Tiền thừa          ZZ,ZZZ
+  //   ─────────────────────────
+  //        Cảm ơn quý khách
+  //
+  // Paper width 80mm; we render at 72mm so it always fits with margin.
+  // Thermal heads can print images (in B/W via dithering) — so the customer
+  // logo file at /logo.png is referenced directly. If not reachable, the
+  // browser falls back to alt text which is still readable.
   function buildPrintMarkup(order, totals, settings, template, type, language, addOnOptions) {
+    function esc(s) { return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
     var cashReceived = Number(order.cashReceived) || 0;
-    var changeDue = Math.max(0, cashReceived - (Number(totals.total) || 0));
+    var totalAmount = Number(totals.total) || 0;
+    var changeDue = Math.max(0, cashReceived - totalAmount);
     var showUnitPrice = template.showUnitPrice !== false;
-    var lineItems = (order.items || [])
-      .map(function (item) {
-        var addons = (item.addOnIds || [])
-          .map(function (addOnId) {
-            var addOn = getAddonById(addOnId, addOnOptions);
-            return addOn ? pickLanguage(addOn.label, language) : "";
-          })
-          .filter(Boolean)
-          .join(", ");
-        var unitPrice = item.price + getItemAddonTotal(item, addOnOptions);
-        var lineTotal = unitPrice * item.qty;
 
-        return (
-          "<tr>" +
-          "<td style='padding:12px 0;border-bottom:1px dashed #e5d5c7;vertical-align:top'>" +
-          "<div style='font-weight:600'>" + item.name + "</div>" +
-          (addons ? "<div style='margin-top:4px;font-size:12px;color:#7b6b5d'>" + addons + "</div>" : "") +
-          "</td>" +
-          "<td style='padding:12px 0;border-bottom:1px dashed #e5d5c7;text-align:center;vertical-align:top'>" + item.qty + "</td>" +
-          (showUnitPrice ? "<td style='padding:12px 0;border-bottom:1px dashed #e5d5c7;text-align:right;vertical-align:top'>" + formatCurrency(unitPrice) + "</td>" : "") +
-          "<td style='padding:12px 0;border-bottom:1px dashed #e5d5c7;text-align:right;vertical-align:top;font-weight:600'>" + formatCurrency(lineTotal) + "</td>" +
-          "</tr>"
-        );
-      })
-      .join("");
+    // Each item: 2 lines (name + addons / qty×price → line total).
+    var lineItems = (order.items || []).map(function (item) {
+      var addons = (item.addOnIds || []).map(function (id) {
+        var a = getAddonById(id, addOnOptions);
+        return a ? pickLanguage(a.label, language) : "";
+      }).filter(Boolean).join(", ");
+      var unitPrice = (Number(item.price) || 0) + getItemAddonTotal(item, addOnOptions);
+      var qty = Number(item.qty) || 0;
+      var lineTotal = unitPrice * qty;
+      var addonRow = addons ? "<div class='addon'>+ " + esc(addons) + "</div>" : "";
+      var unitText = showUnitPrice
+        ? (qty + " × " + formatCurrency(unitPrice))
+        : ("SL " + qty);
+      return (
+        "<div class='item'>" +
+          "<div class='item-name'>" + esc(item.name) + "</div>" +
+          addonRow +
+          "<div class='item-row'>" +
+            "<span>" + esc(unitText) + "</span>" +
+            "<strong>" + formatCurrency(lineTotal) + "</strong>" +
+          "</div>" +
+        "</div>"
+      );
+    }).join("");
 
-    var orderMetaRow = [];
-    if (template.showOrderMeta) {
-      orderMetaRow.push(
-        "<span style='display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:#fff3e6;border:1px solid #f2dcc6;font-size:12px;color:#8a5d34'>" +
-        pickLanguage("Mã đơn / Order ID", language) + ": " + order.id +
-        "</span>"
-      );
-      orderMetaRow.push(
-        "<span style='display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:#fff3e6;border:1px solid #f2dcc6;font-size:12px;color:#8a5d34'>" +
-        pickLanguage("Thời gian / Time", language) + ": " + formatDateTime(order.createdAt || Date.now()) +
-        "</span>"
-      );
+    // Logo source priority for receipts:
+    //   1. settings.logoPrintUrl — B/W thermal-optimised
+    //   2. settings.logoUrl      — colour fallback
+    //   3. /logo-thermal.png     — bundled default
+    //
+    // CRITICAL: when this HTML is injected into a popup opened as
+    // `about:blank`, a relative URL like "/logo.png" resolves against
+    // about:blank, NOT the parent origin — so the image fails to load and
+    // print prints a broken-image icon. We MUST convert to an absolute
+    // URL using the parent origin before injecting.
+    var rawLogo = settings.logoPrintUrl || settings.logoUrl || "/logo-thermal.png";
+    var logoUrl = rawLogo;
+    if (rawLogo && rawLogo.indexOf("//") === -1 && typeof window !== "undefined" && window.location) {
+      // Resolve a relative path against the current page's origin.
+      logoUrl = window.location.origin + (rawLogo.charAt(0) === "/" ? "" : "/") + rawLogo;
     }
+    var logoHtml = logoUrl
+      ? "<img class='logo' src='" + esc(logoUrl) + "' alt='" + esc(settings.brandDisplayName || settings.storeName) + "' />"
+      : "";
 
-    var detailRows = [
-      template.showBranch ? "<div>" + pickLanguage("Chi nhánh / Branch", language) + ": " + settings.branchName + "</div>" : "",
-      template.showAddress ? "<div>" + settings.address + "</div>" : "",
-      template.showPhone ? "<div>" + pickLanguage("Điện thoại / Phone", language) + ": " + settings.phone + "</div>" : "",
-      template.showTaxId ? "<div>" + pickLanguage("Mã số thuế / Tax ID", language) + ": " + settings.taxId + "</div>" : "",
-      template.showCashier ? "<div>" + pickLanguage("Thu ngân / Cashier", language) + ": " + settings.cashierName + "</div>" : "",
-      template.showCustomerName ? "<div>" + pickLanguage("Khách hàng / Customer", language) + ": " + (order.customerName || pickLanguage("Khách lẻ / Walk-in", language)) + "</div>" : "",
-      template.showPaymentMethod ? "<div>" + pickLanguage("Thanh toán / Payment", language) + ": " + pickLanguage(order.paymentMethod || "Chuyển khoản / Bank Transfer", language) + "</div>" : ""
-    ].filter(Boolean).join("");
+    // Address block (single column, centered).
+    var addressLines = [];
+    if (settings.address) addressLines.push(esc(settings.address));
+    var contactInline = [];
+    if (settings.phone) contactInline.push("ĐT: " + esc(settings.phone));
+    if (settings.taxId) contactInline.push("MST: " + esc(settings.taxId));
+    if (contactInline.length) addressLines.push(contactInline.join("  ·  "));
+    if (settings.branchName) addressLines.push(esc(pickLanguage("Chi nhánh / Branch", language)) + ": " + esc(settings.branchName));
+    var addressHtml = addressLines.length
+      ? "<div class='address'>" + addressLines.join("<br>") + "</div>"
+      : "";
+
+    // Order meta (số, ngày, thu ngân, khách, thanh toán).
+    var metaRows = [];
+    if (template.showOrderMeta !== false) {
+      metaRows.push("<div class='meta-row'><span>" + esc(pickLanguage("Số / No", language)) + ":</span><strong>" + esc(order.id) + "</strong></div>");
+      metaRows.push("<div class='meta-row'><span>" + esc(pickLanguage("Ngày / Date", language)) + ":</span><span>" + esc(formatDateTime(order.createdAt || Date.now())) + "</span></div>");
+    }
+    if (template.showCashier !== false && settings.cashierName)
+      metaRows.push("<div class='meta-row'><span>" + esc(pickLanguage("Thu ngân / Cashier", language)) + ":</span><span>" + esc(settings.cashierName) + "</span></div>");
+    if (template.showCustomerName !== false)
+      metaRows.push("<div class='meta-row'><span>" + esc(pickLanguage("Khách / Cust", language)) + ":</span><span>" + esc(order.customerName || pickLanguage("Khách lẻ / Walk-in", language)) + "</span></div>");
+    if (template.showPaymentMethod !== false && order.paymentMethod)
+      metaRows.push("<div class='meta-row'><span>" + esc(pickLanguage("TT / Pay", language)) + ":</span><span>" + esc(pickLanguage(order.paymentMethod, language)) + "</span></div>");
+    var metaHtml = metaRows.join("");
+
+    // CSS: screen preview wraps the 80mm sheet in a soft background; print
+    // strips it down to bare receipt at the real paper width.
+    var css =
+      "* { box-sizing: border-box; }" +
+      "html, body { margin: 0; padding: 0; }" +
+      "body { font-family: 'Courier New', Consolas, 'Liberation Mono', monospace; color: #000; background: #f3eee6; }" +
+      ".sheet { width: 72mm; margin: 14px auto; background: #fff; padding: 5mm 4mm; font-size: 12px; line-height: 1.4; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }" +
+      ".center { text-align: center; }" +
+      // Force max contrast on the logo: any colour pixel collapses toward
+      // black for thermal heads. Even if the user uploaded a colour PNG,
+      // these filters make it print 3-4x darker than the raw image.
+      ".logo { display: block; max-width: 56mm; max-height: 22mm; margin: 0 auto 4px; object-fit: contain; " +
+        "filter: grayscale(100%) contrast(2.5) brightness(0.55); " +
+        "-webkit-print-color-adjust: exact; print-color-adjust: exact; }" +
+      ".shop-name { font-size: 15px; font-weight: 700; letter-spacing: 0.4px; text-align: center; margin: 0; }" +
+      ".address { font-size: 11px; line-height: 1.5; text-align: center; margin-top: 2px; }" +
+      "hr { border: none; border-top: 1px dashed #000; margin: 5px 0; }" +
+      ".doc-title { font-size: 13px; font-weight: 700; text-align: center; letter-spacing: 1px; margin: 2px 0; }" +
+      ".meta { font-size: 11px; margin: 2px 0; }" +
+      ".meta-row { display: flex; justify-content: space-between; gap: 8px; line-height: 1.5; }" +
+      ".meta-row span:first-child { color: #333; }" +
+      ".item { margin: 4px 0; }" +
+      ".item-name { font-weight: 700; word-wrap: break-word; }" +
+      ".addon { font-size: 11px; padding-left: 8px; color: #333; }" +
+      ".item-row { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; }" +
+      ".totals { font-size: 12px; line-height: 1.6; }" +
+      ".totals .row { display: flex; justify-content: space-between; gap: 8px; }" +
+      ".grand-row { font-size: 15px; font-weight: 700; border-top: 1px solid #000; padding-top: 4px; margin-top: 4px; }" +
+      ".vat-note { font-size: 10.5px; font-style: italic; text-align: center; margin: 2px 0 4px; color: #222; }" +
+      ".footer { text-align: center; font-size: 11px; margin-top: 6px; }" +
+      "@media print {" +
+        "@page { size: 80mm auto; margin: 0; }" +
+        "body { background: #fff; }" +
+        ".sheet { width: 100%; margin: 0; padding: 2mm 3mm; box-shadow: none; }" +
+        ".no-print { display: none; }" +
+      "}";
+
+    // <base href> makes any future relative URL inside the popup resolve
+    // against the parent app — not against about:blank — so if anyone adds
+    // <img src="something"> later it still works.
+    var baseHref = (typeof window !== "undefined" && window.location)
+      ? window.location.origin + "/"
+      : "/";
 
     return (
-      "<!DOCTYPE html><html><head><meta charset='utf-8'><title>" + template.title + "</title></head>" +
-      "<body style='margin:0;background:#fffaf4;font-family:Arial,sans-serif;color:#2d2117'>" +
-      "<div style='max-width:860px;margin:0 auto;padding:28px'>" +
-      "<section style='background:#fff;border:1px solid #f0dfcf;border-radius:28px;padding:28px 30px;box-shadow:0 18px 40px rgba(93,58,20,0.08)'>" +
-      "<div style='display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:22px'>" +
-      "<div>" +
-      "<div style='font-size:12px;letter-spacing:0.24em;color:#8f7f71;text-transform:uppercase'>" + (settings.brandLine || settings.storeName) + "</div>" +
-      "<h2 style='margin:8px 0 6px;font-size:34px;line-height:1.02'>" + (settings.brandDisplayName || settings.storeName) + "</h2>" +
-      "<div style='color:#6c5b4d;font-weight:600'>" + pickLanguage(template.title, language) + "</div>" +
-      (template.showSubtitle ? "<div style='margin-top:6px;color:#8f7f71'>" + pickLanguage(template.subtitle || "", language) + "</div>" : "") +
-      "</div>" +
-      "<div style='text-align:right'>" +
-      "<div style='display:inline-block;padding:10px 16px;border-radius:999px;background:#fff3e6;border:1px solid #f2dcc6;color:#a45318;font-weight:700'>" + pickLanguage(type, language) + "</div>" +
-      "</div>" +
-      "</div>" +
-      (detailRows ? "<div style='display:grid;gap:6px;padding:16px 18px;border-radius:20px;background:#fff8f1;color:#6c5b4d;margin-bottom:16px'>" + detailRows + "</div>" : "") +
-      (orderMetaRow.length ? "<div style='display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px'>" + orderMetaRow.join("") + "</div>" : "") +
-      "<table style='width:100%;border-collapse:collapse;border-spacing:0'>" +
-      "<thead><tr>" +
-      "<th align='left' style='padding:0 0 10px;color:#8f7f71;font-size:12px;text-transform:uppercase;letter-spacing:0.14em'>" + pickLanguage("Món / Item", language) + "</th>" +
-      "<th align='center' style='padding:0 0 10px;color:#8f7f71;font-size:12px;text-transform:uppercase;letter-spacing:0.14em'>" + pickLanguage("SL / Qty", language) + "</th>" +
-      (showUnitPrice ? "<th align='right' style='padding:0 0 10px;color:#8f7f71;font-size:12px;text-transform:uppercase;letter-spacing:0.14em'>" + pickLanguage("Đơn giá / Unit Price", language) + "</th>" : "") +
-      "<th align='right' style='padding:0 0 10px;color:#8f7f71;font-size:12px;text-transform:uppercase;letter-spacing:0.14em'>" + pickLanguage("Thành tiền / Amount", language) + "</th>" +
-      "</tr></thead>" +
-      "<tbody>" + lineItems + "</tbody></table>" +
-      "<div style='margin-top:18px;padding:18px;border-radius:22px;background:#fff8f1;line-height:1.9'>" +
-      "<div style='display:flex;justify-content:space-between;gap:16px'><span>" + pickLanguage("Tạm tính / Subtotal", language) + "</span><strong>" + formatCurrency(totals.subtotal) + "</strong></div>" +
-      "<div style='display:flex;justify-content:space-between;gap:16px'><span>" + pickLanguage("Giảm giá / Discount", language) + "</span><strong>" + formatCurrency(totals.discount) + "</strong></div>" +
-      "<div style='display:flex;justify-content:space-between;gap:16px'><span>VAT 8%</span><strong>" + formatCurrency(totals.vat) + "</strong></div>" +
-      "<div style='display:flex;justify-content:space-between;gap:16px;margin-top:8px;padding-top:10px;border-top:1px dashed #d7c2af;font-size:20px;font-weight:700'><span>" + pickLanguage("Tổng cộng / Total", language) + "</span><span>" + formatCurrency(totals.total) + "</span></div>" +
-      (template.showCashReceived ? "<div style='display:flex;justify-content:space-between;gap:16px'><span>" + pickLanguage("Tiền khách đưa / Cash Received", language) + "</span><strong>" + formatCurrency(cashReceived) + "</strong></div>" : "") +
-      (template.showChangeDue ? "<div style='display:flex;justify-content:space-between;gap:16px'><span>" + pickLanguage("Tiền thừa / Change", language) + "</span><strong>" + formatCurrency(changeDue) + "</strong></div>" : "") +
-      "</div>" +
-      "<p style='margin:18px 0 0;color:#6c5b4d'>" + pickLanguage(template.footer, language) + "</p>" +
-      "</section>" +
-      "</div></body></html>"
+      "<!DOCTYPE html><html><head><meta charset='utf-8'>" +
+      "<base href='" + esc(baseHref) + "'>" +
+      "<title>" + esc(template.title || pickLanguage(type, language)) + " — " + esc(order.id) + "</title>" +
+      "<style>" + css + "</style></head>" +
+      "<body>" +
+        "<div class='sheet'>" +
+          // Header: logo + shop name + address
+          logoHtml +
+          "<div class='shop-name'>" + esc(settings.brandDisplayName || settings.storeName) + "</div>" +
+          addressHtml +
+          "<hr>" +
+          // Doc title
+          "<div class='doc-title'>" + esc(pickLanguage(template.title || "HÓA ĐƠN BÁN HÀNG / RECEIPT", language)) + "</div>" +
+          (metaHtml ? "<div class='meta'>" + metaHtml + "</div>" : "") +
+          "<hr>" +
+          // Items
+          "<div class='items'>" + lineItems + "</div>" +
+          "<hr>" +
+          // Totals: single grand total + VAT-inclusive note
+          "<div class='totals'>" +
+            (totals.discount ? "<div class='row'><span>" + esc(pickLanguage("Giảm / Discount", language)) + "</span><span>-" + formatCurrency(totals.discount) + "</span></div>" : "") +
+            "<div class='row grand-row'><span>" + esc(pickLanguage("TỔNG CỘNG / TOTAL", language)) + "</span><span>" + formatCurrency(totalAmount) + "</span></div>" +
+            "<div class='vat-note'>" + esc(pickLanguage("(Giá đã bao gồm VAT) / (VAT included)", language)) + "</div>" +
+            (template.showCashReceived !== false && cashReceived > 0 ? "<div class='row'><span>" + esc(pickLanguage("Khách đưa / Cash", language)) + "</span><span>" + formatCurrency(cashReceived) + "</span></div>" : "") +
+            (template.showChangeDue !== false && cashReceived > 0 ? "<div class='row'><span>" + esc(pickLanguage("Tiền thừa / Change", language)) + "</span><span>" + formatCurrency(changeDue) + "</span></div>" : "") +
+          "</div>" +
+          "<hr>" +
+          (template.footer ? "<p class='footer'>" + esc(pickLanguage(template.footer, language)) + "</p>" : "") +
+          "<p class='footer'>" + esc(pickLanguage("★ Cảm ơn quý khách ★ / ★ Thank you ★", language)) + "</p>" +
+        "</div>" +
+      "</body></html>"
     );
   }
 
   function MenuDrawer(props) {
     var items = [
       { id: "pos", label: "Bán hàng / POS", icon: "🧾", help: "Bán hàng tại quầy / Counter sales" },
+      { id: "purchases", label: "Nhập hàng / Stock In", icon: "📥", help: "Tạo phiếu nhập, nhà cung cấp / Purchase orders" },
+      { id: "issues", label: "Xuất hàng / Stock Out", icon: "📤", help: "Xuất hủy, mẫu, nội bộ / Damage, sample, internal" },
+      { id: "warehouse", label: "Lưu kho / Warehouse", icon: "🏬", help: "Tồn kho, sổ cái, kiểm kê / Stock & ledger" },
       { id: "dashboard", label: "Tổng quan / Dashboard", icon: "📊", help: "Tổng quan doanh thu / Sales overview" },
       { id: "inventory", label: "Kho hàng / Inventory", icon: "📦", help: "Sửa, thêm, xóa sản phẩm / Manage products" },
       { id: "settings", label: "Cài đặt / Settings", icon: "⚙️", help: "Cửa hàng, hóa đơn, mã vạch / Shop, invoice, barcode" }
@@ -1483,6 +1642,81 @@
     `;
   }
 
+  // -----------------------------------------------------------------
+  // Cloudflare D1 sync bridge.
+  // window.ShopFlowSync is provided by sync.js (loaded before app.js).
+  // We guard every call so the app still works if sync.js failed to load
+  // or the API is offline.
+  // -----------------------------------------------------------------
+  function syncEnqueue(payload) {
+    try {
+      if (window.ShopFlowSync && typeof window.ShopFlowSync.enqueue === "function") {
+        return window.ShopFlowSync.enqueue(payload);
+      }
+    } catch (err) {
+      // Never let sync errors block UI flows.
+      if (window && window.console) console.warn("syncEnqueue failed", err);
+    }
+    return null;
+  }
+
+  function syncApi(path, opts) {
+    if (!window.ShopFlowSync || typeof window.ShopFlowSync.api !== "function") {
+      return Promise.reject(new Error("sync not ready"));
+    }
+    return window.ShopFlowSync.api(path, opts);
+  }
+
+  function LocalNumberInput(props) {
+    var useState = window.React.useState;
+    var useEffect = window.React.useEffect;
+    var useRef = window.React.useRef;
+    
+    var localValState = useState(props.value);
+    var localVal = localValState[0];
+    var setLocalVal = localValState[1];
+    
+    var focused = useRef(false);
+    
+    useEffect(function() {
+      if (!focused.current) {
+        setLocalVal(props.value);
+      }
+    }, [props.value]);
+
+    return html`
+      <input
+        type="number"
+        min=${props.min}
+        max=${props.max}
+        className=${props.className}
+        style=${props.style}
+        value=${localVal == null ? "" : localVal}
+        onFocus=${function(e) {
+          focused.current = true;
+          if (props.onFocus) props.onFocus(e);
+        }}
+        onBlur=${function(e) {
+          focused.current = false;
+          setLocalVal(props.value);
+          if (props.onBlur) props.onBlur(e);
+        }}
+        onInput=${function(e) {
+          setLocalVal(e.target.value);
+          if (props.onChange) {
+            props.onChange(e.target.value === "" ? "" : Number(e.target.value));
+          }
+        }}
+        onKeyDown=${function(e) {
+          if (e.key === "Enter") {
+             e.target.blur();
+          }
+          if (props.onKeyDown) props.onKeyDown(e);
+        }}
+      />
+    `;
+  }
+
   function App() {
     var initialState = useMemo(buildInitialState, []);
     var [categories, setCategories] = useState(initialState.categories);
@@ -1501,6 +1735,47 @@
     var [selectedBarcodeTemplateId, setSelectedBarcodeTemplateId] = useState(initialState.selectedBarcodeTemplateId);
     var [activeView, setActiveView] = useState("pos");
     var [menuOpen, setMenuOpen] = useState(false);
+
+    // ---- Cloudflare D1 sync state -------------------------------
+    var [syncStatus, setSyncStatus] = useState({ online: true, pending: 0, lastSyncAt: 0, lastError: null });
+    // Toast queue — array of { id, kind: "success"|"error"|"info", text, ts }.
+    // Auto-dismissed by the renderer after ~3.5s.
+    var [toasts, setToasts] = useState([]);
+    function pushToast(kind, text) {
+      var id = "t-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6);
+      setToasts(function (cur) { return cur.concat([{ id: id, kind: kind, text: text, ts: Date.now() }]); });
+      window.setTimeout(function () {
+        setToasts(function (cur) { return cur.filter(function (t) { return t.id !== id; }); });
+      }, 3500);
+    }
+    var [suppliers, setSuppliers] = useState([]);
+    var [purchases, setPurchases] = useState([]);
+    var [issues, setIssues] = useState([]);
+    var [movements, setMovements] = useState([]);
+    // Drafts for nhập/xuất views
+    var [purchaseDraft, setPurchaseDraft] = useState({ supplierId: "", supplierName: "", paymentMethod: "Tiền mặt / Cash", note: "", items: [] });
+    var [issueDraft, setIssueDraft] = useState({ reason: "damaged", note: "", items: [] });
+    var [supplierDraft, setSupplierDraft] = useState({ id: null, name: "", phone: "", address: "", note: "" });
+    var [warehouseTab, setWarehouseTab] = useState("stock"); // stock | ledger | stocktake
+    var [stocktakeDraft, setStocktakeDraft] = useState({}); // productId -> actual qty
+    // Search boxes for product lookup in Kho hàng (Inventory) and Lưu kho
+    // (Warehouse) views. Plain string; we run productMatchesQuery() on top.
+    var [inventorySearchTerm, setInventorySearchTerm] = useState("");
+    var [warehouseSearchTerm, setWarehouseSearchTerm] = useState("");
+    // Dashboard date-range filter — preset or custom range
+    var [dashboardRange, setDashboardRange] = useState("today"); // today|week|month|year|custom
+    var [dashboardCustomFrom, setDashboardCustomFrom] = useState("");
+    var [dashboardCustomTo, setDashboardCustomTo] = useState("");
+    // POS category sidebar: which parent categories are currently expanded.
+    // Object map { [parentId]: true }. Starts empty (all collapsed).
+    var [expandedCategories, setExpandedCategories] = useState({});
+    function toggleCategoryExpanded(id) {
+      setExpandedCategories(function (cur) {
+        var next = Object.assign({}, cur);
+        if (next[id]) delete next[id]; else next[id] = true;
+        return next;
+      });
+    }
     var [paymentMenuOpen, setPaymentMenuOpen] = useState(false);
     var [selectedCategory, setSelectedCategory] = useState("all");
     var [searchTerm, setSearchTerm] = useState("");
@@ -1521,6 +1796,10 @@
     var [cameraActive, setCameraActive] = useState(false);
     var [productDraft, setProductDraft] = useState({
       id: null,
+      customId: "",
+      skuCode: "",
+      skuTouched: false,
+      idTouched: false,
       name: "",
       category: initialState.categories[0] ? initialState.categories[0].id : "",
       price: 0,
@@ -1528,7 +1807,9 @@
       barcode: "",
       image: "🍊",
       description: "",
-      componentIds: []
+      componentIds: [],
+      minStock: 0,
+      unit: ""
     });
     var [categoryDraft, setCategoryDraft] = useState({
       id: null,
@@ -1562,6 +1843,17 @@
     var hardwareScanBufferRef = useRef("");
     var hardwareScanStartedAtRef = useRef(0);
     var hardwareScanLastAtRef = useRef(0);
+
+    // Dirty refs for debounced D1 settings/template persistence.
+    // Declared up here so handlePulled() (called from sync engine) can flip
+    // them to false BEFORE applying server-driven state — preventing the
+    // pull from triggering a write-back loop.
+    var settingsDirtyRef = useRef(false);
+    var invoiceTemplatesDirtyRef = useRef(false);
+    var barcodeTemplatesDirtyRef = useRef(false);
+    // Per-product timers for debounced inline stock adjustments.
+    // Key = productId, value = setTimeout handle.
+    var stockEditTimersRef = useRef({});
 
     useEffect(function () {
       try {
@@ -1609,6 +1901,263 @@
         setActiveOrderId(orders[0] ? orders[0].id : "");
       }
     }, [orders, activeOrderId]);
+
+    // ---------- Cloudflare D1 sync wiring ----------
+    useEffect(function () {
+      if (!window.ShopFlowSync) return undefined;
+
+      function handlePulled(data) {
+        // Merge products + inventory from server. Server is source of truth
+        // for stock numbers; local edits are pushed via outbox, so by the
+        // time we pull again, server already has them.
+        if (Array.isArray(data.products) && data.products.length) {
+          // Read pending stock edits from localStorage. Any product with an
+          // unflushed edit must keep its LOCAL stock value — otherwise a pull
+          // that runs before the outbox sends the adjustment would clobber
+          // the user's typed value with stale server data.
+          var pendingStockEdits = {};
+          var pendingKey = "shopflow-pending-stock-edits";
+          try {
+            pendingStockEdits = JSON.parse(
+              window.localStorage.getItem(pendingKey) || "{}"
+            ) || {};
+          } catch (_) {}
+
+          // For each pending entry whose server value now matches the desired
+          // newQty (i.e. our adjust has landed), or that's been stuck >30min
+          // (escape hatch), CLEAR the guard so future pulls trust the server.
+          var clearedAny = false;
+          Object.keys(pendingStockEdits).forEach(function (pid) {
+            var entry = pendingStockEdits[pid];
+            var serverRow = data.products.find(function (r) { return r.id === pid; });
+            if (serverRow && Number(serverRow.stock) === Number(entry.newQty)) {
+              delete pendingStockEdits[pid];
+              clearedAny = true;
+            } else if (entry.sentAt && Date.now() - entry.sentAt > 30 * 60 * 1000) {
+              // Stuck > 30 min — assume the op failed permanently; give up
+              // the guard so we don't loop forever showing stale local data.
+              delete pendingStockEdits[pid];
+              clearedAny = true;
+            }
+          });
+          if (clearedAny) {
+            try {
+              window.localStorage.setItem(pendingKey, JSON.stringify(pendingStockEdits));
+            } catch (_) {}
+          }
+
+          // If this is a full snapshot (since=0), trust the server: drop any
+          // local product that's not in the snapshot. Otherwise merge.
+          var isFullSnapshot = !data.since;
+
+          setProducts(function (current) {
+            var byId = {};
+            if (!isFullSnapshot) {
+              current.forEach(function (p) { byId[p.id] = p; });
+            }
+            data.products.forEach(function (row) {
+              // Mirror server soft-deletes locally.
+              if (row.is_active === 0) { delete byId[row.id]; return; }
+              var prev = byId[row.id] || {};
+              var hasPendingEdit = Object.prototype.hasOwnProperty.call(pendingStockEdits, row.id);
+              var resolvedStock = hasPendingEdit
+                ? (Number(prev.stock) || Number(pendingStockEdits[row.id].newQty) || 0)
+                : (Number(row.stock) || 0);
+              byId[row.id] = normalizeProduct(Object.assign({}, prev, {
+                id: row.id,
+                name: row.name,
+                category: row.category_id,
+                price: Number(row.price) || 0,
+                costPrice: Number(row.cost_price) || 0,
+                stock: resolvedStock,
+                barcode: row.barcode || prev.barcode || "",
+                image: row.image || prev.image || "🛒",
+                description: row.description || "",
+                componentIds: row.component_ids ? safeJsonParse(row.component_ids, []) : (prev.componentIds || []),
+                minStock: Number(row.min_stock) || 0,
+                unit: row.unit || prev.unit || "",
+                skuCode: row.sku_code || prev.skuCode || row.id
+              }));
+            });
+            return Object.keys(byId).map(function (id) { return byId[id]; });
+          });
+        }
+        if (Array.isArray(data.categories) && data.categories.length) {
+          setCategories(function (current) {
+            var byId = {};
+            current.forEach(function (c) { byId[c.id] = c; });
+            data.categories.forEach(function (row) {
+              if (row.is_active === 0) { delete byId[row.id]; return; }
+              byId[row.id] = {
+                id: row.id,
+                label: row.label,
+                icon: row.icon || "🛒",
+                parentId: row.parent_id || null,
+                level: Number(row.level) || 1,
+                code: row.code || null,
+                sortOrder: Number(row.sort_order) || 0
+              };
+            });
+            return Object.keys(byId).map(function (id) { return byId[id]; });
+          });
+        }
+        if (Array.isArray(data.addOns) && data.addOns.length) {
+          setAddOns(function (current) {
+            var byId = {};
+            current.forEach(function (a) { byId[a.id] = a; });
+            data.addOns.forEach(function (row) {
+              if (row.is_active === 0) { delete byId[row.id]; return; }
+              byId[row.id] = { id: row.id, label: row.label, price: Number(row.price) || 0, group: row.group_key };
+            });
+            return Object.keys(byId).map(function (id) { return byId[id]; });
+          });
+        }
+
+        // Hydrate settings + templates from the server. We mark the
+        // *DirtyRef = false BEFORE applying the state update so the
+        // debounced-persistence effects above won't bounce the server data
+        // right back.
+        if (Array.isArray(data.settings) && data.settings.length) {
+          data.settings.forEach(function (row) {
+            var parsed;
+            try { parsed = typeof row.value === "string" ? JSON.parse(row.value) : row.value; }
+            catch (e) { parsed = null; }
+            if (!parsed) return;
+            if (row.key === "shop") {
+              settingsDirtyRef.current = false;
+              setSettings(function (prev) { return Object.assign({}, prev, parsed); });
+            } else if (row.key === "invoice_templates" && Array.isArray(parsed.templates)) {
+              invoiceTemplatesDirtyRef.current = false;
+              setInvoiceTemplates(parsed.templates.map(function (t, i) {
+                return normalizeInvoiceTemplate(t, DEFAULT_INVOICE_TEMPLATES[i] || DEFAULT_INVOICE_TEMPLATES[0]);
+              }));
+              if (parsed.selectedId) setSelectedInvoiceTemplateId(parsed.selectedId);
+            } else if (row.key === "barcode_templates" && Array.isArray(parsed.templates)) {
+              barcodeTemplatesDirtyRef.current = false;
+              setBarcodeTemplates(parsed.templates.map(function (t, i) {
+                return normalizeBarcodeTemplate(t, DEFAULT_BARCODE_TEMPLATES[i] || DEFAULT_BARCODE_TEMPLATES[0]);
+              }));
+              if (parsed.selectedId) setSelectedBarcodeTemplateId(parsed.selectedId);
+            }
+          });
+        }
+      }
+
+      function handleStatus(status) { setSyncStatus(status); }
+
+      // Friendly Vietnamese labels by endpoint, so the toast says exactly
+      // WHAT was saved (e.g. "Đã lưu tồn kho").
+      function labelForOp(payload) {
+        var ep = payload && payload.endpoint || "";
+        var op = payload && payload.opType || "";
+        if (ep.indexOf("/inventory/adjust") !== -1) return L("Đã lưu tồn kho / Stock saved");
+        if (ep.indexOf("/products") !== -1)        return L("Đã lưu sản phẩm / Product saved");
+        if (ep.indexOf("/sales") !== -1)           return L("Đã lưu hóa đơn / Sale saved");
+        if (ep.indexOf("/purchases") !== -1)       return L("Đã lưu phiếu nhập / Purchase saved");
+        if (ep.indexOf("/issues") !== -1)          return L("Đã lưu phiếu xuất / Issue saved");
+        if (ep.indexOf("/suppliers") !== -1)       return L("Đã lưu NCC / Supplier saved");
+        if (ep.indexOf("/settings") !== -1)        return L("Đã lưu cài đặt / Settings saved");
+        if (ep.indexOf("/categories") !== -1)      return L("Đã lưu danh mục / Category saved");
+        if (ep.indexOf("/addons") !== -1)          return L("Đã lưu add-on / Add-on saved");
+        return L("Đã lưu / Saved");
+      }
+      function handleSuccess(payload) {
+        // Skip "no-op" adjust responses (delta=0) — these aren't real saves.
+        if (payload && payload.response && payload.response.delta === 0) return;
+        pushToast("success", labelForOp(payload));
+      }
+      function handleFailure(payload) {
+        pushToast("error",
+          L("Chưa lưu được — sẽ thử lại / Save failed — will retry") +
+          (payload && payload.error ? " (" + payload.error + ")" : "")
+        );
+      }
+
+      window.ShopFlowSync.init({
+        onPulled: handlePulled,
+        onStatusChange: handleStatus,
+        onSuccess: handleSuccess,
+        onFailure: handleFailure,
+      });
+      return undefined;
+    }, []);
+
+    // Helpers to refetch the "operations" data shown in nhập/xuất/kho views.
+    function refreshSuppliers() {
+      return syncApi("/suppliers").then(function (data) {
+        setSuppliers(data.suppliers || []);
+      }).catch(function () {});
+    }
+    function refreshPurchases() {
+      return syncApi("/purchases?limit=100").then(function (data) {
+        setPurchases(data.purchases || []);
+      }).catch(function () {});
+    }
+    function refreshIssues() {
+      return syncApi("/issues?limit=100").then(function (data) {
+        setIssues(data.issues || []);
+      }).catch(function () {});
+    }
+    function refreshMovements(productId) {
+      var qs = productId ? ("?productId=" + encodeURIComponent(productId) + "&limit=200") : "?limit=200";
+      return syncApi("/inventory/movements" + qs).then(function (data) {
+        setMovements(data.movements || []);
+      }).catch(function () {});
+    }
+    // Auto refresh when relevant views open.
+    useEffect(function () {
+      if (activeView === "purchases") { refreshSuppliers(); refreshPurchases(); }
+      if (activeView === "issues") { refreshIssues(); }
+      if (activeView === "warehouse") { refreshMovements(); }
+    }, [activeView]);
+
+    // ---------- Debounced persistence of settings / templates to D1 ----------
+    // We don't want to flood /api/settings with one request per keystroke,
+    // so each watcher waits 800ms of idle before pushing.
+    // The first render of the app shouldn't trigger a write either (we'd be
+    // saving the defaults back over the server snapshot), so skip the first
+    // pass with a ref. Each ref is also reset to false in handlePulled() so
+    // server-driven state changes don't echo back as writes.
+    useEffect(function () {
+      if (!settingsDirtyRef.current) { settingsDirtyRef.current = true; return; }
+      var t = window.setTimeout(function () {
+        syncApi("/settings", {
+          method: "POST",
+          body: { key: "shop", value: settings }
+        }).catch(function () { /* offline – will retry next change */ });
+      }, 800);
+      return function () { window.clearTimeout(t); };
+    }, [settings]);
+
+    var invoiceTemplatesDirtyRef = useRef(false);
+    useEffect(function () {
+      if (!invoiceTemplatesDirtyRef.current) { invoiceTemplatesDirtyRef.current = true; return; }
+      var t = window.setTimeout(function () {
+        syncApi("/settings", {
+          method: "POST",
+          body: {
+            key: "invoice_templates",
+            value: { templates: invoiceTemplates, selectedId: selectedInvoiceTemplateId }
+          }
+        }).catch(function () {});
+      }, 800);
+      return function () { window.clearTimeout(t); };
+    }, [invoiceTemplates, selectedInvoiceTemplateId]);
+
+    var barcodeTemplatesDirtyRef = useRef(false);
+    useEffect(function () {
+      if (!barcodeTemplatesDirtyRef.current) { barcodeTemplatesDirtyRef.current = true; return; }
+      var t = window.setTimeout(function () {
+        syncApi("/settings", {
+          method: "POST",
+          body: {
+            key: "barcode_templates",
+            value: { templates: barcodeTemplates, selectedId: selectedBarcodeTemplateId }
+          }
+        }).catch(function () {});
+      }, 800);
+      return function () { window.clearTimeout(t); };
+    }, [barcodeTemplates, selectedBarcodeTemplateId]);
 
     useEffect(function () {
       if (products.length && !products.some(function (product) { return product.id === selectedBarcodeProductId; })) {
@@ -1659,14 +2208,19 @@
     }, [categories, productDraft.category]);
 
     useEffect(function () {
-      var validComponentIds = (productDraft.componentIds || []).filter(function (componentId) {
+      // Recipe entries are now { id, qty, unit, note } objects (legacy data
+      // may still be plain strings — we accept both). Drop any entry whose
+      // component no longer exists in the catalog.
+      var raw = productDraft.componentIds || [];
+      var validEntries = raw.filter(function (entry) {
+        var componentId = (entry && typeof entry === "object") ? entry.id : entry;
         return components.some(function (component) { return component.id === componentId; });
       });
 
-      if (validComponentIds.length !== (productDraft.componentIds || []).length) {
+      if (validEntries.length !== raw.length) {
         setProductDraft(function (currentDraft) {
           return Object.assign({}, currentDraft, {
-            componentIds: validComponentIds
+            componentIds: validEntries
           });
         });
       }
@@ -1789,21 +2343,67 @@
     var totals = calculateOrder(activeOrder, addOns);
 
     var filterCategories = useMemo(function () {
-      return [FILTER_ALL_CATEGORY].concat(categories);
+      // Sort: level-1 parents first, then their children indented underneath.
+      // This keeps the POS sidebar grouped — "Nhu yếu phẩm" at top of its
+      // family, then snacks/beverages/pantry/etc indented one level.
+      var ordered = [];
+      var byParent = {};
+      categories.forEach(function (c) {
+        var pid = c.parentId || "_root";
+        if (!byParent[pid]) byParent[pid] = [];
+        byParent[pid].push(c);
+      });
+      function walk(parentId, depth) {
+        (byParent[parentId] || []).forEach(function (c) {
+          ordered.push(Object.assign({}, c, { _depth: depth }));
+          walk(c.id, depth + 1);
+        });
+      }
+      walk("_root", 0);
+      return [FILTER_ALL_CATEGORY].concat(ordered);
     }, [categories]);
+
+    // Recursive parent ↔ children category matching. Click "Nhu yếu phẩm"
+    // (parent) → match products whose category is essentials OR any of its
+    // children (snacks/beverages/pantry/personal-care/household/packaging).
+    // Click a child directly → only that child.
+    function categoryMatchesSelected(productCategoryId, selected, allCategories) {
+      if (!selected || selected === "all") return true;
+      if (productCategoryId === selected) return true;
+      // If selected is a parent, walk children
+      var cat = allCategories.find(function (c) { return c.id === productCategoryId; });
+      while (cat && cat.parentId) {
+        if (cat.parentId === selected) return true;
+        cat = allCategories.find(function (c) { return c.id === cat.parentId; });
+      }
+      return false;
+    }
 
     var filteredProducts = useMemo(function () {
       return products.filter(function (product) {
         var category = categories.find(function (item) {
           return item.id === product.category;
         });
-        var matchesCategory = selectedCategory === "all" || product.category === selectedCategory;
+        var matchesCategory = categoryMatchesSelected(product.category, selectedCategory, categories);
         var matchesSearch = !searchTerm || (product.name + " " + product.category + " " + (category ? category.label : "") + " " + product.description)
           .toLowerCase()
           .indexOf(searchTerm.toLowerCase()) !== -1;
         return matchesCategory && matchesSearch;
       });
     }, [products, categories, selectedCategory, searchTerm]);
+
+    // ---------- Low-stock awareness ----------
+    // A product is "low" when its on-hand qty is at or below the configured
+    // min_stock. Products with min_stock === 0 are NOT low even at 0 — that's
+    // the "I don't track this" sentinel.
+    var lowStockProducts = useMemo(function () {
+      return products.filter(function (p) {
+        var qty = Number(p.stock) || 0;
+        var min = Number(p.minStock) || 0;
+        return min > 0 && qty <= min;
+      });
+    }, [products]);
+    var lowStockCount = lowStockProducts.length;
 
     var activeInvoiceTemplate = invoiceTemplates.find(function (template) {
       return template.id === selectedInvoiceTemplateId;
@@ -1828,25 +2428,90 @@
         || !!window.FileReader
       );
 
+    // Compute a [from, to] millisecond range from the user-chosen preset.
+    function getDashboardRangeBounds() {
+      var now = new Date();
+      var startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      var endOfDay = startOfToday + 24 * 60 * 60 * 1000 - 1;
+      switch (dashboardRange) {
+        case "today":
+          return { from: startOfToday, to: endOfDay, label: "Hôm nay / Today" };
+        case "week": {
+          // Last 7 days including today
+          var from = startOfToday - 6 * 24 * 60 * 60 * 1000;
+          return { from: from, to: endOfDay, label: "7 ngày qua / Last 7 days" };
+        }
+        case "month": {
+          var from = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+          var to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+          return { from: from, to: to, label: "Tháng này / This month" };
+        }
+        case "year": {
+          var from = new Date(now.getFullYear(), 0, 1).getTime();
+          var to = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999).getTime();
+          return { from: from, to: to, label: "Năm nay / This year" };
+        }
+        case "custom": {
+          var f = dashboardCustomFrom ? new Date(dashboardCustomFrom + "T00:00:00").getTime() : 0;
+          var t = dashboardCustomTo
+            ? new Date(dashboardCustomTo + "T23:59:59.999").getTime()
+            : Date.now();
+          return { from: f, to: t, label: "Tùy chọn / Custom" };
+        }
+        default:
+          return { from: startOfToday, to: endOfDay, label: "Hôm nay / Today" };
+      }
+    }
+
     var dashboardMetrics = useMemo(function () {
-      var todayKey = new Date().toDateString();
-      var salesToday = sales.filter(function (sale) {
-        return new Date(sale.createdAt).toDateString() === todayKey;
+      var range = getDashboardRangeBounds();
+      var salesInRange = sales.filter(function (sale) {
+        var t = Number(sale.createdAt) || 0;
+        return t >= range.from && t <= range.to;
       });
-      var revenueToday = salesToday.reduce(function (sum, sale) {
-        return sum + sale.total;
-      }, 0);
-      var ordersToday = salesToday.length;
+      var revenue = salesInRange.reduce(function (sum, sale) { return sum + (Number(sale.total) || 0); }, 0);
+      var ordersCount = salesInRange.length;
+      // Average ticket
+      var avgTicket = ordersCount > 0 ? Math.round(revenue / ordersCount) : 0;
+      // Low-stock products (unchanged — global rule)
       var lowStock = products.filter(function (product) {
-        return Number(product.stock) <= 10;
+        var qty = Number(product.stock) || 0;
+        var min = Number(product.minStock) || 0;
+        return min > 0 && qty <= min;
       });
+      // Group by day for chart
+      var byDay = {};
+      salesInRange.forEach(function (s) {
+        var d = new Date(s.createdAt);
+        var key = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+        if (!byDay[key]) byDay[key] = { day: key, revenue: 0, orders: 0 };
+        byDay[key].revenue += Number(s.total) || 0;
+        byDay[key].orders += 1;
+      });
+      var daySeries = Object.keys(byDay).sort().map(function (k) { return byDay[k]; });
+      // Top selling products in range
+      var byProduct = {};
+      salesInRange.forEach(function (s) {
+        (s.items || []).forEach(function (it) {
+          var key = it.productId || it.name;
+          if (!byProduct[key]) byProduct[key] = { name: it.name, qty: 0, revenue: 0 };
+          byProduct[key].qty += Number(it.qty) || 0;
+          byProduct[key].revenue += (Number(it.qty) || 0) * (Number(it.price) || 0);
+        });
+      });
+      var topProducts = Object.values(byProduct).sort(function (a, b) { return b.qty - a.qty; }).slice(0, 5);
+
       return {
-        revenueToday: revenueToday,
-        ordersToday: ordersToday,
+        range: range,
+        revenue: revenue,
+        ordersCount: ordersCount,
+        avgTicket: avgTicket,
         lowStock: lowStock,
-        recentSales: clone(sales).sort(function (a, b) { return b.createdAt - a.createdAt; }).slice(0, 5)
+        daySeries: daySeries,
+        topProducts: topProducts,
+        recentSales: clone(salesInRange).sort(function (a, b) { return b.createdAt - a.createdAt; }).slice(0, 10)
       };
-    }, [products, sales]);
+    }, [products, sales, dashboardRange, dashboardCustomFrom, dashboardCustomTo]);
 
     var inventoryTabs = [
       { id: "stock", label: "Kiểm hàng tồn kho / Stock Check" },
@@ -1914,6 +2579,51 @@
       addProductToOrder(matchedProduct);
       setBarcodeInput("");
       setScanMessage(L("Đã thêm sản phẩm từ barcode: / Added product from barcode: ") + matchedProduct.name);
+    }
+
+    // Unified product-lookup handler used by the merged POS input.
+    // Order of precedence:
+    //   1. Exact barcode match (also handles ORIA-style SKU codes)
+    //   2. Substring match on product name (case-insensitive)
+    // If multiple name matches → add first, surface count in scanMessage.
+    // If no match → leave input as-is so the catalog list can show partial hits.
+    function handleUnifiedLookup(rawValue) {
+      var value = String(rawValue || "").trim();
+      if (!value) {
+        setScanMessage(L("Nhập tên sản phẩm hoặc mã barcode. / Type a product name or barcode."));
+        return false;
+      }
+      // 1. Try barcode / SKU / id exact match.
+      var byCode = findProductByBarcode(value);
+      if (!byCode) {
+        var lc = value.toLowerCase();
+        byCode = products.find(function (p) {
+          return (p.id && p.id.toLowerCase() === lc)
+              || (p.skuCode && String(p.skuCode).toLowerCase() === lc);
+        }) || null;
+      }
+      if (byCode) {
+        addProductToOrder(byCode);
+        setBarcodeInput("");
+        setScanMessage(L("Đã thêm / Added") + ": " + byCode.name);
+        return true;
+      }
+      // 2. Substring match on name.
+      var lc2 = value.toLowerCase();
+      var hits = products.filter(function (p) {
+        return p.name && p.name.toLowerCase().indexOf(lc2) !== -1;
+      });
+      if (hits.length === 0) {
+        setScanMessage(L("Không tìm thấy sản phẩm: ") + value + " / No product matched: " + value);
+        return false;
+      }
+      addProductToOrder(hits[0]);
+      setBarcodeInput("");
+      setScanMessage(
+        L("Đã thêm / Added") + ": " + hits[0].name +
+        (hits.length > 1 ? " (" + hits.length + " " + L("kết quả / matches") + ")" : "")
+      );
+      return true;
     }
 
     function stopCameraScan() {
@@ -2216,6 +2926,7 @@
     }
 
     function addProductToOrder(product) {
+      if (!product || !product.id) return;
       updateActiveOrder(function (order) {
         var existingItem = (order.items || []).find(function (item) {
           return item.productId === product.id && (!item.addOnIds || item.addOnIds.length === 0);
@@ -2225,7 +2936,8 @@
           return Object.assign({}, order, {
             items: order.items.map(function (item) {
               return item.id === existingItem.id
-                ? Object.assign({}, item, { qty: item.qty + 1 })
+                // B6: Number() guards against string concat from stale state.
+                ? Object.assign({}, item, { qty: (Number(item.qty) || 0) + 1 })
                 : item;
             })
           });
@@ -2248,6 +2960,7 @@
     }
 
     function adjustItemQty(itemId, delta) {
+      var deltaNum = Number(delta) || 0;
       updateActiveOrder(function (order) {
         var nextItems = (order.items || [])
           .map(function (item) {
@@ -2255,15 +2968,33 @@
               return item;
             }
 
-            return Object.assign({}, item, { qty: item.qty + delta });
+            return Object.assign({}, item, { qty: (Number(item.qty) || 0) + deltaNum });
           })
           .filter(function (item) {
-            return item.qty > 0;
+            return (Number(item.qty) || 0) > 0;
           });
 
         return Object.assign({}, order, { items: nextItems });
       });
     }
+
+    // Direct qty edit (used by the new POS input box).
+    function setItemQty(itemId, qty) {
+      var q = Math.max(0, Math.floor(Number(qty) || 0));
+      updateActiveOrder(function (order) {
+        var nextItems = (order.items || [])
+          .map(function (item) {
+            return item.id === itemId ? Object.assign({}, item, { qty: q }) : item;
+          })
+          .filter(function (item) { return (Number(item.qty) || 0) > 0; });
+        return Object.assign({}, order, { items: nextItems });
+      });
+    }
+
+    // Note: barcode + name + SKU lookup is now consolidated into
+    // handleUnifiedLookup() above. The separate findProductByQuery /
+    // addProductByQuery helpers were removed when the two input forms were
+    // merged into a single POS input.
 
     function removeItem(itemId) {
       updateActiveOrder(function (order) {
@@ -2333,17 +3064,50 @@
       createNewOrder();
     }
 
+    // "Xóa" button behavior — three branches:
+    //   1. Order has items → confirm, then clear items + reset state (keeps id).
+    //   2. Order is empty + there ARE other open orders → DELETE this order
+    //      from the list and switch active to a sibling.
+    //   3. Order is empty + it's the ONLY one → NO-OP. We refuse to silently
+    //      consume a sequence number by recreating it. The user should press
+    //      "+ Đơn mới" if they actually want another order. This used to
+    //      auto-create which made the visible order id jump (e.g. 001 → 002)
+    //      with no items added — confusing.
     function cancelOrder() {
-      updateActiveOrder(function (order) {
-        return Object.assign({}, order, {
-          items: [],
-          discountPct: 0,
-          takeAway: false,
-          status: "open",
-          customerName: "Khách lẻ / Walk-in",
-          paymentMethod: "Chuyển khoản / Bank Transfer",
-          cashReceived: 0
+      var hasItems = (activeOrder.items || []).length > 0;
+
+      if (hasItems) {
+        if (!window.confirm(L("Xóa toàn bộ món trong đơn này? / Clear every item in this order?"))) {
+          return;
+        }
+        updateActiveOrder(function (order) {
+          return Object.assign({}, order, {
+            items: [],
+            discountPct: 0,
+            takeAway: false,
+            status: "open",
+            customerName: "Khách lẻ / Walk-in",
+            paymentMethod: "Chuyển khoản / Bank Transfer",
+            cashReceived: 0
+          });
         });
+        return;
+      }
+
+      // Order is empty.
+      if (orders.length <= 1) {
+        // Only one open order left — nothing useful to do. The UI also
+        // hides the Xóa button in this state but we keep this guard so
+        // hardware keyboard shortcuts can't trigger the regression.
+        return;
+      }
+
+      // Multiple orders → remove the empty one and switch active.
+      setOrders(function (currentOrders) {
+        var remaining = currentOrders.filter(function (o) { return o.id !== activeOrder.id; });
+        if (remaining.length === 0) return currentOrders; // safety net
+        setActiveOrderId(remaining[0].id);
+        return remaining;
       });
     }
 
@@ -2351,6 +3115,19 @@
       if (!activeOrder.items.length) {
         window.alert(L("Đơn hiện tại chưa có món. / This order is empty."));
         return;
+      }
+
+      // B7: Warn when cash payment is short of total.
+      var cashReceivedNumber = Number(activeOrder.cashReceived) || 0;
+      var isCashLike = !activeOrder.paymentMethod || /Tiền mặt|Cash/i.test(activeOrder.paymentMethod || "");
+      if (isCashLike && cashReceivedNumber < (Number(totals.total) || 0)) {
+        var shortBy = (Number(totals.total) || 0) - cashReceivedNumber;
+        if (!window.confirm(
+          L("Khách trả ít hơn tổng tiền. Thiếu") + " " + formatCurrency(shortBy) + ". " +
+          L("Vẫn ghi nhận thanh toán? / Customer paid less than total. Short by the amount above. Record payment anyway?")
+        )) {
+          return;
+        }
       }
 
       var requiredQtyByProduct = getOrderProductQuantities(activeOrder.items);
@@ -2415,6 +3192,10 @@
         return [saleRecord].concat(currentSales);
       });
 
+      // Decrement local stock + record which products newly hit/passed
+      // the min_stock threshold so we can warn the cashier right after the
+      // sale is recorded.
+      var newlyLow = [];
       setProducts(function (currentProducts) {
         return currentProducts.map(function (product) {
           var soldQty = Number(requiredQtyByProduct[product.id]) || 0;
@@ -2422,10 +3203,68 @@
             return product;
           }
 
-          return Object.assign({}, product, {
-            stock: Math.max(0, (Number(product.stock) || 0) - soldQty)
-          });
+          var oldQty = Number(product.stock) || 0;
+          var newQty = Math.max(0, oldQty - soldQty);
+          var min = Number(product.minStock) || 0;
+          // Trigger when (a) min is set, (b) we just dropped to/below it,
+          // (c) we weren't already below it before — so we only warn once
+          // per crossing.
+          if (min > 0 && oldQty > min && newQty <= min) {
+            newlyLow.push({ name: product.name, newQty: newQty, min: min });
+          }
+
+          return Object.assign({}, product, { stock: newQty });
         });
+      });
+      // After the state update settles, surface the warning.
+      if (newlyLow.length) {
+        // setTimeout so the alert fires AFTER the optimistic stock update
+        // is reflected on screen.
+        window.setTimeout(function () {
+          window.alert(
+            L("⚠ Cảnh báo tồn kho thấp / Low stock alert") + ":\n\n" +
+            newlyLow.map(function (p) {
+              return "• " + p.name + " — " + L("còn") + " " + p.newQty + " / " + L("min") + " " + p.min;
+            }).join("\n") +
+            "\n\n" + L("Vui lòng tạo phiếu nhập hàng sớm. / Please create a Purchase Order soon.")
+          );
+        }, 200);
+      }
+
+      // ---- Push to Cloudflare D1 (non-blocking, queued offline) ----
+      syncEnqueue({
+        endpoint: "/sales",
+        method: "POST",
+        opType: "sale",
+        body: {
+          orderId: activeOrder.id,
+          customerName: saleRecord.customerName,
+          subtotal: saleRecord.subtotal,
+          vatAmount: saleRecord.vat,
+          discount: saleRecord.discount,
+          total: saleRecord.total,
+          paid: saleRecord.cashReceived,
+          changeAmount: Math.max(0, (Number(saleRecord.cashReceived) || 0) - (Number(saleRecord.total) || 0)),
+          paymentMethod: saleRecord.paymentMethod,
+          cashierName: saleRecord.cashierName,
+          items: (saleRecord.items || []).map(function (item) {
+            var addonTotal = getItemAddonTotal(item, addOns);
+            var unitPrice = (Number(item.price) || 0) + addonTotal;
+            var qty = Number(item.qty) || 0;
+            return {
+              productId: item.productId,
+              productName: item.name,
+              qty: qty,
+              unitPrice: unitPrice,
+              addonsTotal: addonTotal,
+              lineTotal: unitPrice * qty,
+              addons: (item.addOnIds || []).map(function (id) {
+                var a = getAddonById(id, addOns);
+                return a ? { id: a.id, label: a.label, price: a.price } : { id: id };
+              })
+            };
+          })
+        }
       });
 
       setOrders(function (currentOrders) {
@@ -2443,22 +3282,42 @@
       });
     }
 
+    // Open a popup, write the receipt HTML, wait for the logo image to
+    // finish loading, then optionally auto-trigger window.print().
+    //
+    // Why this complexity? Two real-world bugs:
+    //   1. popup.print() that runs immediately after document.write() fires
+    //      BEFORE the logo image has downloaded — so prints come out with a
+    //      broken-image icon.
+    //   2. Some browsers (esp. Safari/iOS) silently kill `document.write`
+    //      after `document.close()`. We close LAST.
+    //
+    // The injected HTML carries an inline <script> that waits for
+    // window.onload (which fires only after images decode) and then either
+    // calls print() or shows a "Đã sẵn sàng" hint depending on autoPrint.
+    function openReceiptPopup(markup, autoPrint, errorLabel) {
+      var popup = window.open("", "_blank", "width=720,height=840");
+      if (!popup) {
+        window.alert(L(errorLabel || "Trình duyệt đang chặn cửa sổ in. Hãy cho phép popup. / Your browser blocked the print window. Please allow popups."));
+        return null;
+      }
+      var autoScript = autoPrint
+        ? "<script>window.addEventListener('load',function(){setTimeout(function(){window.focus();window.print();},150);});</script>"
+        : "";
+      popup.document.open();
+      popup.document.write(markup + autoScript);
+      popup.document.close();
+      popup.focus();
+      return popup;
+    }
+
     function printWithTemplate(type) {
       if (!activeOrder.items.length) {
         window.alert(L("Đơn hiện tại chưa có món. / This order is empty."));
         return;
       }
-
-      var popup = window.open("", "_blank", "width=720,height=840");
-      if (!popup) {
-        window.alert(L("Trình duyệt đang chặn cửa sổ in hóa đơn. / Your browser blocked the print window."));
-        return;
-      }
-
-      popup.document.write(buildPrintMarkup(activeOrder, totals, settings, activeInvoiceTemplate, type, language, addOns));
-      popup.document.close();
-      popup.focus();
-      popup.print();
+      var markup = buildPrintMarkup(activeOrder, totals, settings, activeInvoiceTemplate, type, language, addOns);
+      openReceiptPopup(markup, true, "Trình duyệt đang chặn cửa sổ in hóa đơn. Hãy cho phép popup. / Your browser blocked the print window. Please allow popups.");
     }
 
     function previewInvoice() {
@@ -2466,16 +3325,8 @@
         window.alert(L("Đơn hiện tại chưa có món. / This order is empty."));
         return;
       }
-
-      var popup = window.open("", "_blank", "width=720,height=840");
-      if (!popup) {
-        window.alert(L("Trình duyệt đang chặn cửa sổ xem trước hóa đơn. / Your browser blocked the invoice preview window."));
-        return;
-      }
-
-      popup.document.write(buildPrintMarkup(activeOrder, totals, settings, activeInvoiceTemplate, "Xem trước hóa đơn / Preview Invoice", language, addOns));
-      popup.document.close();
-      popup.focus();
+      var markup = buildPrintMarkup(activeOrder, totals, settings, activeInvoiceTemplate, "Xem trước hóa đơn / Preview Invoice", language, addOns);
+      openReceiptPopup(markup, false, "Trình duyệt đang chặn cửa sổ xem trước hóa đơn. / Your browser blocked the invoice preview window.");
     }
 
     function previewInvoiceTemplate() {
@@ -2494,15 +3345,85 @@
         items: sampleItems
       };
       var sampleTotals = calculateOrder(sampleOrder, addOns);
-      var popup = window.open("", "_blank", "width=720,height=840");
-      if (!popup) {
-        window.alert(L("Trình duyệt đang chặn cửa sổ xem trước hóa đơn. / Your browser blocked the invoice preview window."));
+      var markup = buildPrintMarkup(sampleOrder, sampleTotals, settings, activeInvoiceTemplate, "Xem trước mẫu hóa đơn / Invoice Template Preview", language, addOns);
+      openReceiptPopup(markup, false, "Trình duyệt đang chặn cửa sổ xem trước hóa đơn. / Your browser blocked the invoice preview window.");
+    }
+
+    // Reprint a historical sale.
+    //
+    // We accept either an in-memory sale object (from this device's `sales`
+    // state) OR just an id — in the latter case we fetch it from /api/sales/:id
+    // so reprint also works for sales that occurred on other devices.
+    //
+    // The print markup needs an "order"-shaped object so we map sale_items
+    // back to order.items shape (productId, name, price, qty, addOnIds).
+    function reprintSale(saleOrId, autoPrint) {
+      var saleId = typeof saleOrId === "string" ? saleOrId : (saleOrId && saleOrId.id);
+      if (!saleId) {
+        window.alert(L("Không tìm thấy hóa đơn / Sale not found"));
         return;
       }
 
-      popup.document.write(buildPrintMarkup(sampleOrder, sampleTotals, settings, activeInvoiceTemplate, "Xem trước mẫu hóa đơn / Invoice Template Preview", language, addOns));
-      popup.document.close();
-      popup.focus();
+      function renderFrom(saleObj, items) {
+        var order = {
+          id: saleObj.orderId || saleObj.order_id || saleObj.id,
+          createdAt: saleObj.createdAt || saleObj.created_at,
+          customerName: saleObj.customerName || saleObj.customer_name || "",
+          paymentMethod: saleObj.paymentMethod || saleObj.payment_method || "",
+          cashReceived: Number(saleObj.cashReceived || saleObj.paid || 0),
+          items: (items || []).map(function (it) {
+            // Re-decode addons stored as JSON; default to empty list
+            var addonIds = [];
+            try {
+              var addons = it.addons_json ? JSON.parse(it.addons_json) : (it.addons || []);
+              addonIds = (Array.isArray(addons) ? addons : []).map(function (a) { return a.id || a; });
+            } catch (_) {}
+            return {
+              id: it.id || (it.product_id || "") + Math.random().toString(36).slice(2, 6),
+              productId: it.product_id || it.productId,
+              name: it.product_name || it.productName || it.name || "",
+              price: Number(it.unit_price || it.unitPrice || it.price || 0)
+                     - Number(it.addons_total || it.addonsTotal || 0),
+              qty: Number(it.qty || 1),
+              addOnIds: addonIds
+            };
+          })
+        };
+        var totals = {
+          subtotal: Number(saleObj.subtotal) || 0,
+          discount: Number(saleObj.discount) || 0,
+          vat: Number(saleObj.vat_amount || saleObj.vat) || 0,
+          total: Number(saleObj.total) || 0,
+          itemCount: (items || []).reduce(function (s, it) { return s + (Number(it.qty) || 0); }, 0),
+          vatRate: VAT_RATE
+        };
+        var label = "In lại / Reprint  HD: " + (saleObj.id || saleId);
+        var markup = buildPrintMarkup(order, totals, settings, activeInvoiceTemplate, label, language, addOns);
+        openReceiptPopup(markup, !!autoPrint, "Trình duyệt đang chặn cửa sổ in. / Print window blocked.");
+      }
+
+      // Prefer the in-memory sale (has full items if it was created on this
+      // device). Otherwise fetch from D1.
+      var local = sales.find(function (s) { return s.id === saleId; });
+      if (local && Array.isArray(local.items) && local.items.length) {
+        renderFrom(local, local.items);
+        pushToast("info", L("Đã mở bản in / Reprint opened"));
+        return;
+      }
+
+      syncApi("/sales/" + encodeURIComponent(saleId))
+        .then(function (data) {
+          if (!data || !data.sale) {
+            window.alert(L("Không tìm thấy hóa đơn / Sale not found"));
+            return;
+          }
+          renderFrom(data.sale, data.items || []);
+          pushToast("info", L("Đã mở bản in / Reprint opened"));
+        })
+        .catch(function (err) {
+          window.alert(L("Không tải được hóa đơn / Failed to load sale") +
+            (err && err.message ? " (" + err.message + ")" : ""));
+        });
     }
 
     function getProductCategoryLabel(product) {
@@ -3563,35 +4484,123 @@
 
     function updateProductDraft(field, value) {
       setProductDraft(function (currentDraft) {
-        return Object.assign({}, currentDraft, { [field]: value });
+        var next = Object.assign({}, currentDraft, { [field]: value });
+        // Auto-suggest ID khi user đang tạo SP MỚI và đổi category.
+        // Chỉ chạy nếu chưa có ID + chưa từng gõ ID tay (customId trống/auto).
+        if (field === "category" && !next.id && !next.idTouched) {
+          var suggestion = suggestOriaIdForCategory(value);
+          if (suggestion) {
+            next.customId = suggestion;
+            if (!next.skuTouched) next.skuCode = suggestion;
+          }
+        }
+        // Đánh dấu user đã gõ tay customId → không auto override nữa
+        if (field === "customId" && value) next.idTouched = true;
+        return next;
       });
     }
 
+    // Generate the next ORIA-style ID for a given category by looking at
+    // existing products of that category and finding max suffix + 1.
+    // Returns null if the category doesn't have a known ORIA prefix (e.g.
+    // user added a custom category).
+    function suggestOriaIdForCategory(categoryId) {
+      // Map app slug -> ORIA 2-digit code (matches migrations/0004_oria_master.sql)
+      var CAT_TO_CODE = {
+        fruits: "10", smoothies: "20", juices: "30",
+        "nutritious-drinks": "40", "refreshing-drinks": "50",
+        essentials: "60",
+        snacks: "61", beverages: "62", pantry: "63",
+        "personal-care": "64", household: "65", packaging: "66",
+      };
+      var code = CAT_TO_CODE[categoryId];
+      if (!code) return null;
+      var prefix = "ORIA" + code;
+      var maxNum = 0;
+      products.forEach(function (p) {
+        if (typeof p.id === "string" && p.id.indexOf(prefix) === 0) {
+          var suffix = p.id.slice(prefix.length);
+          var n = parseInt(suffix, 10);
+          if (!isNaN(n) && n > maxNum) maxNum = n;
+        }
+      });
+      var next = maxNum + 1;
+      return prefix + String(next).padStart(3, "0");
+    }
+
     function resetProductDraft() {
+      // Seed the empty draft with an auto-suggested ID for the first
+      // category so the user sees what's coming even before they touch
+      // anything. They can clear or override.
+      var firstCat = categories[0] ? categories[0].id : "";
+      var suggested = suggestOriaIdForCategory(firstCat) || "";
       setProductDraft({
         id: null,
+        customId: suggested,
+        skuCode: suggested,
+        skuTouched: false,
+        idTouched: false,
         name: "",
-        category: categories[0] ? categories[0].id : "",
+        category: firstCat,
         price: 0,
         stock: 0,
         barcode: "",
         image: "🍊",
         description: "",
-        componentIds: []
+        componentIds: [],
+        minStock: 0,
+        unit: ""
       });
     }
 
+    // The recipe (BOM) for a product is stored as an array of entries shaped
+    //   { id, qty, unit, note }
+    // backed by the JSON `products.component_ids` column. We keep the legacy
+    // name `componentIds` so the old toggle/printing code still works — each
+    // entry's `id` matches `components.id`.
+    //
+    // recipeUpsert(productDraft, componentId, patch?)  →  upsert entry
+    // recipeRemove(productDraft, componentId)         →  drop entry
+    function recipeEntriesFromDraft(draft) {
+      var raw = draft.componentIds;
+      if (!Array.isArray(raw)) return [];
+      return raw.map(function (it) {
+        if (typeof it === "string") return { id: it, qty: 1, unit: "", note: "" };
+        return Object.assign({ qty: 1, unit: "", note: "" }, it);
+      });
+    }
     function toggleProductDraftComponent(componentId) {
       setProductDraft(function (currentDraft) {
-        var currentIds = currentDraft.componentIds || [];
-        var nextIds = currentIds.indexOf(componentId) === -1
-          ? currentIds.concat(componentId)
-          : currentIds.filter(function (currentId) {
-              return currentId !== componentId;
-            });
-
-        return Object.assign({}, currentDraft, { componentIds: nextIds });
+        var entries = recipeEntriesFromDraft(currentDraft);
+        var idx = entries.findIndex(function (e) { return e.id === componentId; });
+        if (idx === -1) {
+          var comp = components.find(function (c) { return c.id === componentId; });
+          entries.push({
+            id: componentId,
+            qty: 1,
+            unit: comp ? (comp.unit || "") : "",
+            note: ""
+          });
+        } else {
+          entries.splice(idx, 1);
+        }
+        return Object.assign({}, currentDraft, { componentIds: entries });
       });
+    }
+    function updateRecipeEntry(componentId, field, value) {
+      setProductDraft(function (currentDraft) {
+        var entries = recipeEntriesFromDraft(currentDraft).map(function (e) {
+          if (e.id !== componentId) return e;
+          var next = Object.assign({}, e);
+          if (field === "qty") next.qty = Number(value) || 0;
+          else next[field] = value;
+          return next;
+        });
+        return Object.assign({}, currentDraft, { componentIds: entries });
+      });
+    }
+    function isComponentInRecipe(draft, componentId) {
+      return recipeEntriesFromDraft(draft).some(function (e) { return e.id === componentId; });
     }
 
     function updateCategoryDraft(field, value) {
@@ -3920,10 +4929,72 @@
         return;
       }
 
+      // Validate any user-typed ID — both for new products AND when
+      // editing existing (rename).
+      var typedId = (productDraft.customId || "").trim().toUpperCase();
+      if (typedId) {
+        if (!/^[A-Z0-9_-]{2,40}$/.test(typedId)) {
+          window.alert(L("Mã SP chỉ chứa A-Z 0-9 _ -  (2-40 ký tự). / ID may contain A-Z 0-9 _ - (2-40 chars)."));
+          return;
+        }
+        // Collision check — exclude ourselves when editing.
+        var clash = products.find(function (p) {
+          return p.id === typedId && p.id !== productDraft.id;
+        });
+        if (clash) {
+          window.alert(
+            L("Mã SP đã tồn tại / Product ID already exists: ") + typedId + " — " + clash.name
+          );
+          return;
+        }
+      }
+
+      // If editing an existing SP AND the user changed the ID, fire a rename
+      // BEFORE doing the field upsert so foreign keys cascade.
+      var renamedFromOldId = null;
+      if (productDraft.id && typedId && typedId !== productDraft.id) {
+        renamedFromOldId = productDraft.id;
+        var newId = typedId;
+        // Optimistically rewrite local state's id so the form's "current ID"
+        // hint and the upsert below all reference the new value.
+        setProducts(function (currentProducts) {
+          return currentProducts.map(function (p) {
+            return p.id === renamedFromOldId ? Object.assign({}, p, { id: newId, skuCode: newId }) : p;
+          });
+        });
+        setOrders(function (currentOrders) {
+          return currentOrders.map(function (order) {
+            return Object.assign({}, order, {
+              items: (order.items || []).map(function (item) {
+                return item.productId === renamedFromOldId
+                  ? Object.assign({}, item, { productId: newId })
+                  : item;
+              })
+            });
+          });
+        });
+        setProductDraft(function (d) {
+          return Object.assign({}, d, { id: newId, customId: newId, skuCode: d.skuCode || newId });
+        });
+        // Send the rename to the server (cascades FK on D1 side).
+        syncEnqueue({
+          endpoint: "/products/rename",
+          method: "POST",
+          opType: "product-rename",
+          body: { oldId: renamedFromOldId, newId: newId }
+        });
+      }
+
+      // The "current" ID for downstream lookups:
+      //   • if we just renamed → use the new typed id
+      //   • else editing existing → original id
+      //   • else creating new → typed id (or auto later)
+      var effectiveId = renamedFromOldId ? typedId : (productDraft.id || typedId);
+
       if (productDraft.id) {
         setProducts(function (currentProducts) {
           return currentProducts.map(function (product) {
-            return product.id === productDraft.id
+            return product.id === effectiveId
               ? Object.assign({}, product, {
                   name: productDraft.name,
                   category: productDraft.category,
@@ -3931,11 +5002,14 @@
                   stock: Number(productDraft.stock) || 0,
                   barcode: getScannableBarcode(
                     productDraft.barcode || product.barcode,
-                    [productDraft.id || product.id, productDraft.name, productDraft.category].join("|")
+                    [effectiveId, productDraft.name, productDraft.category].join("|")
                   ),
                   image: productDraft.image || "🍊",
                   description: productDraft.description,
-                  componentIds: productDraft.componentIds || []
+                  componentIds: productDraft.componentIds || [],
+                  minStock: Math.max(0, Number(productDraft.minStock) || 0),
+                  unit: productDraft.unit || "",
+                  skuCode: (productDraft.skuCode || effectiveId || "").toUpperCase()
                 })
               : product;
           });
@@ -3945,7 +5019,7 @@
           return currentOrders.map(function (order) {
             return Object.assign({}, order, {
               items: (order.items || []).map(function (item) {
-                return item.productId === productDraft.id
+                return item.productId === effectiveId
                   ? Object.assign({}, item, {
                       name: productDraft.name,
                       price: Number(productDraft.price) || 0
@@ -3956,19 +5030,26 @@
           });
         });
       } else {
+        // Honour the user-provided custom ID if any, else fall back to auto.
+        var newId = (productDraft.customId || "").trim().toUpperCase() || uid("product");
+        // SKU defaults to ID, but if user explicitly set a different SKU, use it.
+        var newSku = (productDraft.skuCode || newId || "").toUpperCase();
         var newProduct = {
-          id: uid("product"),
+          id: newId,
           name: productDraft.name,
           category: productDraft.category,
           price: Number(productDraft.price) || 0,
           stock: Number(productDraft.stock) || 0,
           barcode: getScannableBarcode(
             productDraft.barcode,
-            [productDraft.name, productDraft.category, productDraft.price, productDraft.stock, Date.now()].join("|")
+            [newId, productDraft.name, productDraft.category, productDraft.price, productDraft.stock, Date.now()].join("|")
           ),
           image: productDraft.image || "🍊",
           description: productDraft.description,
-          componentIds: productDraft.componentIds || []
+          componentIds: productDraft.componentIds || [],
+          minStock: Math.max(0, Number(productDraft.minStock) || 0),
+          unit: productDraft.unit || "",
+          skuCode: newSku
         };
 
         setProducts(function (currentProducts) {
@@ -3977,12 +5058,69 @@
         setSelectedBarcodeProductId(newProduct.id);
       }
 
+      // Push product upsert to D1 (non-blocking).
+      var saved = effectiveId
+        ? products.find(function (p) { return p.id === effectiveId; })
+        : null;
+      // Resolve the actual ID used:
+      //   • Just renamed → new typed ID
+      //   • Editing existing without rename → original id
+      //   • Creating new → typed or auto
+      var productId = effectiveId
+        || (typeof newProduct !== "undefined" ? newProduct.id : ("p-" + Math.random().toString(36).slice(2, 10)));
+      var newStockValue = Math.max(0, Number(productDraft.stock) || 0);
+      var oldStockValue = saved ? Number(saved.stock) || 0 : 0;
+
+      var payload = {
+        id: productId,
+        name: productDraft.name,
+        category: productDraft.category,
+        price: Number(productDraft.price) || 0,
+        barcode: productDraft.barcode || "",
+        image: productDraft.image || "🍊",
+        description: productDraft.description || "",
+        componentIds: productDraft.componentIds || [],
+        minStock: Math.max(0, Number(productDraft.minStock) || 0),
+        unit: productDraft.unit || "",
+        skuCode: (productDraft.skuCode || productId || "").toUpperCase()
+      };
+      syncEnqueue({ endpoint: "/products", method: "POST", opType: "product", body: payload });
+
+      // ⚠ /api/products ONLY updates the products table — it does NOT touch
+      // inventory.qty_on_hand. If the user changed the Stock field in the
+      // form we must ALSO enqueue a /inventory/adjust so the on-hand qty
+      // actually persists to D1. Without this, toast says "Saved" but F5
+      // shows the old stock value.
+      if (newStockValue !== oldStockValue) {
+        // Track via pendingStockEdits so handlePulled guards against the
+        // pull-race the same way inline edits do.
+        try {
+          var pendingKey = "shopflow-pending-stock-edits";
+          var pending = JSON.parse(window.localStorage.getItem(pendingKey) || "{}");
+          pending[productId] = { newQty: newStockValue, at: Date.now() };
+          window.localStorage.setItem(pendingKey, JSON.stringify(pending));
+        } catch (_) {}
+        syncEnqueue({
+          endpoint: "/inventory/adjust",
+          method: "POST",
+          opType: "adjust",
+          body: {
+            productId: productId,
+            newQty: newStockValue,
+            reason: "Cap nhat tu Form sua SP"
+          }
+        });
+      }
+
       resetProductDraft();
     }
 
     function startEditProduct(product) {
       setProductDraft({
         id: product.id,
+        customId: product.id,
+        skuCode: product.skuCode || product.id,
+        skuTouched: true,   // editing an existing one — never auto-overwrite SKU
         name: product.name,
         category: product.category,
         price: product.price,
@@ -3990,7 +5128,9 @@
         barcode: product.barcode,
         image: product.image,
         description: product.description || "",
-        componentIds: product.componentIds || []
+        componentIds: product.componentIds || [],
+        minStock: Number(product.minStock) || 0,
+        unit: product.unit || ""
       });
       setActiveView("inventory");
       setInventorySection("product");
@@ -4010,17 +5150,135 @@
       if (productDraft.id === productId) {
         resetProductDraft();
       }
+
+      // Soft-delete in D1.
+      if (window.ShopFlowSync && window.ShopFlowSync.api) {
+        window.ShopFlowSync.api("/products/" + encodeURIComponent(productId), { method: "DELETE" })
+          .catch(function () { /* offline -> ignore */ });
+      }
     }
 
+    // updateProductStock — inline stock editor with race-free persistence.
+    //
+    // Earlier we debounced the API call by 700ms. That caused F5-during-typing
+    // to lose the edit: the timer was cancelled, no API call was sent, and
+    // when the page reloaded the next /sync/pull would overwrite the optimistic
+    // local value with stale server data.
+    //
+    // Fix: persist the pending edit to localStorage IMMEDIATELY. Then:
+    //   • debounce the actual /inventory/adjust API call (~500ms) so the
+    //     ledger doesn't fill with one ADJUST row per keystroke
+    //   • on every app boot, drain the pending-edits store into the outbox
+    //   • on beforeunload (page refresh / close), enqueue any in-flight
+    //     timers right away
+    //
+    // The "pendingStockEdits" store survives F5 because it's localStorage,
+    // and the outbox (also localStorage) survives offline too, so even if
+    // the user is offline + F5s, the edit reaches D1 on next online session.
     function updateProductStock(productId, nextStock) {
+      var target = Math.max(0, Math.floor(Number(nextStock) || 0));
+
+      // 1. Optimistic local UI update.
       setProducts(function (currentProducts) {
         return currentProducts.map(function (product) {
           return product.id === productId
-            ? Object.assign({}, product, { stock: Math.max(0, Number(nextStock) || 0) })
+            ? Object.assign({}, product, { stock: target })
             : product;
         });
       });
+
+      // 2. Stash the pending edit so a page-reload mid-debounce doesn't lose it.
+      try {
+        var pendingKey = "shopflow-pending-stock-edits";
+        var pending = JSON.parse(window.localStorage.getItem(pendingKey) || "{}");
+        pending[productId] = { newQty: target, at: Date.now() };
+        window.localStorage.setItem(pendingKey, JSON.stringify(pending));
+      } catch (_) {}
+
+      // 3. Debounced flush to outbox.
+      if (!stockEditTimersRef.current) stockEditTimersRef.current = {};
+      if (stockEditTimersRef.current[productId]) {
+        window.clearTimeout(stockEditTimersRef.current[productId]);
+      }
+      stockEditTimersRef.current[productId] = window.setTimeout(function () {
+        flushPendingStockEdit(productId);
+      }, 500);
     }
+
+    // Drain ONE product's pending edit into the sync outbox.
+    //
+    // CRITICAL: we do NOT delete the entry from localStorage here. The API
+    // POST is asynchronous — if we cleared the guard immediately, a /sync/pull
+    // that fires before the POST lands at D1 would see "no pending" and
+    // overwrite our optimistic value with stale server data.
+    //
+    // Instead we mark it as "in-flight" (status: "sent") and leave the guard
+    // in place. handlePulled() clears the guard only when it sees the server
+    // confirm the value matches (or the entry is older than 30 minutes, an
+    // escape hatch for stuck ops).
+    function flushPendingStockEdit(productId) {
+      try {
+        delete stockEditTimersRef.current[productId];
+      } catch (_) {}
+
+      var pendingKey = "shopflow-pending-stock-edits";
+      var pending = {};
+      try { pending = JSON.parse(window.localStorage.getItem(pendingKey) || "{}"); }
+      catch (_) {}
+      var entry = pending[productId];
+      if (!entry) return;
+
+      // Already in-flight? Don't double-enqueue.
+      if (entry.status === "sent") return;
+
+      // Mark as sent BEFORE enqueueing so we don't accidentally double-send if
+      // this function is invoked multiple times in quick succession.
+      entry.status = "sent";
+      entry.sentAt = Date.now();
+      pending[productId] = entry;
+      try { window.localStorage.setItem(pendingKey, JSON.stringify(pending)); }
+      catch (_) {}
+
+      syncEnqueue({
+        endpoint: "/inventory/adjust",
+        method: "POST",
+        opType: "adjust",
+        body: {
+          productId: productId,
+          newQty: Number(entry.newQty) || 0,
+          reason: "Chinh tay tu Inventory UI"
+        }
+      });
+    }
+
+    // Drain ALL pending stock edits — called once at startup and on
+    // beforeunload, so nothing gets stranded if a user closes the tab
+    // mid-debounce on the previous session.
+    function flushAllPendingStockEdits() {
+      var pendingKey = "shopflow-pending-stock-edits";
+      var pending = {};
+      try { pending = JSON.parse(window.localStorage.getItem(pendingKey) || "{}"); }
+      catch (_) {}
+      Object.keys(pending).forEach(function (pid) {
+        flushPendingStockEdit(pid);
+      });
+    }
+
+    useEffect(function () {
+      // Pick up edits from the previous session that never got enqueued.
+      flushAllPendingStockEdits();
+
+      // Make absolutely sure in-flight debounces get fired before the page
+      // goes away.
+      function onBeforeUnload() {
+        Object.keys(stockEditTimersRef.current || {}).forEach(function (pid) {
+          window.clearTimeout(stockEditTimersRef.current[pid]);
+          flushPendingStockEdit(pid);
+        });
+      }
+      window.addEventListener("beforeunload", onBeforeUnload);
+      return function () { window.removeEventListener("beforeunload", onBeforeUnload); };
+    }, []);
 
     function toggleProductSelection(productId) {
       setSelectedProductIds(function (currentIds) {
@@ -4184,26 +5442,104 @@
       var quickCashOptions = [50000, 100000, 200000, 500000];
       return html`
         <section className="pos-layout">
+          ${lowStockCount > 0 ? html`
+            <aside
+              className="surface"
+              style=${{
+                gridColumn: "1 / -1",
+                padding: "12px 18px",
+                background: "linear-gradient(90deg, #fff1eb 0%, #fff8f1 100%)",
+                border: "1px solid #f5b893",
+                borderLeft: "4px solid #c0392b",
+                display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap"
+              }}>
+              <span style=${{ fontSize: 22 }}>⚠</span>
+              <div style=${{ flex: 1, minWidth: 200 }}>
+                <strong style=${{ color: "#a4451a" }}>
+                  ${L("Cảnh báo tồn kho / Low Stock Alert")}: ${lowStockCount} ${L("sản phẩm / products")}
+                </strong>
+                <p style=${{ color: "#7b6b5d", margin: "4px 0 0", fontSize: 13 }}>
+                  ${lowStockProducts.slice(0, 3).map(function (p) {
+                    return p.name + " (" + (p.stock || 0) + "/" + (p.minStock || 0) + ")";
+                  }).join(" · ")}
+                  ${lowStockCount > 3 ? " · +" + (lowStockCount - 3) + " " + L("khác / more") : ""}
+                </p>
+              </div>
+              <button
+                className="ghost-btn"
+                onClick=${function () { setActiveView("warehouse"); setWarehouseTab("stock"); }}
+              >${L("Xem chi tiết / View Details")}</button>
+            </aside>
+          ` : null}
+
           <aside className="pos-category-toolbar surface">
             <div>
               <p className="eyebrow">${L("Danh mục / Categories")}</p>
               <h2 className="section-title">${L("Loại đồ uống / Product Groups")}</h2>
             </div>
             <div className="pos-category-list">
-              ${filterCategories.map(function (category) {
-                return html`
-                  <button
-                    key=${category.id}
-                    className=${"category-pill category-pill-toolbar" + (selectedCategory === category.id ? " is-active" : "")}
-                    onClick=${function () {
-                      setSelectedCategory(category.id);
-                    }}
-                  >
-                    <span>${category.icon}</span>
-                    <span>${L(category.label)}</span>
-                  </button>
-                `;
-              })}
+              ${(function () {
+                // Build a quick lookup of which parents have children, so we
+                // can show a chevron + only render children when expanded.
+                var hasChildren = {};
+                categories.forEach(function (c) {
+                  if (c.parentId) hasChildren[c.parentId] = true;
+                });
+                // Auto-treat a category as expanded if one of its children is
+                // currently the active filter — keeps the highlight visible.
+                function isAncestorOfActive(parentId) {
+                  var cat = categories.find(function (c) { return c.id === selectedCategory; });
+                  while (cat && cat.parentId) {
+                    if (cat.parentId === parentId) return true;
+                    cat = categories.find(function (c) { return c.id === cat.parentId; });
+                  }
+                  return false;
+                }
+
+                return filterCategories.filter(function (cat) {
+                  // Always show "all" pseudo + top-level (depth 0).
+                  if (cat.id === "all") return true;
+                  var depth = Number(cat._depth) || 0;
+                  if (depth === 0) return true;
+                  // Show child only if its parent is expanded OR descendant of active
+                  var p = cat.parentId;
+                  return !!(expandedCategories[p] || isAncestorOfActive(p) || selectedCategory === cat.id);
+                }).map(function (category) {
+                  var depth = Number(category._depth) || 0;
+                  var parentExpand = !!hasChildren[category.id];
+                  var isOpen = !!expandedCategories[category.id];
+                  var childStyle = depth > 0 ? {
+                    width: "calc(100% - " + (depth * 18) + "px)",
+                    marginLeft: (depth * 18) + "px",
+                    fontSize: 12.5,
+                    padding: "10px 14px",
+                    borderLeft: "3px solid #f2dcc6",
+                    borderRadius: "0 999px 999px 0",
+                    background: "rgba(255, 248, 240, 0.88)"
+                  } : {};
+
+                  return html`
+                    <button
+                      key=${category.id}
+                      className=${"category-pill category-pill-toolbar" + (selectedCategory === category.id ? " is-active" : "")}
+                      onClick=${function () {
+                        setSelectedCategory(category.id);
+                        // Click parent → also toggle the dropdown for it
+                        if (parentExpand) toggleCategoryExpanded(category.id);
+                      }}
+                      style=${childStyle}
+                    >
+                      <span>${category.icon}</span>
+                      <span style=${{ flex: 1, textAlign: "left" }}>
+                        ${depth > 0 ? "↳ " : ""}${L(category.label)}
+                      </span>
+                      ${parentExpand
+                        ? html`<span style=${{ fontSize: 11, opacity: 0.7 }}>${isOpen ? "▾" : "▸"}</span>`
+                        : null}
+                    </button>
+                  `;
+                });
+              })()}
             </div>
           </aside>
 
@@ -4241,21 +5577,22 @@
             <section className="catalog-panel surface scanner-panel">
               <div className="section-top">
                 <div>
-                  <p className="eyebrow">${L("Barcode / Barcode")}</p>
-                  <h2 className="section-title">${L("Quét mã sản phẩm / Scan Product Barcode")}</h2>
+                  <p className="eyebrow">${L("Tìm & Thêm / Find & Add")}</p>
+                  <h2 className="section-title">${L("Thêm sản phẩm vào đơn / Add Product to Order")}</h2>
                 </div>
               </div>
 
+              <!-- UNIFIED LOOKUP: barcode hardware scan + tên SP + SKU (1 ô duy nhất) -->
               <form className="scanner-form" onSubmit=${function (event) {
                 event.preventDefault();
-                handleScannedBarcode(barcodeInput);
+                handleUnifiedLookup(barcodeInput);
               }}>
                 <label className="field">
-                  <span>${L("Mã barcode / Barcode Value")}</span>
+                  <span>${L("Quét mã / Nhập tên SP / Nhập SKU rồi Enter / Scan, type name or SKU then Enter")}</span>
                   <input
                     ref=${barcodeInputRef}
                     value=${barcodeInput}
-                    placeholder=${L("Quét bằng máy scan hoặc nhập mã / Scan with a scanner or type the code")}
+                    placeholder=${L("VD: OREO, DASANI, ORIA61001, 8938... / e.g. OREO, DASANI, ORIA61001, 8938...")}
                     onInput=${function (event) {
                       setBarcodeInput(event.target.value);
                     }}
@@ -4263,10 +5600,11 @@
                 </label>
 
                 <div className="scanner-actions">
-                  <button type="submit" className="primary-btn">${L("Thêm bằng barcode / Add by Barcode")}</button>
+                  <button type="submit" className="primary-btn">${L("Thêm vào đơn / Add to Order")}</button>
                   ${cameraActive
                     ? html`<button type="button" className="ghost-btn" onClick=${stopCameraScan}>${L("Dừng camera / Stop Camera")}</button>`
                     : html`<button type="button" className="ghost-btn" onClick=${startCameraScan}>${L("Mở camera / Open Camera")}</button>`}
+                  ${barcodeInput ? html`<button type="button" className="ghost-btn" onClick=${function () { setBarcodeInput(""); setScanMessage(""); }}>${L("Xóa / Clear")}</button>` : null}
                 </div>
 
                 <input
@@ -4281,7 +5619,7 @@
 
               <div className="scanner-helper">
                 <div className="empty-state align-left">
-                  ${L("Desktop: máy scan USB có thể quét trực tiếp vào POS ngay cả khi chưa click đúng ô nhập. / Desktop: a USB barcode scanner can scan directly into POS even if the barcode field is not focused.")}
+                  ${L("Máy quét USB hoặc bluetooth có thể quét trực tiếp vào POS ngay cả khi chưa focus ô nhập. Nhập tên/SKU → Enter để thêm thủ công. / USB or Bluetooth scanners scan straight into POS even when the input isn't focused. Type a name/SKU then Enter to add manually.")}
                 </div>
                 <div className="empty-state align-left">
                   ${cameraScanSupported
@@ -4297,13 +5635,23 @@
                 </div>
               ` : null}
 
-              <div className="list-stack">
-                ${(selectedCategory === "all" ? products : filteredProducts).slice(0, 6).map(function (product) {
+              <!-- Live catalog filtered by what user is typing in the unified input -->
+              <div className="list-stack" style=${{ maxHeight: 360, overflowY: "auto", marginTop: 12 }}>
+                ${(barcodeInput
+                    ? products.filter(function (p) {
+                        var q = barcodeInput.toLowerCase();
+                        return (p.name && p.name.toLowerCase().indexOf(q) !== -1)
+                            || (p.id && p.id.toLowerCase().indexOf(q) !== -1)
+                            || (p.barcode && p.barcode.toLowerCase().indexOf(q) !== -1)
+                            || (p.skuCode && String(p.skuCode).toLowerCase().indexOf(q) !== -1);
+                      })
+                    : filteredProducts
+                  ).slice(0, 40).map(function (product) {
                   return html`
                     <article key=${product.id} className="list-row list-row-actions">
                       <div>
                         <strong>${product.image} ${product.name}</strong>
-                        <p>${product.barcode} · ${formatCurrency(product.price)}</p>
+                        <p>${product.barcode}${product.unit ? " · " + product.unit : ""} · ${formatCurrency(product.price)}</p>
                       </div>
                       <div className="row-actions">
                         <span className="stock-badge">${product.stock}</span>
@@ -4325,7 +5673,11 @@
                 </div>
                 <div className="item-badge">#${totals.itemCount} ${L("món / items")}</div>
               </div>
-              <button className="ghost-btn" onClick=${cancelOrder}>${L("Xóa / Clear")}</button>
+              ${(activeOrder.items && activeOrder.items.length > 0)
+                ? html`<button className="ghost-btn" onClick=${cancelOrder}>${L("Xóa món / Clear Items")}</button>`
+                : (orders.length > 1
+                    ? html`<button className="ghost-btn" onClick=${cancelOrder}>${L("Xóa đơn / Remove Order")}</button>`
+                    : null)}
             </div>
 
             <div className="order-items">
@@ -4349,7 +5701,38 @@
                           <button className="qty-btn" onClick=${function () {
                             adjustItemQty(item.id, -1);
                           }}>-</button>
-                          <strong>${item.qty}</strong>
+                          <${LocalNumberInput}
+                            style=${{
+                              width: "50px",
+                              textAlign: "center",
+                              border: "none",
+                              background: "transparent",
+                              fontSize: "1rem",
+                              fontWeight: "bold",
+                              color: "inherit"
+                            }}
+                            value=${item.qty}
+                            onChange=${function(val) {
+                              updateActiveOrder(function(order) {
+                                var newItems = order.items.map(function(it) {
+                                  if (it.id === item.id) return Object.assign({}, it, { qty: val });
+                                  return it;
+                                });
+                                return Object.assign({}, order, { items: newItems });
+                              });
+                            }}
+                            onBlur=${function(e) {
+                              if (e.target.value === "" || Number(e.target.value) <= 0) {
+                                updateActiveOrder(function(order) {
+                                  var newItems = order.items.map(function(it) {
+                                    if (it.id === item.id) return Object.assign({}, it, { qty: 1 });
+                                    return it;
+                                  });
+                                  return Object.assign({}, order, { items: newItems });
+                                });
+                              }
+                            }}
+                          />
                           <button className="qty-btn" onClick=${function () {
                             adjustItemQty(item.id, 1);
                           }}>+</button>
@@ -4443,27 +5826,24 @@
             <div className="payment-grid payment-grid-single">
               <label className="field">
                 <span>${L("Tiền khách đưa / Cash Received")}</span>
-                <input
-                  type="number"
-                  value=${activeOrder.cashReceived || 0}
-                  onInput=${function (event) {
+                <${LocalNumberInput}
+                  value=${activeOrder.cashReceived}
+                  onChange=${function (val) {
                     updateActiveOrder(function (order) {
-                      return Object.assign({}, order, { cashReceived: Number(event.target.value) || 0 });
+                      return Object.assign({}, order, { cashReceived: val });
                     });
                   }}
                 />
               </label>
               <label className="field discount-box">
                 <span>${L("Giảm giá / Discount (%)")}</span>
-                <input
-                  type="number"
+                <${LocalNumberInput}
                   min="0"
                   max="100"
-                  value=${activeOrder.discountPct || 0}
-                  onInput=${function (event) {
-                    var nextValue = Number(event.target.value) || 0;
+                  value=${activeOrder.discountPct}
+                  onChange=${function (val) {
                     updateActiveOrder(function (order) {
-                      return Object.assign({}, order, { discountPct: nextValue });
+                      return Object.assign({}, order, { discountPct: val });
                     });
                   }}
                 />
@@ -4488,12 +5868,17 @@
               })}
             </div>
 
+            <!-- Prices are VAT-inclusive, so we don't show a separate "Thuế"
+                 row anymore. The displayed amount IS what the customer pays. -->
             <div className="summary-list">
               <div><span>${L("Số món / Items")}</span><strong>${totals.itemCount}</strong></div>
-              <div><span>${L("Tạm tính / Subtotal")}</span><strong>${formatCurrency(totals.subtotal)}</strong></div>
-              <div><span>${L("Giảm giá / Discount")}</span><strong>${formatCurrency(totals.discount)}</strong></div>
-              <div><span>${L("Thuế / VAT")}</span><strong>${formatCurrency(totals.vat)}</strong></div>
+              ${totals.discount > 0
+                ? html`<div><span>${L("Giảm giá / Discount")}</span><strong>-${formatCurrency(totals.discount)}</strong></div>`
+                : null}
               <div className="summary-total"><span>${L("Tổng cộng / Total")}</span><strong>${formatCurrency(totals.total)}</strong></div>
+              <div style=${{ fontSize: 11, fontStyle: "italic", color: "#7b6b5d", marginTop: -4 }}>
+                ${L("(Giá đã bao gồm VAT) / (VAT included)")}
+              </div>
               <div><span>${L("Tiền thừa / Change")}</span><strong>${formatCurrency(changeDue)}</strong></div>
             </div>
 
@@ -4513,20 +5898,62 @@
     }
 
     function renderDashboardView() {
+      var rangeOptions = [
+        { id: "today",  label: "Hôm nay / Today" },
+        { id: "week",   label: "7 ngày / 7 days" },
+        { id: "month",  label: "Tháng này / This Month" },
+        { id: "year",   label: "Năm nay / This Year" },
+        { id: "custom", label: "Tùy chọn / Custom" }
+      ];
       return html`
         <section className="stack-view">
+          <!-- Date range filter -->
+          <section className="surface section-card" style=${{ padding: "16px 18px" }}>
+            <div className="section-top" style=${{ flexWrap: "wrap", gap: 12 }}>
+              <div>
+                <p className="eyebrow">${L("Báo cáo / Report")}</p>
+                <h2 className="section-title" style=${{ marginTop: 2 }}>${L(dashboardMetrics.range.label)}</h2>
+              </div>
+              <div className="row-actions" style=${{ flexWrap: "wrap", gap: 8 }}>
+                ${rangeOptions.map(function (opt) {
+                  var active = dashboardRange === opt.id;
+                  return html`
+                    <button
+                      key=${opt.id}
+                      className=${"ghost-btn" + (active ? " is-active" : "")}
+                      onClick=${function () { setDashboardRange(opt.id); }}
+                      style=${active ? { background: "linear-gradient(135deg, #ffe2bf, #ffc47f)", color: "#5b3a20", fontWeight: 700 } : {}}
+                    >${L(opt.label)}</button>
+                  `;
+                })}
+              </div>
+            </div>
+            ${dashboardRange === "custom" ? html`
+              <div className="field-grid" style=${{ marginTop: 12 }}>
+                <label className="field">
+                  <span>${L("Từ ngày / From")}</span>
+                  <input type="date" value=${dashboardCustomFrom} onInput=${function (e) { setDashboardCustomFrom(e.target.value); }} />
+                </label>
+                <label className="field">
+                  <span>${L("Đến ngày / To")}</span>
+                  <input type="date" value=${dashboardCustomTo} onInput=${function (e) { setDashboardCustomTo(e.target.value); }} />
+                </label>
+              </div>
+            ` : null}
+          </section>
+
           <div className="card-grid card-grid-4">
             <article className="metric-card surface">
-              <span className="metric-label">${L("Doanh thu hôm nay / Revenue Today")}</span>
-              <strong>${formatCurrency(dashboardMetrics.revenueToday)}</strong>
+              <span className="metric-label">${L("Doanh thu / Revenue")}</span>
+              <strong>${formatCurrency(dashboardMetrics.revenue)}</strong>
             </article>
             <article className="metric-card surface">
-              <span className="metric-label">${L("Số đơn hôm nay / Orders Today")}</span>
-              <strong>${dashboardMetrics.ordersToday}</strong>
+              <span className="metric-label">${L("Số đơn / Orders")}</span>
+              <strong>${dashboardMetrics.ordersCount}</strong>
             </article>
             <article className="metric-card surface">
-              <span className="metric-label">${L("Sản phẩm / Products")}</span>
-              <strong>${products.length}</strong>
+              <span className="metric-label">${L("TB / đơn / Avg Ticket")}</span>
+              <strong>${formatCurrency(dashboardMetrics.avgTicket)}</strong>
             </article>
             <article className="metric-card surface">
               <span className="metric-label">${L("Sắp hết hàng / Low Stock")}</span>
@@ -4534,7 +5961,64 @@
             </article>
           </div>
 
+          ${dashboardMetrics.daySeries.length > 1 ? html`
+            <section className="surface section-card">
+              <h2 className="section-title">${L("Doanh thu theo ngày / Revenue by Day")}</h2>
+              <div className="list-stack" style=${{ marginTop: 8 }}>
+                ${(function () {
+                  var max = Math.max.apply(null, dashboardMetrics.daySeries.map(function (d) { return d.revenue; }));
+                  return dashboardMetrics.daySeries.map(function (d) {
+                    var pct = max > 0 ? Math.round(d.revenue / max * 100) : 0;
+                    return html`
+                      <article key=${d.day} className="list-row" style=${{ alignItems: "center" }}>
+                        <div style=${{ minWidth: 110 }}>
+                          <strong>${d.day}</strong>
+                          <p>${d.orders} ${L("đơn / orders")}</p>
+                        </div>
+                        <div style=${{ flex: 1, margin: "0 12px" }}>
+                          <div style=${{
+                            height: 10, background: "#fff3e6", borderRadius: 999, overflow: "hidden"
+                          }}>
+                            <div style=${{
+                              width: pct + "%", height: "100%",
+                              background: "linear-gradient(90deg, #ffb66b, #f08821)"
+                            }}></div>
+                          </div>
+                        </div>
+                        <strong style=${{ minWidth: 100, textAlign: "right" }}>${formatCurrency(d.revenue)}</strong>
+                      </article>
+                    `;
+                  });
+                })()}
+              </div>
+            </section>
+          ` : null}
+
           <div className="split-grid">
+            <section className="surface section-card">
+              <div className="section-top">
+                <div>
+                  <p className="eyebrow">${L("Top bán chạy / Best Sellers")}</p>
+                  <h2 className="section-title">${L("SP bán chạy nhất / Top Products")}</h2>
+                </div>
+              </div>
+              <div className="list-stack">
+                ${dashboardMetrics.topProducts.length
+                  ? dashboardMetrics.topProducts.map(function (p, i) {
+                      return html`
+                        <article key=${p.name + i} className="list-row">
+                          <div>
+                            <strong>#${i + 1} ${p.name}</strong>
+                            <p>${p.qty} ${L("đã bán / sold")}</p>
+                          </div>
+                          <strong>${formatCurrency(p.revenue)}</strong>
+                        </article>
+                      `;
+                    })
+                  : html`<div className="empty-state">${L("Chưa có dữ liệu bán hàng. / No sales data yet.")}</div>`}
+              </div>
+            </section>
+
             <section className="surface section-card">
               <div className="section-top">
                 <div>
@@ -4546,19 +6030,28 @@
                 ${dashboardMetrics.recentSales.length
                   ? dashboardMetrics.recentSales.map(function (sale) {
                       return html`
-                        <article key=${sale.id} className="list-row">
+                        <article key=${sale.id} className="list-row list-row-actions">
                           <div>
-                            <strong>${sale.orderId}</strong>
-                            <p>${formatDateTime(sale.createdAt)}</p>
+                            <strong>${sale.orderId || sale.id}</strong>
+                            <p>${formatDateTime(sale.createdAt)} · ${formatCurrency(sale.total)}</p>
                           </div>
-                          <strong>${formatCurrency(sale.total)}</strong>
+                          <div className="row-actions">
+                            <button className="ghost-btn" onClick=${function () { reprintSale(sale, false); }}>
+                              ${L("Xem / Preview")}
+                            </button>
+                            <button className="primary-btn" onClick=${function () { reprintSale(sale, true); }}>
+                              🖨 ${L("In lại / Reprint")}
+                            </button>
+                          </div>
                         </article>
                       `;
                     })
-                  : html`<div className="empty-state">${L("Chưa có giao dịch nào được thanh toán. / No paid transactions yet.")}</div>`}
+                  : html`<div className="empty-state">${L("Chưa có giao dịch trong khoảng này. / No transactions in this range.")}</div>`}
               </div>
             </section>
+          </div>
 
+          ${dashboardMetrics.lowStock.length ? html`
             <section className="surface section-card">
               <div className="section-top">
                 <div>
@@ -4567,22 +6060,20 @@
                 </div>
               </div>
               <div className="list-stack">
-                ${dashboardMetrics.lowStock.length
-                  ? dashboardMetrics.lowStock.map(function (product) {
-                      return html`
-                        <article key=${product.id} className="list-row">
-                          <div>
-                            <strong>${product.name}</strong>
-                            <p>${product.barcode}</p>
-                          </div>
-                          <span className="stock-badge">${product.stock} ${L("còn / left")}</span>
-                        </article>
-                      `;
-                    })
-                  : html`<div className="empty-state">${L("Tồn kho đang ổn, chưa có sản phẩm cần bổ sung gấp. / Stock levels look healthy.")}</div>`}
+                ${dashboardMetrics.lowStock.map(function (product) {
+                  return html`
+                    <article key=${product.id} className="list-row">
+                      <div>
+                        <strong>${product.name}</strong>
+                        <p>${product.barcode} · ${L("min")}: ${product.minStock}</p>
+                      </div>
+                      <span className="stock-badge" style=${{ color: "#c0392b" }}>${product.stock} ${L("còn / left")}</span>
+                    </article>
+                  `;
+                })}
               </div>
             </section>
-          </div>
+          ` : null}
 
           <section className="surface section-card export-section">
             <div className="section-top">
@@ -4682,8 +6173,17 @@
       var totalStock = products.reduce(function (sum, product) {
         return sum + (Number(product.stock) || 0);
       }, 0);
-      var lowStockProducts = products.filter(function (product) {
-        return Number(product.stock) <= 10;
+      // Previously this filter was a hardcoded `stock <= 10`, which caused a
+      // confusing bug: if you typed 11+ into a product's stock input it would
+      // INSTANTLY disappear from this list (it no longer matched the filter).
+      // Now we use the same rule as the global low-stock badge:
+      //   • only show products with min_stock > 0 (admin has set a threshold)
+      //   • and current stock at/below that threshold
+      // Products without a min_stock are NEVER hidden here.
+      var lowStockListForCheck = products.filter(function (product) {
+        var qty = Number(product.stock) || 0;
+        var min = Number(product.minStock) || 0;
+        return min > 0 && qty <= min;
       });
       var allProductsSelected = products.length > 0 && selectedProductIds.length === products.length;
 
@@ -4725,7 +6225,7 @@
                   </article>
                   <article className="metric-card surface">
                     <span className="metric-label">${L("Sắp hết hàng / Low Stock")}</span>
-                    <strong>${lowStockProducts.length}</strong>
+                    <strong>${lowStockListForCheck.length}</strong>
                   </article>
                   <article className="metric-card surface">
                     <span className="metric-label">${L("Danh mục / Categories")}</span>
@@ -4742,8 +6242,8 @@
                       </div>
                     </div>
                     <div className="list-stack">
-                      ${lowStockProducts.length
-                        ? lowStockProducts.map(function (product) {
+                      ${lowStockListForCheck.length
+                        ? lowStockListForCheck.map(function (product) {
                             var category = categories.find(function (item) {
                               return item.id === product.category;
                             });
@@ -4760,6 +6260,13 @@
                                     value=${product.stock}
                                     onInput=${function (event) {
                                       updateProductStock(product.id, event.target.value);
+                                    }}
+                                    onBlur=${function () { flushPendingStockEdit(product.id); }}
+                                    onKeyDown=${function (event) {
+                                      if (event.key === "Enter") {
+                                        event.preventDefault();
+                                        event.target.blur();
+                                      }
                                     }}
                                   />
                                   <button className="ghost-btn" onClick=${function () { startEditProduct(product); }}>${L("Sửa / Edit")}</button>
@@ -4799,8 +6306,33 @@
                         </button>
                       </div>
                     </div>
+
+                    <!-- Search box: name / barcode / SKU, accent-insensitive -->
+                    <div className="field" style=${{ marginBottom: 12 }}>
+                      <input
+                        type="search"
+                        value=${inventorySearchTerm}
+                        placeholder=${L("Tìm tên SP / barcode / SKU... (gõ không dấu cũng được) / Search name / barcode / SKU (accent-insensitive)")}
+                        onInput=${function (e) { setInventorySearchTerm(e.target.value); }}
+                        style=${{ width: "100%", padding: "10px 14px", borderRadius: 12, border: "1px solid #e5d5c7", fontSize: 14 }}
+                      />
+                      ${inventorySearchTerm
+                        ? html`<small style=${{ color: "#7b6b5d", marginTop: 4, display: "block" }}>
+                            ${(function () {
+                              var nq = normalizeSearchText(inventorySearchTerm);
+                              var n = products.filter(function (p) { return productMatchesQuery(p, nq); }).length;
+                              return n + " " + L("kết quả / matches");
+                            })()}
+                            · <a href="#" onClick=${function (e) { e.preventDefault(); setInventorySearchTerm(""); }}>${L("Xóa / Clear")}</a>
+                          </small>`
+                        : null}
+                    </div>
+
                     <div className="list-stack">
-                      ${products.map(function (product) {
+                      ${(function () {
+                        var nq = normalizeSearchText(inventorySearchTerm);
+                        return products.filter(function (p) { return productMatchesQuery(p, nq); });
+                      })().map(function (product) {
                         var category = categories.find(function (item) {
                           return item.id === product.category;
                         });
@@ -4858,106 +6390,241 @@
             ` : null}
 
             ${inventorySection === "product" ? html`
-              <div className="split-grid">
-                <form className="surface section-card form-card" onSubmit=${submitProduct}>
+              <div className="stack-view" style=${{ gap: 16 }}>
+                <form
+                  className="surface section-card form-card"
+                  style=${{ alignSelf: "start" }}
+                  onSubmit=${submitProduct}
+                >
                   <div className="section-top">
                     <div>
                       <p className="eyebrow">${L("Sản phẩm / Product")}</p>
                       <h2 className="section-title">${productDraft.id ? L("Cập nhật sản phẩm / Update Product") : L("Thêm sản phẩm mới / Add Product")}</h2>
+                      <small style=${{ color: "#7b6b5d" }}>
+                        ${productDraft.id
+                          ? L("Đang sửa SP có ID này / Editing product with this ID")
+                          : L("Điền các trường rồi nhấn 'Thêm vào kho' / Fill the fields and submit")}
+                      </small>
                     </div>
                     ${productDraft.id
                       ? html`<button type="button" className="ghost-btn" onClick=${resetProductDraft}>${L("Hủy / Cancel")}</button>`
                       : null}
                   </div>
 
-                  <div className="field-grid">
-                    <label className="field">
-                      <span>${L("Tên sản phẩm / Product Name")}</span>
-                      <input value=${productDraft.name} onInput=${function (event) { updateProductDraft("name", event.target.value); }} />
+                  <!-- Group: Identity -->
+                  <fieldset style=${{ border: "1px dashed #e5d5c7", borderRadius: 14, padding: "12px 16px 16px", margin: 0 }}>
+                    <legend style=${{ padding: "0 8px", color: "#8a7565", fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase" }}>${L("Định danh / Identity")}</legend>
+
+                    <!-- ID nội bộ — editable cả khi tạo mới VÀ khi sửa SP cũ.
+                         Khi save, nếu ID đã đổi so với ID cũ → client gọi
+                         /api/products/rename trước, rồi mới upsert fields. -->
+                    <label className="field" style=${{ marginBottom: 12 }}>
+                      <span>
+                        ${L("ID nội bộ / Internal ID")}
+                        ${productDraft.id ? html`<span style=${{ fontSize: 10, marginLeft: 6, padding: "2px 6px", background: "#fff8e0", borderRadius: 8, color: "#a47218" }}>✎ ${L("Sửa được / Editable")}</span>` : null}
+                      </span>
+                      <input
+                        value=${productDraft.customId !== undefined ? productDraft.customId : (productDraft.id || "")}
+                        placeholder=${L("Ví dụ ORIA61050 (để trống = tự sinh) / e.g. ORIA61050 (blank = auto)")}
+                        onInput=${function (event) {
+                          var cleaned = String(event.target.value || "")
+                            .toUpperCase()
+                            .replace(/[^A-Z0-9_-]/g, "");
+                          updateProductDraft("customId", cleaned);
+                          updateProductDraft("idTouched", true);
+                          // Khi đang tạo mới, nếu user chưa sửa SKU thì auto đồng bộ SKU = ID
+                          if (!productDraft.id && (!productDraft.skuTouched)) {
+                            updateProductDraft("skuCode", cleaned);
+                          }
+                        }}
+                      />
+                      <small>
+                        ${productDraft.id
+                          ? html`${L("⚠ Đổi ID sẽ cập nhật toàn bộ liên kết hóa đơn/tồn kho/sổ cái sang ID mới. / Renaming the ID will cascade-update every invoice / inventory / ledger reference.")}<br/>
+                            <strong>${L("ID hiện tại / Current")}: ${productDraft.id}</strong>`
+                          : html`${L("Hệ thống tự đề xuất mã ORIA theo danh mục bạn chọn. / Auto-suggested ORIA code based on category.")}
+                            ${(function () {
+                              var s = suggestOriaIdForCategory(productDraft.category);
+                              return s ? html` <strong style=${{ color: "#a45318" }}>→ ${L("gợi ý / suggested")}: ${s}</strong>` : null;
+                            })()}`}
+                      </small>
                     </label>
-                    <label className="field">
-                      <span>${L("Danh mục / Category")}</span>
-                      <select value=${productDraft.category} onChange=${function (event) { updateProductDraft("category", event.target.value); }}>
-                        ${categories.map(function (item) {
-                          return html`<option key=${item.id} value=${item.id}>${L(item.label)}</option>`;
-                        })}
-                      </select>
+
+                    <!-- SKU (business code — printed on barcode, can change anytime) -->
+                    <label className="field" style=${{ marginBottom: 12 }}>
+                      <span>${L("Mã SP / SKU code")}</span>
+                      <input
+                        value=${productDraft.skuCode || ""}
+                        placeholder=${L("Mã in tem (vd ORIA61050) / Code shown on label (e.g. ORIA61050)")}
+                        onInput=${function (event) {
+                          updateProductDraft("skuCode", String(event.target.value || "").toUpperCase().replace(/[^A-Z0-9_-]/g, ""));
+                          updateProductDraft("skuTouched", true);
+                        }}
+                      />
+                      <small>
+                        ${L("Mã in tem barcode, có thể đổi bất kỳ lúc nào. Mặc định = ID nội bộ. / Code printed on labels — changeable anytime. Defaults to Internal ID.")}
+                      </small>
                     </label>
-                    <label className="field">
-                      <span>${L("Giá bán / Price")}</span>
-                      <input type="number" value=${productDraft.price} onInput=${function (event) { updateProductDraft("price", event.target.value); }} />
-                    </label>
-                    <label className="field">
-                      <span>${L("Tồn kho / Stock")}</span>
-                      <input type="number" value=${productDraft.stock} onInput=${function (event) { updateProductDraft("stock", event.target.value); }} />
-                    </label>
+
+                    <div className="field-grid">
+                      <label className="field" style=${{ gridColumn: "1 / -1" }}>
+                        <span>${L("Tên sản phẩm / Product Name")}</span>
+                        <input value=${productDraft.name} onInput=${function (event) { updateProductDraft("name", event.target.value); }} required />
+                      </label>
+                      <label className="field">
+                        <span>${L("Danh mục / Category")}</span>
+                        <select value=${productDraft.category} onChange=${function (event) { updateProductDraft("category", event.target.value); }}>
+                          ${categories.map(function (item) {
+                            return html`<option key=${item.id} value=${item.id}>${L(item.label)}</option>`;
+                          })}
+                        </select>
+                      </label>
+                      <label className="field">
+                        <span>${L("Biểu tượng / Icon")}</span>
+                        <input value=${productDraft.image} onInput=${function (event) { updateProductDraft("image", event.target.value); }} />
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  <!-- Group: Price + stock -->
+                  <fieldset style=${{ border: "1px dashed #e5d5c7", borderRadius: 14, padding: "12px 16px 16px", margin: 0 }}>
+                    <legend style=${{ padding: "0 8px", color: "#8a7565", fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase" }}>${L("Giá & Tồn kho / Pricing & Stock")}</legend>
+                    <div className="field-grid">
+                      <label className="field">
+                        <span>${L("Giá bán / Price")}</span>
+                        <input type="number" min="0" value=${productDraft.price} onInput=${function (event) { updateProductDraft("price", event.target.value); }} />
+                      </label>
+                      <label className="field">
+                        <span>${L("Đơn vị / Unit")}</span>
+                        <input
+                          value=${productDraft.unit || ""}
+                          placeholder=${L("VD: Gói, Chai, Lon, Cái... / e.g. Pack, Bottle, Can")}
+                          onInput=${function (event) { updateProductDraft("unit", event.target.value); }}
+                        />
+                      </label>
+                      <label className="field">
+                        <span>${L("Tồn kho / Stock")}</span>
+                        <input type="number" min="0" value=${productDraft.stock} onInput=${function (event) { updateProductDraft("stock", event.target.value); }} />
+                        <small>${L("Số tồn hiện tại; thường để hệ thống cập nhật qua Nhập/Xuất. / Usually updated via Stock-In/Out.")}</small>
+                      </label>
+                      <label className="field">
+                        <span>${L("Mức cảnh báo / Min Stock Alert")}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value=${productDraft.minStock}
+                          onInput=${function (event) { updateProductDraft("minStock", event.target.value); }}
+                        />
+                        <small>${L("Nếu tồn ≤ mức này, hệ thống sẽ cảnh báo. Đặt 0 để tắt. / Warn when on-hand ≤ this level. 0 to disable.")}</small>
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  <!-- Group: Barcode + description -->
+                  <fieldset style=${{ border: "1px dashed #e5d5c7", borderRadius: 14, padding: "12px 16px 16px", margin: 0 }}>
+                    <legend style=${{ padding: "0 8px", color: "#8a7565", fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase" }}>${L("Mã vạch & Mô tả / Barcode & Description")}</legend>
                     <label className="field">
                       <span>${L("Mã vạch / Barcode")}</span>
                       <input value=${productDraft.barcode} onInput=${function (event) { updateProductDraft("barcode", event.target.value); }} />
-                      <small>${L("Có thể để trống, hệ thống sẽ tự tạo mã số chuẩn dễ quét để in tem và scan trên desktop/mobile. / Leave blank to auto-generate a scannable numeric code for printing and scanning on desktop/mobile.")}</small>
+                      <small>${L("Có thể để trống, hệ thống tự tạo mã EAN-13 dễ quét. / Leave blank to auto-generate scannable EAN-13.")}</small>
                     </label>
                     <label className="field">
-                      <span>${L("Biểu tượng / Icon")}</span>
-                      <input value=${productDraft.image} onInput=${function (event) { updateProductDraft("image", event.target.value); }} />
+                      <span>${L("Mô tả ngắn / Short Description")}</span>
+                      <textarea rows="3" value=${productDraft.description} onInput=${function (event) { updateProductDraft("description", event.target.value); }}></textarea>
                     </label>
-                  </div>
+                  </fieldset>
 
-                  <label className="field">
-                    <span>${L("Mô tả ngắn / Short Description")}</span>
-                    <textarea rows="4" value=${productDraft.description} onInput=${function (event) { updateProductDraft("description", event.target.value); }}></textarea>
-                  </label>
+                  <!-- Group: Recipe / BOM with quantities + units -->
+                  <fieldset style=${{ border: "1px dashed #e5d5c7", borderRadius: 14, padding: "12px 16px 16px", margin: 0 }}>
+                    <legend style=${{ padding: "0 8px", color: "#8a7565", fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase" }}>${L("Công thức / Recipe (BOM)")}</legend>
 
-                  <div className="field">
-                    <span>${L("Thành phần sản phẩm / Product Components")}</span>
-                    <div className="addon-row">
-                      ${components.map(function (component) {
-                        var isActive = (productDraft.componentIds || []).indexOf(component.id) !== -1;
+                    ${components.length === 0 ? html`
+                      <div style=${{ color: "#7b6b5d", fontSize: 13, padding: "8px 0" }}>
+                        ${L("Chưa có nguyên liệu nào trong danh mục. Vào tab \"Điều chỉnh danh mục\" để thêm. / No components defined. Add them in the \"Catalog Adjustments\" tab.")}
+                      </div>
+                    ` : html`
+                      <!-- Chip palette to toggle ingredients in/out of recipe -->
+                      <div style=${{ marginBottom: 12 }}>
+                        <p style=${{ margin: "0 0 6px", fontSize: 12, color: "#8a7565" }}>
+                          ${L("Bấm để thêm/bỏ nguyên liệu: / Tap to add/remove ingredients:")}
+                        </p>
+                        <div className="addon-row">
+                          ${components.map(function (component) {
+                            var inRecipe = isComponentInRecipe(productDraft, component.id);
+                            return html`
+                              <button
+                                key=${component.id}
+                                type="button"
+                                className=${"addon-chip" + (inRecipe ? " is-active" : "")}
+                                onClick=${function () { toggleProductDraftComponent(component.id); }}
+                              >
+                                ${inRecipe ? "✓ " : "+ "}${L(component.label)}
+                              </button>
+                            `;
+                          })}
+                        </div>
+                      </div>
+
+                      <!-- Per-line recipe editor: qty + unit + note -->
+                      ${(function () {
+                        var entries = recipeEntriesFromDraft(productDraft);
+                        if (!entries.length) {
+                          return html`
+                            <div style=${{ color: "#7b6b5d", fontSize: 13, padding: "8px 0", fontStyle: "italic" }}>
+                              ${L("Chưa chọn nguyên liệu nào cho món này. / No ingredients selected yet.")}
+                            </div>
+                          `;
+                        }
                         return html`
-                          <button
-                            key=${component.id}
-                            type="button"
-                            className=${"addon-chip" + (isActive ? " is-active" : "")}
-                            onClick=${function () {
-                              toggleProductDraftComponent(component.id);
-                            }}
-                          >
-                            ${L(component.label)}
-                          </button>
+                          <div className="list-stack" style=${{ marginTop: 8 }}>
+                            ${entries.map(function (entry) {
+                              var comp = components.find(function (c) { return c.id === entry.id; });
+                              return html`
+                                <article key=${entry.id} className="list-row" style=${{
+                                  flexWrap: "wrap", alignItems: "center", gap: 8,
+                                  padding: 10, background: "#fff8f1", borderRadius: 12
+                                }}>
+                                  <div style=${{ flex: "1 1 160px", minWidth: 140 }}>
+                                    <strong>${comp ? L(comp.label) : entry.id}</strong>
+                                    ${comp && comp.note ? html`<p style=${{ margin: 0, fontSize: 11, color: "#7b6b5d" }}>${L(comp.note)}</p>` : null}
+                                  </div>
+                                  <label className="field" style=${{ width: 90, margin: 0 }}>
+                                    <span style=${{ fontSize: 11 }}>${L("SL / Qty")}</span>
+                                    <input type="number" min="0" step="0.1" value=${entry.qty}
+                                      onInput=${function (e) { updateRecipeEntry(entry.id, "qty", e.target.value); }}
+                                    />
+                                  </label>
+                                  <label className="field" style=${{ width: 110, margin: 0 }}>
+                                    <span style=${{ fontSize: 11 }}>${L("ĐV / Unit")}</span>
+                                    <input value=${entry.unit || ""}
+                                      placeholder=${comp && comp.unit ? comp.unit : L("vd: gram, ml")}
+                                      onInput=${function (e) { updateRecipeEntry(entry.id, "unit", e.target.value); }}
+                                    />
+                                  </label>
+                                  <label className="field" style=${{ flex: "2 1 200px", margin: 0 }}>
+                                    <span style=${{ fontSize: 11 }}>${L("Ghi chú / Note")}</span>
+                                    <input value=${entry.note || ""}
+                                      placeholder=${L("vd: xay nhuyễn, để lạnh... / e.g. blended, chilled...")}
+                                      onInput=${function (e) { updateRecipeEntry(entry.id, "note", e.target.value); }}
+                                    />
+                                  </label>
+                                  <button type="button" className="ghost-btn danger-text"
+                                    style=${{ alignSelf: "flex-end" }}
+                                    onClick=${function () { toggleProductDraftComponent(entry.id); }}
+                                  >${L("Xóa / Remove")}</button>
+                                </article>
+                              `;
+                            })}
+                          </div>
                         `;
-                      })}
-                    </div>
-                  </div>
+                      })()}
+                    `}
+                  </fieldset>
 
-                  <button type="submit" className="primary-btn">${productDraft.id ? L("Lưu thay đổi / Save Changes") : L("Thêm vào kho / Add to Inventory")}</button>
+                  <button type="submit" className="primary-btn" style=${{ alignSelf: "stretch" }}>
+                    ${productDraft.id ? L("Lưu thay đổi / Save Changes") : L("Thêm vào kho / Add to Inventory")}
+                  </button>
                 </form>
-
-                <section className="surface section-card">
-                  <div className="section-top">
-                    <div>
-                      <p className="eyebrow">${L("Thông tin tham chiếu / Reference")}</p>
-                      <h2 className="section-title">${L("Sản phẩm và thành phần / Product Components")}</h2>
-                    </div>
-                  </div>
-                  <div className="list-stack">
-                    ${products.map(function (product) {
-                      var productComponents = (product.componentIds || []).map(function (componentId) {
-                        var component = components.find(function (item) { return item.id === componentId; });
-                        return component ? L(component.label) : "";
-                      }).filter(Boolean);
-                      return html`
-                        <article key=${product.id} className="list-row list-row-actions">
-                          <div>
-                            <strong>${product.image} ${product.name}</strong>
-                            <p>${productComponents.length ? productComponents.join(", ") : L("Chưa gắn thành phần / No components assigned")}</p>
-                          </div>
-                          <div className="row-actions">
-                            <button className="ghost-btn" onClick=${function () { startEditProduct(product); }}>${L("Sửa / Edit")}</button>
-                          </div>
-                        </article>
-                      `;
-                    })}
-                  </div>
-                </section>
               </div>
             ` : null}
 
@@ -5082,6 +6749,690 @@
       `;
     }
 
+    // ==================================================================
+    // NHẬP HÀNG / STOCK IN
+    // ==================================================================
+    function addPurchaseLine(productId) {
+      var product = products.find(function (p) { return p.id === productId; });
+      setPurchaseDraft(function (current) {
+        var existing = current.items.find(function (it) { return it.productId === productId; });
+        if (existing) {
+          return Object.assign({}, current, {
+            items: current.items.map(function (it) {
+              return it.productId === productId
+                ? Object.assign({}, it, { qty: (Number(it.qty) || 0) + 1 })
+                : it;
+            })
+          });
+        }
+        return Object.assign({}, current, {
+          items: current.items.concat([{
+            productId: productId,
+            productName: product ? product.name : productId,
+            qty: 1,
+            unitCost: product ? Number(product.costPrice) || 0 : 0
+          }])
+        });
+      });
+    }
+    function updatePurchaseLine(productId, field, value) {
+      setPurchaseDraft(function (current) {
+        return Object.assign({}, current, {
+          items: current.items.map(function (it) {
+            if (it.productId !== productId) return it;
+            var v = (field === "qty" || field === "unitCost") ? Number(value) || 0 : value;
+            return Object.assign({}, it, { [field]: v });
+          })
+        });
+      });
+    }
+    function removePurchaseLine(productId) {
+      setPurchaseDraft(function (current) {
+        return Object.assign({}, current, {
+          items: current.items.filter(function (it) { return it.productId !== productId; })
+        });
+      });
+    }
+    function resetPurchaseDraft() {
+      setPurchaseDraft({ supplierId: "", supplierName: "", paymentMethod: "Tiền mặt / Cash", note: "", items: [] });
+    }
+    function submitPurchase() {
+      if (!purchaseDraft.items.length) {
+        window.alert(L("Chưa có dòng hàng nào. / Add at least one line first."));
+        return;
+      }
+      var total = purchaseDraft.items.reduce(function (s, it) {
+        return s + (Number(it.qty) || 0) * (Number(it.unitCost) || 0);
+      }, 0);
+      // Optimistic: bump local stock immediately.
+      setProducts(function (current) {
+        return current.map(function (p) {
+          var line = purchaseDraft.items.find(function (it) { return it.productId === p.id; });
+          if (!line) return p;
+          return Object.assign({}, p, { stock: (Number(p.stock) || 0) + (Number(line.qty) || 0) });
+        });
+      });
+      syncEnqueue({
+        endpoint: "/purchases",
+        method: "POST",
+        opType: "purchase",
+        body: {
+          supplierId: purchaseDraft.supplierId || null,
+          supplierName: purchaseDraft.supplierName || null,
+          paymentMethod: purchaseDraft.paymentMethod || null,
+          paidAmount: total,
+          note: purchaseDraft.note || null,
+          items: purchaseDraft.items.map(function (it) {
+            return {
+              productId: it.productId,
+              productName: it.productName,
+              qty: Number(it.qty) || 0,
+              unitCost: Number(it.unitCost) || 0
+            };
+          })
+        }
+      });
+      window.alert(L("Đã lưu phiếu nhập. / Purchase saved."));
+      resetPurchaseDraft();
+      // Refresh shortly after to pick up server-assigned PN-id.
+      setTimeout(refreshPurchases, 800);
+    }
+    function submitSupplier(event) {
+      if (event && event.preventDefault) event.preventDefault();
+      if (!supplierDraft.name.trim()) {
+        window.alert(L("Nhập tên nhà cung cấp. / Enter supplier name."));
+        return;
+      }
+      syncApi("/suppliers", {
+        method: "POST",
+        body: {
+          id: supplierDraft.id || undefined,
+          name: supplierDraft.name.trim(),
+          phone: supplierDraft.phone || null,
+          address: supplierDraft.address || null,
+          note: supplierDraft.note || null
+        }
+      }).then(function () {
+        setSupplierDraft({ id: null, name: "", phone: "", address: "", note: "" });
+        refreshSuppliers();
+      }).catch(function (err) {
+        window.alert(L("Không lưu được nhà cung cấp. / Could not save supplier.") + "\n" + (err && err.message ? err.message : ""));
+      });
+    }
+
+    // ==================================================================
+    // XUẤT HÀNG / STOCK OUT
+    // ==================================================================
+    var ISSUE_REASONS = [
+      { value: "damaged",  label: "Hư hỏng / Damaged" },
+      { value: "sample",   label: "Hàng mẫu / Sample" },
+      { value: "internal", label: "Sử dụng nội bộ / Internal use" },
+      { value: "transfer", label: "Chuyển kho / Transfer" },
+      { value: "other",    label: "Khác / Other" }
+    ];
+    function addIssueLine(productId) {
+      var product = products.find(function (p) { return p.id === productId; });
+      setIssueDraft(function (current) {
+        var existing = current.items.find(function (it) { return it.productId === productId; });
+        if (existing) {
+          return Object.assign({}, current, {
+            items: current.items.map(function (it) {
+              return it.productId === productId
+                ? Object.assign({}, it, { qty: (Number(it.qty) || 0) + 1 })
+                : it;
+            })
+          });
+        }
+        return Object.assign({}, current, {
+          items: current.items.concat([{
+            productId: productId,
+            productName: product ? product.name : productId,
+            qty: 1,
+            maxStock: product ? Number(product.stock) || 0 : 0
+          }])
+        });
+      });
+    }
+    function updateIssueLine(productId, qty) {
+      setIssueDraft(function (current) {
+        return Object.assign({}, current, {
+          items: current.items.map(function (it) {
+            return it.productId === productId
+              ? Object.assign({}, it, { qty: Number(qty) || 0 })
+              : it;
+          })
+        });
+      });
+    }
+    function removeIssueLine(productId) {
+      setIssueDraft(function (current) {
+        return Object.assign({}, current, {
+          items: current.items.filter(function (it) { return it.productId !== productId; })
+        });
+      });
+    }
+    function resetIssueDraft() {
+      setIssueDraft({ reason: "damaged", note: "", items: [] });
+    }
+    function submitIssue() {
+      if (!issueDraft.items.length) {
+        window.alert(L("Chưa có dòng hàng nào. / Add at least one line first."));
+        return;
+      }
+      var insufficient = issueDraft.items.filter(function (it) {
+        var p = products.find(function (x) { return x.id === it.productId; });
+        var stock = p ? Number(p.stock) || 0 : 0;
+        return (Number(it.qty) || 0) > stock;
+      });
+      if (insufficient.length) {
+        var msg = insufficient.map(function (it) {
+          var p = products.find(function (x) { return x.id === it.productId; });
+          return "- " + (p ? p.name : it.productId) + " (" + (p ? p.stock : 0) + "/" + it.qty + ")";
+        }).join("\n");
+        if (!window.confirm(L("Một số mặt hàng xuất quá tồn. Vẫn lưu? / Some lines exceed stock. Continue?") + "\n" + msg)) return;
+      }
+      // Optimistic local decrement.
+      setProducts(function (current) {
+        return current.map(function (p) {
+          var line = issueDraft.items.find(function (it) { return it.productId === p.id; });
+          if (!line) return p;
+          return Object.assign({}, p, { stock: Math.max(0, (Number(p.stock) || 0) - (Number(line.qty) || 0)) });
+        });
+      });
+      syncEnqueue({
+        endpoint: "/issues",
+        method: "POST",
+        opType: "issue",
+        body: {
+          reason: issueDraft.reason,
+          note: issueDraft.note || null,
+          items: issueDraft.items.map(function (it) {
+            return { productId: it.productId, productName: it.productName, qty: Number(it.qty) || 0 };
+          })
+        }
+      });
+      window.alert(L("Đã lưu phiếu xuất. / Issue saved."));
+      resetIssueDraft();
+      setTimeout(refreshIssues, 800);
+    }
+
+    // ==================================================================
+    // KIỂM KÊ / STOCKTAKE  (sinh ADJUST movement cho chênh lệch)
+    // ==================================================================
+    function submitStocktake() {
+      var adjustItems = [];
+      products.forEach(function (p) {
+        var raw = stocktakeDraft[p.id];
+        if (raw === undefined || raw === "") return;
+        var actual = Number(raw);
+        if (!Number.isFinite(actual)) return;
+        var diff = actual - (Number(p.stock) || 0);
+        if (diff === 0) return;
+        adjustItems.push({ productId: p.id, productName: p.name, diff: diff, actual: actual });
+      });
+      if (!adjustItems.length) {
+        window.alert(L("Không có chênh lệch tồn. / No stock differences."));
+        return;
+      }
+      // For each adjustment we either push an IN (positive diff) or OUT (negative)
+      // through the existing endpoints — keeps the ledger clean.
+      adjustItems.forEach(function (it) {
+        if (it.diff > 0) {
+          syncEnqueue({
+            endpoint: "/purchases",
+            method: "POST",
+            opType: "stocktake-in",
+            body: {
+              supplierName: "Kiểm kê / Stocktake",
+              paymentMethod: "Internal",
+              note: "Kiem ke - dieu chinh tang",
+              items: [{ productId: it.productId, productName: it.productName, qty: it.diff, unitCost: 0 }]
+            }
+          });
+        } else {
+          syncEnqueue({
+            endpoint: "/issues",
+            method: "POST",
+            opType: "stocktake-out",
+            body: {
+              reason: "other",
+              note: "Kiem ke - dieu chinh giam",
+              allowNegativeStock: true,
+              items: [{ productId: it.productId, productName: it.productName, qty: Math.abs(it.diff) }]
+            }
+          });
+        }
+      });
+      // Optimistic local update.
+      setProducts(function (current) {
+        return current.map(function (p) {
+          var line = adjustItems.find(function (it) { return it.productId === p.id; });
+          return line ? Object.assign({}, p, { stock: line.actual }) : p;
+        });
+      });
+      setStocktakeDraft({});
+      window.alert(L("Đã ghi nhận kiểm kê. / Stocktake recorded."));
+      setTimeout(function () { refreshMovements(); }, 1000);
+    }
+
+    function formatMovementType(type) {
+      var map = {
+        IN:     "Nhập / Stock In",
+        OUT:    "Xuất / Stock Out",
+        SALE:   "Bán / Sale",
+        ADJUST: "Kiểm kê / Adjust",
+        RETURN: "Trả / Return"
+      };
+      return L(map[type] || type);
+    }
+
+    // ==================================================================
+    // RENDER: NHẬP HÀNG VIEW
+    // ==================================================================
+    function renderPurchasesView() {
+      var total = purchaseDraft.items.reduce(function (s, it) {
+        return s + (Number(it.qty) || 0) * (Number(it.unitCost) || 0);
+      }, 0);
+      return html`
+        <section className="page-section">
+          <header className="page-header surface">
+            <div>
+              <p className="eyebrow">${L("Nhập hàng / Stock In")}</p>
+              <h1 className="section-title">${L("Tạo phiếu nhập / Create Purchase Order")}</h1>
+              <small style=${{ color: "#7b6b5d" }}>${L("Phiếu nhập sẽ ghi vào Cloudflare D1 + tự cộng tồn kho. / Purchase writes to Cloudflare D1 and adds to stock.")}</small>
+            </div>
+            <div className="row-actions">
+              <span className="eyebrow">${L("Trạng thái / Status")}: ${syncStatus.online ? "🟢" : "🔴"} ${syncStatus.pending ? ("⏳" + syncStatus.pending) : ""}</span>
+            </div>
+          </header>
+
+          <div className="grid-2">
+            <section className="surface section-card form-card">
+              <h2 className="section-title">${L("Thông tin phiếu / PO Info")}</h2>
+              <div className="field-grid">
+                <label className="field">
+                  <span>${L("Nhà cung cấp / Supplier")}</span>
+                  <select value=${purchaseDraft.supplierId} onChange=${function (e) {
+                    var sid = e.target.value;
+                    var s = suppliers.find(function (x) { return x.id === sid; });
+                    setPurchaseDraft(function (cur) { return Object.assign({}, cur, { supplierId: sid, supplierName: s ? s.name : "" }); });
+                  }}>
+                    <option value="">${L("— Chọn / Select —")}</option>
+                    ${suppliers.map(function (s) {
+                      return html`<option key=${s.id} value=${s.id}>${s.name}</option>`;
+                    })}
+                  </select>
+                </label>
+                <label className="field">
+                  <span>${L("Thanh toán / Payment")}</span>
+                  <select value=${purchaseDraft.paymentMethod} onChange=${function (e) {
+                    setPurchaseDraft(function (cur) { return Object.assign({}, cur, { paymentMethod: e.target.value }); });
+                  }}>
+                    ${PAYMENT_METHOD_OPTIONS.map(function (opt) {
+                      return html`<option key=${opt.value} value=${opt.value}>${L(opt.label)}</option>`;
+                    })}
+                  </select>
+                </label>
+                <label className="field" style=${{ gridColumn: "1 / -1" }}>
+                  <span>${L("Ghi chú / Note")}</span>
+                  <input value=${purchaseDraft.note} onInput=${function (e) {
+                    setPurchaseDraft(function (cur) { return Object.assign({}, cur, { note: e.target.value }); });
+                  }} />
+                </label>
+              </div>
+
+              <h3 className="section-title" style=${{ marginTop: 24 }}>${L("Thêm mặt hàng / Add Product")}</h3>
+              <select onChange=${function (e) {
+                if (e.target.value) { addPurchaseLine(e.target.value); e.target.value = ""; }
+              }}>
+                <option value="">${L("— Chọn sản phẩm để thêm / Pick product —")}</option>
+                ${products.map(function (p) {
+                  return html`<option key=${p.id} value=${p.id}>${p.image} ${p.name} (${L("tồn")}: ${p.stock || 0})</option>`;
+                })}
+              </select>
+
+              <div className="management-list" style=${{ marginTop: 16 }}>
+                ${purchaseDraft.items.length === 0
+                  ? html`<p style=${{ color: "#7b6b5d" }}>${L("Chưa có dòng hàng. / No lines yet.")}</p>`
+                  : purchaseDraft.items.map(function (it) {
+                      return html`
+                        <article key=${it.productId} className="list-row list-row-actions">
+                          <div>
+                            <strong>${it.productName}</strong>
+                            <p>${formatCurrency((Number(it.qty) || 0) * (Number(it.unitCost) || 0))}</p>
+                          </div>
+                          <div className="row-actions">
+                            <label className="field" style=${{ width: 90 }}>
+                              <span>${L("SL / Qty")}</span>
+                              <input type="number" min="1" value=${it.qty} onInput=${function (e) { updatePurchaseLine(it.productId, "qty", e.target.value); }} />
+                            </label>
+                            <label className="field" style=${{ width: 130 }}>
+                              <span>${L("Giá nhập / Cost")}</span>
+                              <input type="number" min="0" value=${it.unitCost} onInput=${function (e) { updatePurchaseLine(it.productId, "unitCost", e.target.value); }} />
+                            </label>
+                            <button className="ghost-btn danger-text" onClick=${function () { removePurchaseLine(it.productId); }}>${L("Xóa / Remove")}</button>
+                          </div>
+                        </article>
+                      `;
+                    })}
+              </div>
+
+              <div className="section-top" style=${{ marginTop: 18 }}>
+                <strong style=${{ fontSize: 18 }}>${L("Tổng / Total")}: ${formatCurrency(total)}</strong>
+                <div className="row-actions">
+                  <button className="ghost-btn" onClick=${resetPurchaseDraft}>${L("Hủy / Cancel")}</button>
+                  <button className="primary-btn" onClick=${submitPurchase} disabled=${!purchaseDraft.items.length}>${L("Lưu phiếu nhập / Save Purchase")}</button>
+                </div>
+              </div>
+            </section>
+
+            <section className="surface section-card form-card">
+              <h2 className="section-title">${L("Nhà cung cấp / Suppliers")}</h2>
+              <form className="form-card" onSubmit=${submitSupplier}>
+                <div className="field-grid">
+                  <label className="field"><span>${L("Tên / Name")}</span><input value=${supplierDraft.name} onInput=${function (e) { setSupplierDraft(Object.assign({}, supplierDraft, { name: e.target.value })); }} /></label>
+                  <label className="field"><span>${L("Điện thoại / Phone")}</span><input value=${supplierDraft.phone} onInput=${function (e) { setSupplierDraft(Object.assign({}, supplierDraft, { phone: e.target.value })); }} /></label>
+                  <label className="field" style=${{ gridColumn: "1 / -1" }}><span>${L("Địa chỉ / Address")}</span><input value=${supplierDraft.address} onInput=${function (e) { setSupplierDraft(Object.assign({}, supplierDraft, { address: e.target.value })); }} /></label>
+                </div>
+                <button type="submit" className="primary-btn">${supplierDraft.id ? L("Lưu / Save") : L("Thêm nhà cung cấp / Add Supplier")}</button>
+              </form>
+              <div className="management-list" style=${{ marginTop: 12 }}>
+                ${suppliers.length === 0
+                  ? html`<p style=${{ color: "#7b6b5d" }}>${L("Chưa có nhà cung cấp. / No suppliers yet.")}</p>`
+                  : suppliers.map(function (s) {
+                      return html`
+                        <article key=${s.id} className="list-row list-row-actions">
+                          <div>
+                            <strong>${s.name}</strong>
+                            <p>${s.phone || ""} ${s.address ? " · " + s.address : ""}</p>
+                          </div>
+                          <div className="row-actions">
+                            <button className="ghost-btn" onClick=${function () { setSupplierDraft({ id: s.id, name: s.name, phone: s.phone || "", address: s.address || "", note: s.note || "" }); }}>${L("Sửa / Edit")}</button>
+                          </div>
+                        </article>
+                      `;
+                    })}
+              </div>
+            </section>
+          </div>
+
+          <section className="surface section-card" style=${{ marginTop: 24 }}>
+            <h2 className="section-title">${L("Lịch sử phiếu nhập / Purchase History")}</h2>
+            <div className="management-list">
+              ${purchases.length === 0
+                ? html`<p style=${{ color: "#7b6b5d" }}>${L("Chưa có phiếu nhập. / No purchases yet.")}</p>`
+                : purchases.map(function (po) {
+                    return html`
+                      <article key=${po.id} className="list-row list-row-actions">
+                        <div>
+                          <strong>${po.id}</strong>
+                          <p>${po.supplier_name || L("Không rõ NCC / Unknown supplier")} · ${po.item_count} ${L("dòng / lines")} · ${formatDateTime(po.created_at)}</p>
+                        </div>
+                        <strong>${formatCurrency(po.total_amount)}</strong>
+                      </article>
+                    `;
+                  })}
+            </div>
+          </section>
+        </section>
+      `;
+    }
+
+    // ==================================================================
+    // RENDER: XUẤT HÀNG VIEW
+    // ==================================================================
+    function renderIssuesView() {
+      return html`
+        <section className="page-section">
+          <header className="page-header surface">
+            <div>
+              <p className="eyebrow">${L("Xuất hàng / Stock Out")}</p>
+              <h1 className="section-title">${L("Tạo phiếu xuất (không phải bán) / Create Issue (non-sale)")}</h1>
+              <small style=${{ color: "#7b6b5d" }}>${L("Dùng cho xuất hủy, hàng mẫu, sử dụng nội bộ. / Use for damages, samples, internal use.")}</small>
+            </div>
+            <div className="row-actions">
+              <span className="eyebrow">${L("Trạng thái / Status")}: ${syncStatus.online ? "🟢" : "🔴"} ${syncStatus.pending ? ("⏳" + syncStatus.pending) : ""}</span>
+            </div>
+          </header>
+
+          <section className="surface section-card form-card">
+            <div className="field-grid">
+              <label className="field">
+                <span>${L("Lý do / Reason")}</span>
+                <select value=${issueDraft.reason} onChange=${function (e) {
+                  setIssueDraft(Object.assign({}, issueDraft, { reason: e.target.value }));
+                }}>
+                  ${ISSUE_REASONS.map(function (r) {
+                    return html`<option key=${r.value} value=${r.value}>${L(r.label)}</option>`;
+                  })}
+                </select>
+              </label>
+              <label className="field" style=${{ gridColumn: "1 / -1" }}>
+                <span>${L("Ghi chú / Note")}</span>
+                <input value=${issueDraft.note} onInput=${function (e) {
+                  setIssueDraft(Object.assign({}, issueDraft, { note: e.target.value }));
+                }} />
+              </label>
+            </div>
+
+            <h3 className="section-title" style=${{ marginTop: 16 }}>${L("Thêm mặt hàng / Add Product")}</h3>
+            <select onChange=${function (e) {
+              if (e.target.value) { addIssueLine(e.target.value); e.target.value = ""; }
+            }}>
+              <option value="">${L("— Chọn sản phẩm / Pick product —")}</option>
+              ${products.map(function (p) {
+                return html`<option key=${p.id} value=${p.id}>${p.image} ${p.name} (${L("tồn")}: ${p.stock || 0})</option>`;
+              })}
+            </select>
+
+            <div className="management-list" style=${{ marginTop: 16 }}>
+              ${issueDraft.items.length === 0
+                ? html`<p style=${{ color: "#7b6b5d" }}>${L("Chưa có dòng hàng. / No lines yet.")}</p>`
+                : issueDraft.items.map(function (it) {
+                    var p = products.find(function (x) { return x.id === it.productId; });
+                    var stock = p ? Number(p.stock) || 0 : 0;
+                    var over = (Number(it.qty) || 0) > stock;
+                    return html`
+                      <article key=${it.productId} className="list-row list-row-actions">
+                        <div>
+                          <strong>${it.productName}</strong>
+                          <p style=${{ color: over ? "#c0392b" : "#7b6b5d" }}>
+                            ${L("Tồn")}: ${stock}${over ? " ⚠ " + L("vượt tồn / over stock") : ""}
+                          </p>
+                        </div>
+                        <div className="row-actions">
+                          <label className="field" style=${{ width: 100 }}>
+                            <span>${L("SL / Qty")}</span>
+                            <input type="number" min="1" value=${it.qty} onInput=${function (e) { updateIssueLine(it.productId, e.target.value); }} />
+                          </label>
+                          <button className="ghost-btn danger-text" onClick=${function () { removeIssueLine(it.productId); }}>${L("Xóa / Remove")}</button>
+                        </div>
+                      </article>
+                    `;
+                  })}
+            </div>
+
+            <div className="section-top" style=${{ marginTop: 18 }}>
+              <strong>${L("Tổng dòng / Total lines")}: ${issueDraft.items.length}</strong>
+              <div className="row-actions">
+                <button className="ghost-btn" onClick=${resetIssueDraft}>${L("Hủy / Cancel")}</button>
+                <button className="primary-btn" onClick=${submitIssue} disabled=${!issueDraft.items.length}>${L("Lưu phiếu xuất / Save Issue")}</button>
+              </div>
+            </div>
+          </section>
+
+          <section className="surface section-card" style=${{ marginTop: 24 }}>
+            <h2 className="section-title">${L("Lịch sử phiếu xuất / Issue History")}</h2>
+            <div className="management-list">
+              ${issues.length === 0
+                ? html`<p style=${{ color: "#7b6b5d" }}>${L("Chưa có phiếu xuất. / No issues yet.")}</p>`
+                : issues.map(function (px) {
+                    return html`
+                      <article key=${px.id} className="list-row list-row-actions">
+                        <div>
+                          <strong>${px.id}</strong>
+                          <p>${L("Lý do")}: ${px.reason} · ${px.item_count} ${L("dòng / lines")} · ${px.total_qty || 0} ${L("món / items")} · ${formatDateTime(px.created_at)}</p>
+                        </div>
+                      </article>
+                    `;
+                  })}
+            </div>
+          </section>
+        </section>
+      `;
+    }
+
+    // ==================================================================
+    // RENDER: LƯU KHO VIEW (warehouse)
+    // ==================================================================
+    function renderWarehouseView() {
+      var tabs = [
+        { id: "stock",     label: "Tồn hiện tại / Current Stock" },
+        { id: "ledger",    label: "Sổ cái / Movement Ledger" },
+        { id: "stocktake", label: "Kiểm kê / Stocktake" }
+      ];
+      // Use the shared lowStockProducts (above) so this count matches the
+      // topbar badge + POS banner.  (Avoids the previous min=0 false positive.)
+
+      return html`
+        <section className="page-section">
+          <header className="page-header surface">
+            <div>
+              <p className="eyebrow">${L("Lưu kho / Warehouse")}</p>
+              <h1 className="section-title">${L("Quản lý kho hàng / Inventory Management")}</h1>
+              <small style=${{ color: "#7b6b5d" }}>${L("Đồng bộ với Cloudflare D1. / Synced with Cloudflare D1.")}</small>
+            </div>
+            <div className="row-actions">
+              ${lowStockCount > 0 ? html`<span className="eyebrow" style=${{ color: "#c0392b" }}>⚠ ${lowStockCount} ${L("SP sắp hết / low-stock")}</span>` : null}
+              <span className="eyebrow">${syncStatus.online ? "🟢" : "🔴"} ${syncStatus.pending ? ("⏳" + syncStatus.pending) : ""}</span>
+            </div>
+          </header>
+
+          <div className="settings-nav" style=${{ marginBottom: 16 }}>
+            ${tabs.map(function (tab) {
+              return html`
+                <button key=${tab.id}
+                  className=${"settings-nav-btn" + (warehouseTab === tab.id ? " is-active" : "")}
+                  onClick=${function () {
+                    setWarehouseTab(tab.id);
+                    if (tab.id === "ledger") refreshMovements();
+                  }}>${L(tab.label)}</button>
+              `;
+            })}
+          </div>
+
+          ${warehouseTab === "stock" ? html`
+            <section className="surface section-card">
+              <div className="section-top">
+                <h2 className="section-title">${L("Tồn hiện tại / On-Hand Quantity")}</h2>
+              </div>
+              <!-- Search box (accent-insensitive name / barcode / SKU) -->
+              <div className="field" style=${{ marginBottom: 12 }}>
+                <input
+                  type="search"
+                  value=${warehouseSearchTerm}
+                  placeholder=${L("Tìm tên SP / barcode / SKU... / Search name / barcode / SKU")}
+                  onInput=${function (e) { setWarehouseSearchTerm(e.target.value); }}
+                  style=${{ width: "100%", padding: "10px 14px", borderRadius: 12, border: "1px solid #e5d5c7", fontSize: 14 }}
+                />
+                ${warehouseSearchTerm
+                  ? html`<small style=${{ color: "#7b6b5d", marginTop: 4, display: "block" }}>
+                      ${(function () {
+                        var nq = normalizeSearchText(warehouseSearchTerm);
+                        var n = products.filter(function (p) { return productMatchesQuery(p, nq); }).length;
+                        return n + " " + L("kết quả / matches");
+                      })()}
+                      · <a href="#" onClick=${function (e) { e.preventDefault(); setWarehouseSearchTerm(""); }}>${L("Xóa / Clear")}</a>
+                    </small>`
+                  : null}
+              </div>
+              <div className="management-list">
+                ${(function () {
+                  var nq = normalizeSearchText(warehouseSearchTerm);
+                  return products.filter(function (p) { return productMatchesQuery(p, nq); });
+                })().map(function (p) {
+                  var qty = Number(p.stock) || 0;
+                  var min = Number(p.minStock) || 0;
+                  // Match the shared rule: only "low" when a min is set.
+                  var low = min > 0 && qty <= min;
+                  return html`
+                    <article key=${p.id} className="list-row list-row-actions">
+                      <div>
+                        <strong>${p.image} ${p.name}</strong>
+                        <p style=${{ color: low ? "#c0392b" : "#7b6b5d" }}>${L("Tồn")}: ${qty}${p.unit ? " " + p.unit : ""} ${low ? " ⚠ " + L("dưới mức tối thiểu / below min") : ""} · ${L("Giá vốn")}: ${formatCurrency(p.costPrice || 0)} · SKU: ${p.skuCode || p.id}</p>
+                      </div>
+                    </article>
+                  `;
+                })}
+              </div>
+            </section>
+          ` : null}
+
+          ${warehouseTab === "ledger" ? html`
+            <section className="surface section-card">
+              <div className="section-top">
+                <h2 className="section-title">${L("Sổ cái chuyển động kho / Stock Movement Ledger")}</h2>
+                <button className="ghost-btn" onClick=${function () { refreshMovements(); }}>${L("Tải lại / Reload")}</button>
+              </div>
+              <div className="management-list">
+                ${movements.length === 0
+                  ? html`<p style=${{ color: "#7b6b5d" }}>${L("Chưa có chuyển động. / No movements yet.")}</p>`
+                  : movements.map(function (m) {
+                      var sign = m.qty_change > 0 ? "+" : "";
+                      return html`
+                        <article key=${m.id} className="list-row list-row-actions">
+                          <div>
+                            <strong>${m.product_name || m.product_id}</strong>
+                            <p>${formatMovementType(m.movement_type)} · ${formatDateTime(m.created_at)} ${m.ref_id ? " · " + m.ref_id : ""}</p>
+                          </div>
+                          <strong style=${{ color: m.qty_change > 0 ? "#1f8a3a" : "#c0392b" }}>${sign}${m.qty_change}</strong>
+                        </article>
+                      `;
+                    })}
+              </div>
+            </section>
+          ` : null}
+
+          ${warehouseTab === "stocktake" ? html`
+            <section className="surface section-card">
+              <h2 className="section-title">${L("Kiểm kê / Stocktake")}</h2>
+              <p style=${{ color: "#7b6b5d" }}>${L("Nhập số lượng thực tế. Hệ thống sẽ tự sinh phiếu điều chỉnh tăng/giảm. / Enter actual quantity. The system will create adjustment entries.")}</p>
+              <div className="management-list">
+                ${products.map(function (p) {
+                  var actual = stocktakeDraft[p.id];
+                  var diff = (actual === undefined || actual === "") ? null : Number(actual) - (Number(p.stock) || 0);
+                  return html`
+                    <article key=${p.id} className="list-row list-row-actions">
+                      <div>
+                        <strong>${p.image} ${p.name}</strong>
+                        <p>${L("Tồn hệ thống / System stock")}: ${p.stock || 0}</p>
+                      </div>
+                      <div className="row-actions">
+                        <label className="field" style=${{ width: 110 }}>
+                          <span>${L("Thực tế / Actual")}</span>
+                          <input type="number" min="0" value=${actual === undefined ? "" : actual} onInput=${function (e) {
+                            var val = e.target.value;
+                            setStocktakeDraft(function (cur) { var next = Object.assign({}, cur); next[p.id] = val; return next; });
+                          }} />
+                        </label>
+                        ${diff !== null && diff !== 0
+                          ? html`<strong style=${{ color: diff > 0 ? "#1f8a3a" : "#c0392b" }}>${diff > 0 ? "+" : ""}${diff}</strong>`
+                          : null}
+                      </div>
+                    </article>
+                  `;
+                })}
+              </div>
+              <div className="section-top" style=${{ marginTop: 18 }}>
+                <button className="ghost-btn" onClick=${function () { setStocktakeDraft({}); }}>${L("Xóa nháp / Clear draft")}</button>
+                <button className="primary-btn" onClick=${submitStocktake}>${L("Ghi nhận kiểm kê / Submit Stocktake")}</button>
+              </div>
+            </section>
+          ` : null}
+        </section>
+      `;
+    }
+
     function renderSettingsView() {
       var settingsTabs = [
         { id: "general", label: "Chung / General" },
@@ -5133,17 +7484,37 @@
                 </div>
                 <label className="field"><span>${L("Địa chỉ / Address")}</span><textarea rows="3" value=${settings.address} onInput=${function (event) { patchSettings("address", event.target.value); }}></textarea></label>
                 <label className="field"><span>${L("Chân hóa đơn / Receipt Footer")}</span><textarea rows="3" value=${settings.receiptFooter} onInput=${function (event) { patchSettings("receiptFooter", event.target.value); }}></textarea></label>
+                <label className="field">
+                  <span>${L("Logo cửa hàng (màu, dùng trên app) / Shop Logo (color, app UI)")}</span>
+                  <input
+                    value=${settings.logoUrl || ""}
+                    placeholder="/logo.png"
+                    onInput=${function (event) { patchSettings("logoUrl", event.target.value); }}
+                  />
+                  <small>${L("Logo màu hiển thị trong app. Mặc định /logo.png / Color logo for app UI. Default /logo.png")}</small>
+                </label>
+                <label className="field">
+                  <span>${L("Logo in hóa đơn (B/W) / Receipt Logo (B/W)")}</span>
+                  <input
+                    value=${settings.logoPrintUrl || ""}
+                    placeholder="/logo-thermal.png"
+                    onInput=${function (event) { patchSettings("logoPrintUrl", event.target.value); }}
+                  />
+                  <small>${L("Phiên bản đen-trắng để in máy nhiệt đậm rõ. Trống = tự dùng logo màu. Mặc định /logo-thermal.png. / B/W version printing darker on thermal printers. Blank = use color logo. Default /logo-thermal.png.")}</small>
+                </label>
                 <div className="template-preview brand-preview">
+                  ${settings.logoUrl
+                    ? html`<img src=${settings.logoUrl} alt="logo" style=${{ maxWidth: 180, maxHeight: 80, display: "block", marginBottom: 8 }} />`
+                    : null}
                   <p className="eyebrow">${settings.brandLine || settings.storeName}</p>
                   <h3>${settings.brandDisplayName || settings.storeName}</h3>
                   <small>${settings.branchName} · ${settings.phone}</small>
                 </div>
                 <div className="list-stack">
                   <div className="empty-state align-left">
-                    ${L("Mọi thay đổi đang được lưu tự động trong trình duyệt hiện tại. / Changes are saved automatically in this browser.")}
-                  </div>
-                  <div className="empty-state align-left">
-                    ${L("Muốn đồng bộ desktop và mobile thì cần thêm backend hoặc database online. / To sync desktop and mobile, connect a backend or online database.")}
+                    ${syncStatus.online
+                      ? L("Mọi thay đổi tự động lưu lên Cloudflare D1 (1s delay). / Changes auto-save to Cloudflare D1 (1s delay).")
+                      : L("Đang offline – thay đổi sẽ đồng bộ khi có mạng lại. / Offline – changes will sync when reconnected.")}
                   </div>
                 </div>
               </section>
@@ -5492,6 +7863,13 @@
                               onInput=${function (event) {
                                 updateProductStock(product.id, event.target.value);
                               }}
+                              onBlur=${function () { flushPendingStockEdit(product.id); }}
+                              onKeyDown=${function (event) {
+                                if (event.key === "Enter") {
+                                  event.preventDefault();
+                                  event.target.blur();
+                                }
+                              }}
                             />
                             <button className="ghost-btn" onClick=${function () { startEditProduct(product); }}>${L("Sửa chi tiết / Edit Details")}</button>
                           </div>
@@ -5544,6 +7922,41 @@
             />
           </div>
 
+          <div
+            className="lang-switch surface"
+            title=${syncStatus.lastError ? syncStatus.lastError : (syncStatus.online ? "D1 online" : "Offline")}
+            style=${{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 10px", marginRight: 8 }}
+          >
+            <span style=${{ fontSize: 14 }}>${syncStatus.online ? "🟢" : "🔴"}</span>
+            <small style=${{ color: "#7b6b5d" }}>
+              ${syncStatus.online ? "D1" : L("Ngoại tuyến / Offline")}
+              ${syncStatus.pending ? " · ⏳" + syncStatus.pending : ""}
+            </small>
+          </div>
+
+          ${lowStockCount > 0 ? html`
+            <button
+              type="button"
+              className="lang-switch surface"
+              title=${lowStockProducts.slice(0, 8).map(function (p) {
+                return p.name + " (" + (p.stock || 0) + "/" + (p.minStock || 0) + ")";
+              }).join("\n")}
+              style=${{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                padding: "6px 12px", marginRight: 8,
+                background: "#fff1eb", border: "1px solid #f5b893",
+                color: "#a4451a", cursor: "pointer", fontWeight: 600
+              }}
+              onClick=${function () {
+                setActiveView("warehouse");
+                setWarehouseTab("stock");
+              }}
+            >
+              <span style=${{ fontSize: 16 }}>⚠</span>
+              <span>${lowStockCount} ${L("SP sắp hết / low-stock")}</span>
+            </button>
+          ` : null}
+
           <div className="lang-switch surface">
             ${LANGUAGE_OPTIONS.map(function (item) {
               return html`
@@ -5561,10 +7974,49 @@
 
         <main className="page-body">
           ${activeView === "pos" ? renderPosView() : null}
+          ${activeView === "purchases" ? renderPurchasesView() : null}
+          ${activeView === "issues" ? renderIssuesView() : null}
+          ${activeView === "warehouse" ? renderWarehouseView() : null}
           ${activeView === "dashboard" ? renderDashboardView() : null}
           ${activeView === "inventory" ? renderInventoryView() : null}
           ${activeView === "settings" ? renderSettingsView() : null}
         </main>
+
+        <!-- Toast stack — fixed bottom-right, stacks vertically, auto-dismiss -->
+        <div
+          aria-live="polite"
+          style=${{
+            position: "fixed", bottom: 18, right: 18, zIndex: 9999,
+            display: "flex", flexDirection: "column", gap: 8, pointerEvents: "none"
+          }}>
+          ${toasts.map(function (t) {
+            var bg = t.kind === "error"   ? "#fde2e0"
+                    : t.kind === "success" ? "#e6f7ea"
+                    :                        "#fff8e0";
+            var bd = t.kind === "error"   ? "#c0392b"
+                    : t.kind === "success" ? "#1f8a3a"
+                    :                        "#a47218";
+            var icon = t.kind === "error"   ? "⚠"
+                      : t.kind === "success" ? "✓"
+                      :                        "ℹ";
+            return html`
+              <div
+                key=${t.id}
+                style=${{
+                  background: bg, color: bd, border: "1px solid " + bd,
+                  borderLeft: "4px solid " + bd,
+                  borderRadius: 10, padding: "10px 14px",
+                  fontWeight: 600, fontSize: 13,
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                  minWidth: 220, maxWidth: 360,
+                  display: "flex", gap: 8, alignItems: "center"
+                }}>
+                <span style=${{ fontSize: 16 }}>${icon}</span>
+                <span>${t.text}</span>
+              </div>
+            `;
+          })}
+        </div>
       </div>
     `;
   }

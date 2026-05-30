@@ -5707,7 +5707,8 @@
                               background: "transparent",
                               fontSize: "1rem",
                               fontWeight: "bold",
-                              color: "inherit"
+                              color: "inherit",
+                              padding: "0"
                             }}
                             value=${item.qty}
                             onChange=${function(val) {

@@ -1813,6 +1813,7 @@
     });
     var [categoryDraft, setCategoryDraft] = useState({
       id: null,
+      code: "",
       labelVi: "",
       labelEn: "",
       icon: "🍊"
@@ -4612,6 +4613,7 @@
     function resetCategoryDraft() {
       setCategoryDraft({
         id: null,
+        code: "",
         labelVi: "",
         labelEn: "",
         icon: "🍊"
@@ -4622,6 +4624,7 @@
       var labelParts = splitBilingualLabel(category.label);
       setCategoryDraft({
         id: category.id,
+        code: category.code || "",
         labelVi: labelParts.vi,
         labelEn: labelParts.en,
         icon: category.icon || "🍊"
@@ -4639,33 +4642,50 @@
         return;
       }
 
+      var syncId;
+      var syncIcon;
+
       if (categoryDraft.id) {
+        syncId = categoryDraft.id;
+        syncIcon = categoryDraft.icon;
         setCategories(function (currentCategories) {
           return currentCategories.map(function (category) {
             return category.id === categoryDraft.id
               ? Object.assign({}, category, {
                   label: label,
+                  code: categoryDraft.code || category.code || "",
                   icon: categoryDraft.icon || category.icon || "🍊"
                 })
               : category;
           });
         });
       } else {
-        var baseId = slugify(categoryDraft.labelEn || categoryDraft.labelVi || uid("category"));
+        var baseId = slugify(categoryDraft.code || categoryDraft.labelEn || categoryDraft.labelVi || uid("category"));
         var nextId = baseId;
 
         while (categories.some(function (category) { return category.id === nextId; })) {
           nextId = baseId + "-" + Math.random().toString(36).slice(2, 5);
         }
 
+        syncId = nextId;
+        syncIcon = categoryDraft.icon || "🍊";
         setCategories(function (currentCategories) {
           return currentCategories.concat({
             id: nextId,
+            code: categoryDraft.code || "",
             label: label,
             icon: categoryDraft.icon || "🍊"
           });
         });
       }
+
+      // Sync to Cloudflare D1
+      syncEnqueue({
+        endpoint: "/categories",
+        method: "POST",
+        opType: "category",
+        body: { id: syncId, label: label, icon: syncIcon || "🍊", code: categoryDraft.code || "" }
+      });
 
       resetCategoryDraft();
     }
@@ -4711,6 +4731,14 @@
       if (categoryDraft.id === categoryId) {
         resetCategoryDraft();
       }
+
+      // Sync soft-delete to Cloudflare D1
+      syncEnqueue({
+        endpoint: "/categories",
+        method: "DELETE",
+        opType: "category",
+        body: { id: categoryId }
+      });
     }
 
     function updateAddOnDraft(field, value) {
@@ -5579,6 +5607,12 @@
                     border: "1px solid rgba(111, 84, 41, 0.12)"
                   }}
                 >
+                  <input
+                    placeholder=${L("Mã danh mục / Category Code (VD: ORIA7000)")}
+                    value=${categoryDraft.code}
+                    onInput=${function (e) { updateCategoryDraft("code", e.target.value); }}
+                    style=${{ padding: "10px 14px", borderRadius: "12px", fontSize: "0.9rem" }}
+                  />
                   <input
                     placeholder=${L("Tên tiếng Việt / Vietnamese Name")}
                     value=${categoryDraft.labelVi}
@@ -6703,6 +6737,7 @@
                     </div>
                     <form className="form-card" onSubmit=${submitCategory}>
                       <div className="field-grid">
+                        <label className="field"><span>${L("Mã danh mục / Category Code")}</span><input placeholder="VD: ORIA7000" value=${categoryDraft.code} onInput=${function (event) { updateCategoryDraft("code", event.target.value); }} /></label>
                         <label className="field"><span>${L("Tên tiếng Việt / Vietnamese Name")}</span><input value=${categoryDraft.labelVi} onInput=${function (event) { updateCategoryDraft("labelVi", event.target.value); }} /></label>
                         <label className="field"><span>${L("Tên tiếng Anh / English Name")}</span><input value=${categoryDraft.labelEn} onInput=${function (event) { updateCategoryDraft("labelEn", event.target.value); }} /></label>
                         <label className="field"><span>${L("Icon / Icon")}</span><input value=${categoryDraft.icon} onInput=${function (event) { updateCategoryDraft("icon", event.target.value); }} /></label>
@@ -6715,7 +6750,7 @@
                           <article key=${category.id} className="list-row list-row-actions">
                             <div>
                               <strong>${category.icon} ${L(category.label)}</strong>
-                              <p>${category.id}</p>
+                              <p>${category.code ? category.code + " · " : ""}${category.id}</p>
                             </div>
                             <div className="row-actions">
                               <button className="ghost-btn" onClick=${function () { startEditCategory(category); }}>${L("Sửa / Edit")}</button>
@@ -7832,6 +7867,7 @@
                     </div>
                     <form className="form-card" onSubmit=${submitCategory}>
                       <div className="field-grid">
+                        <label className="field"><span>${L("Mã danh mục / Category Code")}</span><input placeholder="VD: ORIA7000" value=${categoryDraft.code} onInput=${function (event) { updateCategoryDraft("code", event.target.value); }} /></label>
                         <label className="field"><span>${L("Tên tiếng Việt / Vietnamese Name")}</span><input value=${categoryDraft.labelVi} onInput=${function (event) { updateCategoryDraft("labelVi", event.target.value); }} /></label>
                         <label className="field"><span>${L("Tên tiếng Anh / English Name")}</span><input value=${categoryDraft.labelEn} onInput=${function (event) { updateCategoryDraft("labelEn", event.target.value); }} /></label>
                         <label className="field"><span>${L("Icon / Icon")}</span><input value=${categoryDraft.icon} onInput=${function (event) { updateCategoryDraft("icon", event.target.value); }} /></label>
@@ -7844,7 +7880,7 @@
                           <article key=${category.id} className="list-row list-row-actions">
                             <div>
                               <strong>${category.icon} ${L(category.label)}</strong>
-                              <p>${category.id}</p>
+                              <p>${category.code ? category.code + " · " : ""}${category.id}</p>
                             </div>
                             <div className="row-actions">
                               <button className="ghost-btn" onClick=${function () { startEditCategory(category); }}>${L("Sửa / Edit")}</button>

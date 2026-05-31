@@ -54,10 +54,15 @@ Bỏ `--remote` nếu muốn dùng D1 local trong khi dev với `wrangler pages 
 ### Option A — Lệnh CLI
 
 ```bash
-npx wrangler pages deploy .
+# QUAN TRỌNG: --branch=main để deploy lên PRODUCTION.
+# Nếu bỏ --branch, Cloudflare sẽ tạo preview deployment (URL random)
+# và domain chính KHÔNG được cập nhật!
+npx wrangler pages deploy . --branch=main
 ```
 
 Cloudflare sẽ tự nhận thư mục `functions/` và build Pages Functions kèm static site.
+
+> ⚠️ **Lưu ý:** Nếu wrangler hết phiên đăng nhập, chạy `npx wrangler login` trước.
 
 ### Option B — Git integration
 

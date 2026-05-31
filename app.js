@@ -1212,7 +1212,7 @@
       id: baseOrder.id || buildOrderId(getOrderDateKey(baseOrder.createdAt || Date.now()), 1),
       items: Array.isArray(baseOrder.items) ? baseOrder.items : [],
       takeAway: !!baseOrder.takeAway,
-      discountPct: Number(baseOrder.discountPct) || 0,
+      discountAmount: Number(baseOrder.discountAmount) || 0,
       status: baseOrder.status || "open",
       createdAt: baseOrder.createdAt || Date.now(),
       customerName: baseOrder.customerName || "Khách lẻ / Walk-in",
@@ -1250,8 +1250,11 @@
       return sum + linePrice * qty;
     }, 0);
     subtotal = Math.round(subtotal);
-    var discountPct = Number(safeOrder.discountPct) || 0;
-    var discount = Math.round(subtotal * (discountPct / 100));
+    var discount = Number(safeOrder.discountAmount) || 0;
+    // Tương thích ngược với đơn hàng cũ còn dùng discountPct
+    if (!discount && safeOrder.discountPct) {
+      discount = Math.round(subtotal * (Number(safeOrder.discountPct) / 100));
+    }
     // Prices are VAT-INCLUSIVE: the price printed on the product / shown in
     // POS already contains the tax. So `total` = subtotal - discount (no
     // additional VAT row). VAT is computed BACKWARDS purely for accounting
@@ -3094,7 +3097,7 @@
         updateActiveOrder(function (order) {
           return Object.assign({}, order, {
             items: [],
-            discountPct: 0,
+            discountAmount: 0,
             takeAway: false,
             status: "open",
             customerName: "Khách lẻ / Walk-in",
@@ -5949,14 +5952,13 @@
                 />
               </label>
               <label className="field discount-box">
-                <span>${L("Giảm giá / Discount (%)")}</span>
+                <span>${L("Giảm giá / Discount")}</span>
                 <${LocalNumberInput}
                   min="0"
-                  max="100"
-                  value=${activeOrder.discountPct}
+                  value=${activeOrder.discountAmount}
                   onChange=${function (val) {
                     updateActiveOrder(function (order) {
-                      return Object.assign({}, order, { discountPct: val });
+                      return Object.assign({}, order, { discountAmount: val });
                     });
                   }}
                 />

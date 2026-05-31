@@ -1752,6 +1752,7 @@
     var [movements, setMovements] = useState([]);
     // Drafts for nhập/xuất views
     var [purchaseDraft, setPurchaseDraft] = useState({ supplierId: "", supplierName: "", paymentMethod: "Tiền mặt / Cash", note: "", items: [] });
+    var [purchaseProductSearch, setPurchaseProductSearch] = useState("");
     var [issueDraft, setIssueDraft] = useState({ reason: "damaged", note: "", items: [] });
     var [supplierDraft, setSupplierDraft] = useState({ id: null, name: "", phone: "", address: "", note: "" });
     var [warehouseTab, setWarehouseTab] = useState("stock"); // stock | ledger | stocktake
@@ -7179,14 +7180,38 @@
               </div>
 
               <h3 className="section-title" style=${{ marginTop: 24 }}>${L("Thêm mặt hàng / Add Product")}</h3>
-              <select onChange=${function (e) {
-                if (e.target.value) { addPurchaseLine(e.target.value); e.target.value = ""; }
-              }}>
-                <option value="">${L("— Chọn sản phẩm để thêm / Pick product —")}</option>
-                ${products.map(function (p) {
-                  return html`<option key=${p.id} value=${p.id}>${p.image} ${p.name} (${L("tồn")}: ${p.stock || 0})</option>`;
-                })}
-              </select>
+              <input
+                placeholder=${L("Tìm sản phẩm theo tên, mã vạch... / Search product by name, barcode...")}
+                value=${purchaseProductSearch}
+                onInput=${function (e) { setPurchaseProductSearch(e.target.value); }}
+                style=${{ marginBottom: "10px" }}
+              />
+              ${purchaseProductSearch.trim() ? html`
+                <div className="management-list" style=${{ maxHeight: "240px", overflowY: "auto", marginBottom: "12px" }}>
+                  ${(function () {
+                    var nq = normalizeSearchText(purchaseProductSearch);
+                    var matched = products.filter(function (p) { return productMatchesQuery(p, nq); }).slice(0, 20);
+                    if (!matched.length) return html`<p style=${{ color: "#7b6b5d", padding: "8px" }}>${L("Không tìm thấy. / No products found.")}</p>`;
+                    return matched.map(function (p) {
+                      return html`
+                        <button
+                          key=${p.id}
+                          type="button"
+                          className="list-row"
+                          onClick=${function () { addPurchaseLine(p.id); setPurchaseProductSearch(""); }}
+                          style=${{ cursor: "pointer", width: "100%", textAlign: "left", border: "1px solid rgba(111,84,41,0.08)", background: "rgba(255,255,255,0.78)", borderRadius: "14px", padding: "12px 16px", marginBottom: "6px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}
+                        >
+                          <div>
+                            <strong>${p.image || ""} ${p.name}</strong>
+                            <p style=${{ margin: "4px 0 0", color: "#7b6b5d", fontSize: "0.88rem" }}>${p.barcode || ""} · ${L("tồn")}: ${p.stock || 0}</p>
+                          </div>
+                          <span style=${{ color: "#de631d", fontWeight: 700, flexShrink: 0 }}>+ ${L("Thêm / Add")}</span>
+                        </button>
+                      `;
+                    });
+                  })()}
+                </div>
+              ` : null}
 
               <div className="management-list" style=${{ marginTop: 16 }}>
                 ${purchaseDraft.items.length === 0

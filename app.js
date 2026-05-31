@@ -1985,9 +1985,12 @@
           });
         }
         if (Array.isArray(data.categories) && data.categories.length) {
+          var isCatFullSnapshot = !data.since;
           setCategories(function (current) {
             var byId = {};
-            current.forEach(function (c) { byId[c.id] = c; });
+            if (!isCatFullSnapshot) {
+              current.forEach(function (c) { byId[c.id] = c; });
+            }
             data.categories.forEach(function (row) {
               if (row.is_active === 0) { delete byId[row.id]; return; }
               byId[row.id] = {
@@ -2000,18 +2003,24 @@
                 sortOrder: Number(row.sort_order) || 0
               };
             });
-            return Object.keys(byId).map(function (id) { return byId[id]; });
+            var result = Object.keys(byId).map(function (id) { return byId[id]; });
+            // Guard: never return empty — keep at least local data
+            return result.length ? result : current;
           });
         }
         if (Array.isArray(data.addOns) && data.addOns.length) {
+          var isAddonFullSnapshot = !data.since;
           setAddOns(function (current) {
             var byId = {};
-            current.forEach(function (a) { byId[a.id] = a; });
+            if (!isAddonFullSnapshot) {
+              current.forEach(function (a) { byId[a.id] = a; });
+            }
             data.addOns.forEach(function (row) {
               if (row.is_active === 0) { delete byId[row.id]; return; }
               byId[row.id] = { id: row.id, label: row.label, price: Number(row.price) || 0, group: row.group_key };
             });
-            return Object.keys(byId).map(function (id) { return byId[id]; });
+            var result = Object.keys(byId).map(function (id) { return byId[id]; });
+            return result.length ? result : current;
           });
         }
 

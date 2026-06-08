@@ -245,7 +245,17 @@
     //                     thermal receipt printers. Falls back to logoUrl
     //                     when empty.
     logoUrl: "/logo.png",
-    logoPrintUrl: "/logo-thermal.png"
+    logoPrintUrl: "/logo-thermal.png",
+    firebaseSyncEnabled: false,
+    firebaseApiKey: "",
+    firebaseAuthDomain: "",
+    firebaseProjectId: "",
+    firebaseStorageBucket: "",
+    firebaseMessagingSenderId: "",
+    firebaseAppId: "",
+    firebaseMeasurementId: "",
+    firebaseSyncCollection: "posStores",
+    firebaseSyncDocument: "main"
   };
 
   var DEFAULT_INVOICE_TEMPLATES = [
@@ -760,7 +770,7 @@
     return dateKey + "-" + padNumber(sequenceNumber, 3);
   }
 
-  var BARCODE_DETECT_FORMATS = ["code_128", "code_39", "ean_13", "ean_8", "upc_a", "upc_e", "itf", "qr_code"];
+  var BARCODE_DETECT_FORMATS = ["ean_13"];
 
   function normalizeBarcode(value) {
     return String(value || "").trim().toUpperCase();
@@ -813,30 +823,11 @@
       return digits + String(getBarcodeCheckDigit(digits));
     }
 
-    if (digits.length === 8 && digits === normalizedValue) {
-      return digits;
-    }
-
     return createEan13Barcode(seed || normalizedValue);
   }
 
   function getBarcodeFormat(value) {
-    var normalizedValue = normalizeBarcode(value);
-    var digits = getBarcodeDigits(normalizedValue);
-
-    if (digits.length === 13 && digits === normalizedValue) {
-      return "EAN13";
-    }
-
-    if (digits.length === 8 && digits === normalizedValue) {
-      return "EAN8";
-    }
-
-    if (digits.length === 12 && digits === normalizedValue) {
-      return "UPC";
-    }
-
-    return "CODE128";
+    return "EAN13";
   }
 
   function renderBarcodeMarkup(value, options) {
@@ -1153,6 +1144,62 @@
     };
   }
 
+  function getFirebaseSyncConfig(sourceSettings) {
+    var safeSettings = sourceSettings || {};
+    return {
+      enabled: !!safeSettings.firebaseSyncEnabled,
+      apiKey: String(safeSettings.firebaseApiKey || "").trim(),
+      authDomain: String(safeSettings.firebaseAuthDomain || "").trim(),
+      projectId: String(safeSettings.firebaseProjectId || "").trim(),
+      storageBucket: String(safeSettings.firebaseStorageBucket || "").trim(),
+      messagingSenderId: String(safeSettings.firebaseMessagingSenderId || "").trim(),
+      appId: String(safeSettings.firebaseAppId || "").trim(),
+      measurementId: String(safeSettings.firebaseMeasurementId || "").trim(),
+      collection: String(safeSettings.firebaseSyncCollection || "posStores").trim() || "posStores",
+      document: String(safeSettings.firebaseSyncDocument || "main").trim() || "main"
+    };
+  }
+
+  function isFirebaseSyncConfigured(syncConfig) {
+    var safeConfig = syncConfig || {};
+    return !!(safeConfig.apiKey && safeConfig.authDomain && safeConfig.projectId && safeConfig.appId);
+  }
+
+  function buildFirebaseAppName(syncConfig) {
+    return "fruit-house-pos-" + String((syncConfig && syncConfig.projectId) || "default").replace(/[^a-z0-9_-]+/gi, "-").toLowerCase();
+  }
+
+  function getFirebaseLocalSettings(sourceSettings) {
+    var safeSettings = sourceSettings || {};
+    return {
+      firebaseSyncEnabled: !!safeSettings.firebaseSyncEnabled,
+      firebaseApiKey: safeSettings.firebaseApiKey || "",
+      firebaseAuthDomain: safeSettings.firebaseAuthDomain || "",
+      firebaseProjectId: safeSettings.firebaseProjectId || "",
+      firebaseStorageBucket: safeSettings.firebaseStorageBucket || "",
+      firebaseMessagingSenderId: safeSettings.firebaseMessagingSenderId || "",
+      firebaseAppId: safeSettings.firebaseAppId || "",
+      firebaseMeasurementId: safeSettings.firebaseMeasurementId || "",
+      firebaseSyncCollection: safeSettings.firebaseSyncCollection || "posStores",
+      firebaseSyncDocument: safeSettings.firebaseSyncDocument || "main"
+    };
+  }
+
+  function stripFirebaseSettings(sourceSettings) {
+    var nextSettings = Object.assign({}, sourceSettings || {});
+    delete nextSettings.firebaseSyncEnabled;
+    delete nextSettings.firebaseApiKey;
+    delete nextSettings.firebaseAuthDomain;
+    delete nextSettings.firebaseProjectId;
+    delete nextSettings.firebaseStorageBucket;
+    delete nextSettings.firebaseMessagingSenderId;
+    delete nextSettings.firebaseAppId;
+    delete nextSettings.firebaseMeasurementId;
+    delete nextSettings.firebaseSyncCollection;
+    delete nextSettings.firebaseSyncDocument;
+    return nextSettings;
+  }
+
   function mapDocsById(docs) {
     return (docs || []).reduce(function (result, doc) {
       result[doc.id] = doc.data;
@@ -1313,64 +1360,69 @@
     }
   }
 
+  function hydrateStoredState(stored) {
+    var safeStored = stored || {};
+    var storedSequenceByDate = Object.assign({}, safeStored.orderSequenceByDate || {});
+    var normalizedOrders = Array.isArray(safeStored.orders) && safeStored.orders.length
+      ? safeStored.orders.map(function (order) {
+          var safeOrder = normalizeOrder(order);
+          var hasNewFormat = /^\d{2}\/\d{2}\/\d{4}-\d{3}$/.test(safeOrder.id);
+
+          if (hasNewFormat) {
+            var existingDateKey = safeOrder.id.slice(0, 10);
+            var existingSequence = Number(safeOrder.id.slice(11)) || 0;
+            storedSequenceByDate[existingDateKey] = Math.max(storedSequenceByDate[existingDateKey] || 0, existingSequence);
+            return safeOrder;
+          }
+
+          var migratedDateKey = getOrderDateKey(safeOrder.createdAt);
+          var migratedSequence = (storedSequenceByDate[migratedDateKey] || 0) + 1;
+          storedSequenceByDate[migratedDateKey] = migratedSequence;
+
+          return normalizeOrder(Object.assign({}, safeOrder, {
+            id: buildOrderId(migratedDateKey, migratedSequence)
+          }));
+        })
+      : null;
+
+    if (!normalizedOrders || !normalizedOrders.length) {
+      var createdStateOrder = createOrder(storedSequenceByDate);
+      normalizedOrders = [createdStateOrder.order];
+      storedSequenceByDate = createdStateOrder.nextSequenceByDate;
+    }
+
+    return {
+      categories: Array.isArray(safeStored.categories) && safeStored.categories.length ? safeStored.categories : clone(DEFAULT_CATEGORY_OPTIONS),
+      addOns: Array.isArray(safeStored.addOns) && safeStored.addOns.length ? safeStored.addOns : clone(DEFAULT_ADD_ON_OPTIONS),
+      components: Array.isArray(safeStored.components) && safeStored.components.length ? safeStored.components : clone(DEFAULT_COMPONENT_OPTIONS),
+      products: Array.isArray(safeStored.products) && safeStored.products.length ? safeStored.products.map(normalizeProduct) : clone(DEFAULT_PRODUCTS).map(normalizeProduct),
+      sales: Array.isArray(safeStored.sales) ? safeStored.sales : [],
+      orders: normalizedOrders,
+      activeOrderId: safeStored.activeOrderId || null,
+      language: safeStored.language || "vi",
+      orderSequenceByDate: storedSequenceByDate,
+      settings: Object.assign({}, DEFAULT_SETTINGS, safeStored.settings || {}),
+      invoiceTemplates: Array.isArray(safeStored.invoiceTemplates) && safeStored.invoiceTemplates.length
+        ? safeStored.invoiceTemplates.map(function (template, index) {
+            return normalizeInvoiceTemplate(template, DEFAULT_INVOICE_TEMPLATES[index] || DEFAULT_INVOICE_TEMPLATES[0]);
+          })
+        : clone(DEFAULT_INVOICE_TEMPLATES),
+      barcodeTemplates: Array.isArray(safeStored.barcodeTemplates) && safeStored.barcodeTemplates.length
+        ? safeStored.barcodeTemplates.map(function (template, index) {
+            return normalizeBarcodeTemplate(template, DEFAULT_BARCODE_TEMPLATES[index] || DEFAULT_BARCODE_TEMPLATES[0]);
+          })
+        : clone(DEFAULT_BARCODE_TEMPLATES),
+      selectedInvoiceTemplateId: safeStored.selectedInvoiceTemplateId || DEFAULT_INVOICE_TEMPLATES[0].id,
+      selectedBarcodeTemplateId: safeStored.selectedBarcodeTemplateId || DEFAULT_BARCODE_TEMPLATES[0].id
+    };
+  }
+
   function buildInitialState() {
     var stored = readStorage();
     var emptySequenceByDate = {};
 
     if (stored) {
-      var storedSequenceByDate = Object.assign({}, stored.orderSequenceByDate || {});
-      var normalizedOrders = Array.isArray(stored.orders) && stored.orders.length
-        ? stored.orders.map(function (order) {
-            var safeOrder = normalizeOrder(order);
-            var hasNewFormat = /^\d{2}\/\d{2}\/\d{4}-\d{3}$/.test(safeOrder.id);
-
-            if (hasNewFormat) {
-              var existingDateKey = safeOrder.id.slice(0, 10);
-              var existingSequence = Number(safeOrder.id.slice(11)) || 0;
-              storedSequenceByDate[existingDateKey] = Math.max(storedSequenceByDate[existingDateKey] || 0, existingSequence);
-              return safeOrder;
-            }
-
-            var migratedDateKey = getOrderDateKey(safeOrder.createdAt);
-            var migratedSequence = (storedSequenceByDate[migratedDateKey] || 0) + 1;
-            storedSequenceByDate[migratedDateKey] = migratedSequence;
-
-            return normalizeOrder(Object.assign({}, safeOrder, {
-              id: buildOrderId(migratedDateKey, migratedSequence)
-            }));
-          })
-        : null;
-
-      if (!normalizedOrders || !normalizedOrders.length) {
-        var createdStateOrder = createOrder(storedSequenceByDate);
-        normalizedOrders = [createdStateOrder.order];
-        storedSequenceByDate = createdStateOrder.nextSequenceByDate;
-      }
-
-      return {
-        categories: Array.isArray(stored.categories) && stored.categories.length ? stored.categories : clone(DEFAULT_CATEGORY_OPTIONS),
-        addOns: Array.isArray(stored.addOns) && stored.addOns.length ? stored.addOns : clone(DEFAULT_ADD_ON_OPTIONS),
-        components: Array.isArray(stored.components) && stored.components.length ? stored.components : clone(DEFAULT_COMPONENT_OPTIONS),
-        products: Array.isArray(stored.products) && stored.products.length ? stored.products.map(normalizeProduct) : clone(DEFAULT_PRODUCTS).map(normalizeProduct),
-        sales: Array.isArray(stored.sales) ? stored.sales : [],
-        orders: normalizedOrders,
-        activeOrderId: stored.activeOrderId || null,
-        language: stored.language || "vi",
-        orderSequenceByDate: storedSequenceByDate,
-        settings: Object.assign({}, DEFAULT_SETTINGS, stored.settings || {}),
-        invoiceTemplates: Array.isArray(stored.invoiceTemplates) && stored.invoiceTemplates.length
-          ? stored.invoiceTemplates.map(function (template, index) {
-              return normalizeInvoiceTemplate(template, DEFAULT_INVOICE_TEMPLATES[index] || DEFAULT_INVOICE_TEMPLATES[0]);
-            })
-          : clone(DEFAULT_INVOICE_TEMPLATES),
-        barcodeTemplates: Array.isArray(stored.barcodeTemplates) && stored.barcodeTemplates.length
-          ? stored.barcodeTemplates.map(function (template, index) {
-              return normalizeBarcodeTemplate(template, DEFAULT_BARCODE_TEMPLATES[index] || DEFAULT_BARCODE_TEMPLATES[0]);
-            })
-          : clone(DEFAULT_BARCODE_TEMPLATES),
-        selectedInvoiceTemplateId: stored.selectedInvoiceTemplateId || DEFAULT_INVOICE_TEMPLATES[0].id,
-        selectedBarcodeTemplateId: stored.selectedBarcodeTemplateId || DEFAULT_BARCODE_TEMPLATES[0].id
-      };
+      return hydrateStoredState(stored);
     }
 
     var firstOrderState = createOrder(emptySequenceByDate);
@@ -1844,6 +1896,9 @@
     var [exportActiveOnly, setExportActiveOnly] = useState(false);
     var [exportCompletedOrdersOnly, setExportCompletedOrdersOnly] = useState(false);
     var [exportBusy, setExportBusy] = useState(false);
+    var [firebaseSyncStatus, setFirebaseSyncStatus] = useState("local");
+    var [firebaseLastSyncedAt, setFirebaseLastSyncedAt] = useState("");
+    var [firebaseSyncError, setFirebaseSyncError] = useState("");
     var [barcodeInput, setBarcodeInput] = useState("");
     var [scanMessage, setScanMessage] = useState("");
     var [cameraActive, setCameraActive] = useState(false);
@@ -1897,6 +1952,125 @@
     var hardwareScanBufferRef = useRef("");
     var hardwareScanStartedAtRef = useRef(0);
     var hardwareScanLastAtRef = useRef(0);
+    var firebaseAppRef = useRef(null);
+    var firestoreRef = useRef(null);
+    var firestoreDocRef = useRef(null);
+    var firestoreUnsubscribeRef = useRef(null);
+    var lastSyncedPayloadRef = useRef("");
+    var applyingRemoteSnapshotRef = useRef(false);
+    var syncDebounceRef = useRef(null);
+
+    function buildPersistedStateSnapshot(includeFirebaseSettings) {
+      var nextSettings = includeFirebaseSettings === false
+        ? stripFirebaseSettings(settings)
+        : settings;
+
+      return {
+        categories: categories,
+        addOns: addOns,
+        components: components,
+        products: products,
+        sales: sales,
+        orders: orders,
+        activeOrderId: activeOrderId,
+        language: language,
+        orderSequenceByDate: orderSequenceByDate,
+        settings: nextSettings,
+        invoiceTemplates: invoiceTemplates,
+        barcodeTemplates: barcodeTemplates,
+        selectedInvoiceTemplateId: selectedInvoiceTemplateId,
+        selectedBarcodeTemplateId: selectedBarcodeTemplateId
+      };
+    }
+
+    function applyPersistedStateSnapshot(snapshot) {
+      var hydrated = hydrateStoredState(snapshot || {});
+      var localFirebaseSettings = getFirebaseLocalSettings(settings);
+      setCategories(hydrated.categories);
+      setAddOns(hydrated.addOns);
+      setComponents(hydrated.components);
+      setProducts(hydrated.products);
+      setSales(hydrated.sales);
+      setOrders(hydrated.orders);
+      setActiveOrderId(hydrated.activeOrderId || (hydrated.orders[0] ? hydrated.orders[0].id : ""));
+      setLanguage(hydrated.language || "vi");
+      setOrderSequenceByDate(hydrated.orderSequenceByDate || {});
+      setSettings(Object.assign({}, hydrated.settings, localFirebaseSettings));
+      setInvoiceTemplates(hydrated.invoiceTemplates);
+      setBarcodeTemplates(hydrated.barcodeTemplates);
+      setSelectedInvoiceTemplateId(hydrated.selectedInvoiceTemplateId);
+      setSelectedBarcodeTemplateId(hydrated.selectedBarcodeTemplateId);
+    }
+
+    function getFirebaseSyncMeta() {
+      return getFirebaseSyncConfig(settings);
+    }
+
+    function pushStateToFirebase(syncReason) {
+      if (!firestoreDocRef.current || !window.firebase || !window.firebase.firestore) {
+        if (syncReason === "manual") {
+          window.alert(L("Hãy nhập cấu hình Firebase và bật đồng bộ trước. / Enter your Firebase config and enable sync first."));
+        }
+        return Promise.resolve(false);
+      }
+
+      var payload = buildPersistedStateSnapshot(false);
+      var payloadJson = JSON.stringify(payload);
+
+      if (payloadJson === lastSyncedPayloadRef.current && syncReason !== "manual") {
+        return Promise.resolve(false);
+      }
+
+      setFirebaseSyncStatus("syncing");
+      setFirebaseSyncError("");
+
+      return firestoreDocRef.current.set({
+        payload: payload,
+        updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
+        updatedBy: settings.cashierName || "POS User",
+        appVersion: APP_VERSION
+      }, { merge: true }).then(function () {
+        lastSyncedPayloadRef.current = payloadJson;
+        setFirebaseSyncStatus("synced");
+        setFirebaseLastSyncedAt(formatDateTime(Date.now()));
+        return true;
+      }).catch(function (error) {
+        setFirebaseSyncStatus("error");
+        setFirebaseSyncError(error && error.message ? error.message : "Firebase sync failed");
+        return false;
+      });
+    }
+
+    function pullStateFromFirebase() {
+      if (!firestoreDocRef.current) {
+        window.alert(L("Chưa kết nối Firebase. / Firebase is not connected yet."));
+        return;
+      }
+
+      setFirebaseSyncStatus("syncing");
+      setFirebaseSyncError("");
+
+      firestoreDocRef.current.get().then(function (snapshot) {
+        if (!snapshot.exists || !snapshot.data() || !snapshot.data().payload) {
+          return pushStateToFirebase("manual");
+        }
+
+        var remotePayload = snapshot.data().payload;
+        var hydratedPayload = hydrateStoredState(remotePayload);
+        var payloadJson = JSON.stringify(Object.assign({}, hydratedPayload, {
+          settings: stripFirebaseSettings(hydratedPayload.settings)
+        }));
+        lastSyncedPayloadRef.current = payloadJson;
+        applyingRemoteSnapshotRef.current = true;
+        applyPersistedStateSnapshot(remotePayload);
+        setFirebaseSyncStatus("synced");
+        setFirebaseLastSyncedAt(formatDateTime(Date.now()));
+        return true;
+      }).catch(function (error) {
+        setFirebaseSyncStatus("error");
+        setFirebaseSyncError(error && error.message ? error.message : "Firebase pull failed");
+      });
+    }
 
     // Dirty refs for debounced D1 settings/template persistence.
     // Declared up here so handlePulled() (called from sync engine) can flip
@@ -1911,28 +2085,158 @@
 
     useEffect(function () {
       try {
-        window.localStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify({
-            categories: categories,
-            addOns: addOns,
-            components: components,
-            products: products,
-            sales: sales,
-            orders: orders,
-            activeOrderId: activeOrderId,
-            language: language,
-            orderSequenceByDate: orderSequenceByDate,
-            settings: settings,
-            invoiceTemplates: invoiceTemplates,
-            barcodeTemplates: barcodeTemplates,
-            selectedInvoiceTemplateId: selectedInvoiceTemplateId,
-            selectedBarcodeTemplateId: selectedBarcodeTemplateId
-          })
-        );
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(buildPersistedStateSnapshot(true)));
       } catch (error) {
         // Keep the POS working even when storage is unavailable.
       }
+    }, [
+      categories,
+      addOns,
+      components,
+      products,
+      sales,
+      orders,
+      activeOrderId,
+      language,
+      orderSequenceByDate,
+      settings,
+      invoiceTemplates,
+      barcodeTemplates,
+      selectedInvoiceTemplateId,
+      selectedBarcodeTemplateId
+    ]);
+
+    useEffect(function () {
+      var syncConfig = getFirebaseSyncMeta();
+
+      if (firestoreUnsubscribeRef.current) {
+        firestoreUnsubscribeRef.current();
+        firestoreUnsubscribeRef.current = null;
+      }
+
+      firestoreRef.current = null;
+      firestoreDocRef.current = null;
+
+      if (!syncConfig.enabled) {
+        setFirebaseSyncStatus("local");
+        setFirebaseSyncError("");
+        return undefined;
+      }
+
+      if (!window.firebase || !window.firebase.firestore) {
+        setFirebaseSyncStatus("error");
+        setFirebaseSyncError("Firebase SDK not loaded");
+        return undefined;
+      }
+
+      if (!isFirebaseSyncConfigured(syncConfig)) {
+        setFirebaseSyncStatus("incomplete");
+        setFirebaseSyncError("");
+        return undefined;
+      }
+
+      setFirebaseSyncStatus("connecting");
+      setFirebaseSyncError("");
+
+      try {
+        var appName = buildFirebaseAppName(syncConfig);
+        var firebaseApp = (window.firebase.apps || []).find(function (app) {
+          return app.name === appName;
+        });
+
+        if (!firebaseApp) {
+          firebaseApp = window.firebase.initializeApp({
+            apiKey: syncConfig.apiKey,
+            authDomain: syncConfig.authDomain,
+            projectId: syncConfig.projectId,
+            storageBucket: syncConfig.storageBucket || undefined,
+            messagingSenderId: syncConfig.messagingSenderId || undefined,
+            appId: syncConfig.appId,
+            measurementId: syncConfig.measurementId || undefined
+          }, appName);
+        }
+
+        firebaseAppRef.current = firebaseApp;
+        firestoreRef.current = firebaseApp.firestore();
+        firestoreDocRef.current = firestoreRef.current.collection(syncConfig.collection).doc(syncConfig.document);
+
+        firestoreUnsubscribeRef.current = firestoreDocRef.current.onSnapshot(function (snapshot) {
+          if (!snapshot.exists || !snapshot.data() || !snapshot.data().payload) {
+            pushStateToFirebase("seed");
+            return;
+          }
+
+          var remotePayload = snapshot.data().payload;
+          var hydratedPayload = hydrateStoredState(remotePayload);
+          var payloadJson = JSON.stringify(Object.assign({}, hydratedPayload, {
+            settings: stripFirebaseSettings(hydratedPayload.settings)
+          }));
+
+          if (payloadJson === lastSyncedPayloadRef.current) {
+            setFirebaseSyncStatus("synced");
+            return;
+          }
+
+          applyingRemoteSnapshotRef.current = true;
+          lastSyncedPayloadRef.current = payloadJson;
+          applyPersistedStateSnapshot(remotePayload);
+          setFirebaseSyncStatus("synced");
+          setFirebaseLastSyncedAt(formatDateTime(Date.now()));
+        }, function (error) {
+          setFirebaseSyncStatus("error");
+          setFirebaseSyncError(error && error.message ? error.message : "Firebase listener failed");
+        });
+      } catch (error) {
+        setFirebaseSyncStatus("error");
+        setFirebaseSyncError(error && error.message ? error.message : "Firebase initialization failed");
+      }
+
+      return function () {
+        if (firestoreUnsubscribeRef.current) {
+          firestoreUnsubscribeRef.current();
+          firestoreUnsubscribeRef.current = null;
+        }
+      };
+    }, [
+      settings.firebaseSyncEnabled,
+      settings.firebaseApiKey,
+      settings.firebaseAuthDomain,
+      settings.firebaseProjectId,
+      settings.firebaseStorageBucket,
+      settings.firebaseMessagingSenderId,
+      settings.firebaseAppId,
+      settings.firebaseMeasurementId,
+      settings.firebaseSyncCollection,
+      settings.firebaseSyncDocument
+    ]);
+
+    useEffect(function () {
+      var syncConfig = getFirebaseSyncMeta();
+
+      if (!syncConfig.enabled || !isFirebaseSyncConfigured(syncConfig) || !firestoreDocRef.current) {
+        return undefined;
+      }
+
+      if (applyingRemoteSnapshotRef.current) {
+        applyingRemoteSnapshotRef.current = false;
+        lastSyncedPayloadRef.current = JSON.stringify(buildPersistedStateSnapshot(false));
+        return undefined;
+      }
+
+      if (syncDebounceRef.current) {
+        window.clearTimeout(syncDebounceRef.current);
+      }
+
+      syncDebounceRef.current = window.setTimeout(function () {
+        pushStateToFirebase("auto");
+      }, 900);
+
+      return function () {
+        if (syncDebounceRef.current) {
+          window.clearTimeout(syncDebounceRef.current);
+          syncDebounceRef.current = null;
+        }
+      };
     }, [
       categories,
       addOns,
@@ -4121,7 +4425,17 @@
         cashierName: "Default cashier name",
         openHours: "Opening hours",
         receiptFooter: "Receipt footer text",
-        vatNote: "VAT invoice note"
+        vatNote: "VAT invoice note",
+        firebaseSyncEnabled: "Enable Firebase synchronization",
+        firebaseApiKey: "Firebase web API key",
+        firebaseAuthDomain: "Firebase auth domain",
+        firebaseProjectId: "Firebase project id",
+        firebaseStorageBucket: "Firebase storage bucket",
+        firebaseMessagingSenderId: "Firebase messaging sender id",
+        firebaseAppId: "Firebase app id",
+        firebaseMeasurementId: "Firebase measurement id",
+        firebaseSyncCollection: "Firestore collection for POS sync",
+        firebaseSyncDocument: "Firestore document id for POS sync"
       };
 
       var settingsRows = Object.keys(settings).map(function (settingKey) {
@@ -7680,6 +7994,14 @@
         { id: "general", label: "Chung / General" },
         { id: "invoice", label: "Hóa đơn / Invoice" }
       ];
+      var firebaseStatusLabelMap = {
+        local: "Chỉ lưu máy này / Local only",
+        incomplete: "Thiếu cấu hình / Incomplete config",
+        connecting: "Đang kết nối / Connecting",
+        syncing: "Đang đồng bộ / Syncing",
+        synced: "Đã đồng bộ / Synced",
+        error: "Lỗi đồng bộ / Sync error"
+      };
 
       return html`
         <section className="settings-layout">
@@ -7759,6 +8081,43 @@
                       : L("Đang offline – thay đổi sẽ đồng bộ khi có mạng lại. / Offline – changes will sync when reconnected.")}
                   </div>
                 </div>
+                <section className="surface section-card form-card" style=${{ marginTop: "8px" }}>
+                  <div className="section-top">
+                    <div>
+                      <p className="eyebrow">${L("Đồng bộ cloud / Cloud Sync")}</p>
+                      <h3 className="template-preview-title">${L("Firebase Firestore")}</h3>
+                    </div>
+                    <span className="stock-badge">${L(firebaseStatusLabelMap[firebaseSyncStatus] || firebaseStatusLabelMap.local)}</span>
+                  </div>
+                  <label className="toggle-card">
+                    <input
+                      type="checkbox"
+                      checked=${!!settings.firebaseSyncEnabled}
+                      onChange=${function (event) { patchSettings("firebaseSyncEnabled", event.target.checked); }}
+                    />
+                    <span>${L("Bật đồng bộ nhiều máy qua Firebase / Enable multi-device sync through Firebase")}</span>
+                  </label>
+                  <div className="field-grid">
+                    <label className="field"><span>${L("API Key")}</span><input value=${settings.firebaseApiKey || ""} onInput=${function (event) { patchSettings("firebaseApiKey", event.target.value); }} /></label>
+                    <label className="field"><span>${L("Auth Domain")}</span><input value=${settings.firebaseAuthDomain || ""} onInput=${function (event) { patchSettings("firebaseAuthDomain", event.target.value); }} /></label>
+                    <label className="field"><span>${L("Project ID")}</span><input value=${settings.firebaseProjectId || ""} onInput=${function (event) { patchSettings("firebaseProjectId", event.target.value); }} /></label>
+                    <label className="field"><span>${L("Storage Bucket")}</span><input value=${settings.firebaseStorageBucket || ""} onInput=${function (event) { patchSettings("firebaseStorageBucket", event.target.value); }} /></label>
+                    <label className="field"><span>${L("Messaging Sender ID")}</span><input value=${settings.firebaseMessagingSenderId || ""} onInput=${function (event) { patchSettings("firebaseMessagingSenderId", event.target.value); }} /></label>
+                    <label className="field"><span>${L("App ID")}</span><input value=${settings.firebaseAppId || ""} onInput=${function (event) { patchSettings("firebaseAppId", event.target.value); }} /></label>
+                    <label className="field"><span>${L("Measurement ID (optional)")}</span><input value=${settings.firebaseMeasurementId || ""} onInput=${function (event) { patchSettings("firebaseMeasurementId", event.target.value); }} /></label>
+                    <label className="field"><span>${L("Collection")}</span><input value=${settings.firebaseSyncCollection || ""} onInput=${function (event) { patchSettings("firebaseSyncCollection", event.target.value); }} /></label>
+                    <label className="field"><span>${L("Document ID")}</span><input value=${settings.firebaseSyncDocument || ""} onInput=${function (event) { patchSettings("firebaseSyncDocument", event.target.value); }} /></label>
+                  </div>
+                  <div className="row-actions">
+                    <button type="button" className="primary-btn" onClick=${function () { pushStateToFirebase("manual"); }}>${L("Đẩy dữ liệu hiện tại lên cloud / Sync now")}</button>
+                    <button type="button" className="ghost-btn" onClick=${pullStateFromFirebase}>${L("Lấy dữ liệu từ cloud / Pull cloud data")}</button>
+                    ${firebaseLastSyncedAt ? html`<span className="metric-label">${L("Lần đồng bộ gần nhất / Last sync")}: ${firebaseLastSyncedAt}</span>` : null}
+                  </div>
+                  <div className="empty-state align-left">
+                    ${L("Cloudflare và Vercel chỉ cập nhật code. Muốn nhiều máy thấy cùng dữ liệu, hãy nhập cùng cấu hình Firebase trên các máy rồi bật đồng bộ. / Cloudflare and Vercel only update code. For shared data across devices, enter the same Firebase config on each device and enable sync.")}
+                  </div>
+                  ${firebaseSyncError ? html`<div className="empty-state align-left danger-text">${firebaseSyncError}</div>` : null}
+                </section>
               </section>
             ` : null}
 

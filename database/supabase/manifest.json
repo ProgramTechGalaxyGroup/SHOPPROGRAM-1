@@ -16,6 +16,8 @@
     "suppliers": 0,
     "purchase_orders": 0,
     "purchase_order_items": 0,
+    "purchase_component_items": 0,
+    "component_stock_movements": 0,
     "stock_issues": 0,
     "stock_issue_items": 0,
     "sales": 0,

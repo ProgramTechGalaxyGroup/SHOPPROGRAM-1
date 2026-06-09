@@ -210,15 +210,30 @@ async function fetchAllData() {
       note: item.note || null,
       created_at: Number(item.created_at) || NOW
     })),
-    purchase_order_items: purchaseDetails.flatMap((payload) => payload.items || []).map((item) => ({
-      id: item.id,
-      purchase_id: item.purchase_id,
-      product_id: item.product_id,
-      product_name: item.product_name || null,
-      qty: Number(item.qty) || 0,
-      unit_cost: Number(item.unit_cost) || 0,
-      subtotal: Number(item.subtotal) || 0
-    })),
+    purchase_order_items: purchaseDetails.flatMap((payload) => payload.items || [])
+      .filter((item) => item.item_type !== "component")
+      .map((item) => ({
+        id: item.id,
+        purchase_id: item.purchase_id,
+        product_id: item.product_id,
+        product_name: item.product_name || null,
+        qty: Number(item.qty) || 0,
+        unit_cost: Number(item.unit_cost) || 0,
+        subtotal: Number(item.subtotal) || 0
+      })),
+    purchase_component_items: purchaseDetails.flatMap((payload) => payload.items || [])
+      .filter((item) => item.item_type === "component")
+      .map((item) => ({
+        id: item.id,
+        purchase_id: item.purchase_id,
+        component_id: item.component_id || item.product_id,
+        component_name: item.component_name || item.product_name || null,
+        qty: Number(item.qty) || 0,
+        unit: item.unit || null,
+        unit_cost: Number(item.unit_cost) || 0,
+        subtotal: Number(item.subtotal) || 0
+      })),
+    component_stock_movements: [],
     stock_issues: (issuesPayload.issues || []).map((item) => ({
       id: item.id,
       reason: item.reason || "other",
@@ -340,6 +355,8 @@ function normalizeTables(data) {
     })),
     purchase_orders: data.purchase_orders,
     purchase_order_items: data.purchase_order_items,
+    purchase_component_items: data.purchase_component_items || [],
+    component_stock_movements: data.component_stock_movements || [],
     stock_issues: data.stock_issues,
     stock_issue_items: data.stock_issue_items,
     sales: data.sales,
@@ -394,6 +411,8 @@ function buildStatements(tables) {
     ...buildUpsertStatements("suppliers", ["id", "name", "phone", "address", "note", "is_active", "updated_at"], tables.suppliers, { conflict: ["id"] }),
     ...buildUpsertStatements("purchase_orders", ["id", "supplier_id", "supplier_name", "total_amount", "paid_amount", "payment_method", "status", "note", "created_at"], tables.purchase_orders, { conflict: ["id"] }),
     ...buildUpsertStatements("purchase_order_items", ["id", "purchase_id", "product_id", "product_name", "qty", "unit_cost", "subtotal"], tables.purchase_order_items, { conflict: ["id"] }),
+    ...buildUpsertStatements("purchase_component_items", ["id", "purchase_id", "component_id", "component_name", "qty", "unit", "unit_cost", "subtotal"], tables.purchase_component_items || [], { conflict: ["id"] }),
+    ...buildUpsertStatements("component_stock_movements", ["id", "component_id", "movement_type", "qty_change", "unit_cost", "ref_type", "ref_id", "note", "created_at"], tables.component_stock_movements || [], { conflict: ["id"] }),
     ...buildUpsertStatements("stock_issues", ["id", "reason", "note", "status", "created_at"], tables.stock_issues, { conflict: ["id"] }),
     ...buildUpsertStatements("stock_issue_items", ["id", "issue_id", "product_id", "product_name", "qty", "unit_cost"], tables.stock_issue_items, { conflict: ["id"] }),
     ...buildUpsertStatements("sales", ["id", "order_id", "customer_name", "subtotal", "vat_amount", "discount", "total", "paid", "change_amount", "payment_method", "cashier_name", "payment_status", "order_status", "note", "created_at"], tables.sales, { conflict: ["id"] }),

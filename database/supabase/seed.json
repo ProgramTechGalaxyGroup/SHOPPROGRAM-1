@@ -3562,6 +3562,8 @@
     "suppliers": [],
     "purchase_orders": [],
     "purchase_order_items": [],
+    "purchase_component_items": [],
+    "component_stock_movements": [],
     "stock_issues": [],
     "stock_issue_items": [],
     "sales": [],

@@ -116,6 +116,33 @@ create table if not exists purchase_order_items (
 create index if not exists idx_po_items_purchase on purchase_order_items(purchase_id);
 create index if not exists idx_po_items_product on purchase_order_items(product_id);
 
+create table if not exists purchase_component_items (
+  id text primary key,
+  purchase_id text not null references purchase_orders(id) on delete cascade,
+  component_id text not null references components(id),
+  component_name text,
+  qty numeric not null,
+  unit text,
+  unit_cost integer not null,
+  subtotal integer not null
+);
+create index if not exists idx_po_component_items_purchase on purchase_component_items(purchase_id);
+create index if not exists idx_po_component_items_component on purchase_component_items(component_id);
+
+create table if not exists component_stock_movements (
+  id text primary key,
+  component_id text not null references components(id),
+  movement_type text not null,
+  qty_change numeric not null,
+  unit_cost integer,
+  ref_type text,
+  ref_id text,
+  note text,
+  created_at bigint not null
+);
+create index if not exists idx_component_mov_component on component_stock_movements(component_id, created_at);
+create index if not exists idx_component_mov_ref on component_stock_movements(ref_type, ref_id);
+
 create table if not exists stock_issues (
   id text primary key,
   reason text not null check (reason in ('damaged','sample','internal','transfer','other')),
@@ -210,6 +237,8 @@ alter table public.stock_movements enable row level security;
 alter table public.suppliers enable row level security;
 alter table public.purchase_orders enable row level security;
 alter table public.purchase_order_items enable row level security;
+alter table public.purchase_component_items enable row level security;
+alter table public.component_stock_movements enable row level security;
 alter table public.stock_issues enable row level security;
 alter table public.stock_issue_items enable row level security;
 alter table public.sales enable row level security;
@@ -225,7 +254,7 @@ alter table public.products add column if not exists inventory_mode text not nul
 
 grant usage on schema public to anon, authenticated;
 grant select on public.categories, public.add_ons, public.components, public.products, public.inventory, public.settings to anon, authenticated;
-grant select on public.suppliers, public.sales, public.sale_items, public.purchase_orders, public.purchase_order_items, public.stock_issues, public.stock_issue_items, public.stock_movements to authenticated;
+grant select on public.suppliers, public.sales, public.sale_items, public.purchase_orders, public.purchase_order_items, public.purchase_component_items, public.stock_issues, public.stock_issue_items, public.stock_movements, public.component_stock_movements to authenticated;
 
 drop policy if exists "catalog_select_active_categories" on public.categories;
 create policy "catalog_select_active_categories"
@@ -305,6 +334,18 @@ using (true);
 drop policy if exists "staff_select_purchase_order_items" on public.purchase_order_items;
 create policy "staff_select_purchase_order_items"
 on public.purchase_order_items for select
+to authenticated
+using (true);
+
+drop policy if exists "staff_select_purchase_component_items" on public.purchase_component_items;
+create policy "staff_select_purchase_component_items"
+on public.purchase_component_items for select
+to authenticated
+using (true);
+
+drop policy if exists "staff_select_component_stock_movements" on public.component_stock_movements;
+create policy "staff_select_component_stock_movements"
+on public.component_stock_movements for select
 to authenticated
 using (true);
 

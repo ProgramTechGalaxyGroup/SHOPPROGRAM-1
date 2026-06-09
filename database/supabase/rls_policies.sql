@@ -14,6 +14,8 @@ alter table public.stock_movements enable row level security;
 alter table public.suppliers enable row level security;
 alter table public.purchase_orders enable row level security;
 alter table public.purchase_order_items enable row level security;
+alter table public.purchase_component_items enable row level security;
+alter table public.component_stock_movements enable row level security;
 alter table public.stock_issues enable row level security;
 alter table public.stock_issue_items enable row level security;
 alter table public.sales enable row level security;
@@ -29,7 +31,7 @@ alter table public.products add column if not exists inventory_mode text not nul
 
 grant usage on schema public to anon, authenticated;
 grant select on public.categories, public.add_ons, public.components, public.products, public.inventory, public.settings to anon, authenticated;
-grant select on public.suppliers, public.sales, public.sale_items, public.purchase_orders, public.purchase_order_items, public.stock_issues, public.stock_issue_items, public.stock_movements to authenticated;
+grant select on public.suppliers, public.sales, public.sale_items, public.purchase_orders, public.purchase_order_items, public.purchase_component_items, public.stock_issues, public.stock_issue_items, public.stock_movements, public.component_stock_movements to authenticated;
 
 drop policy if exists "catalog_select_active_categories" on public.categories;
 create policy "catalog_select_active_categories"
@@ -109,6 +111,18 @@ using (true);
 drop policy if exists "staff_select_purchase_order_items" on public.purchase_order_items;
 create policy "staff_select_purchase_order_items"
 on public.purchase_order_items for select
+to authenticated
+using (true);
+
+drop policy if exists "staff_select_purchase_component_items" on public.purchase_component_items;
+create policy "staff_select_purchase_component_items"
+on public.purchase_component_items for select
+to authenticated
+using (true);
+
+drop policy if exists "staff_select_component_stock_movements" on public.component_stock_movements;
+create policy "staff_select_component_stock_movements"
+on public.component_stock_movements for select
 to authenticated
 using (true);
 

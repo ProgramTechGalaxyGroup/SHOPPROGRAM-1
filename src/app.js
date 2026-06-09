@@ -1984,6 +1984,7 @@
     var [movements, setMovements] = useState([]);
     // Drafts for nhập/xuất views
     var [purchaseDraft, setPurchaseDraft] = useState({ supplierId: "", supplierName: "", paymentMethod: "cash", note: "", items: [] });
+    var [purchaseItemType, setPurchaseItemType] = useState("product");
     var [purchaseProductSearch, setPurchaseProductSearch] = useState("");
     var [issueDraft, setIssueDraft] = useState({ reason: "damaged", note: "", items: [] });
     var [supplierDraft, setSupplierDraft] = useState({ id: null, name: "", phone: "", address: "", note: "" });
@@ -8028,14 +8029,23 @@
     // ==================================================================
     // NHẬP HÀNG / STOCK IN
     // ==================================================================
-    function addPurchaseLine(productId) {
-      var product = products.find(function (p) { return p.id === productId; });
+    function purchaseLineKey(itemType, itemId) {
+      return (itemType || "product") + ":" + itemId;
+    }
+    function addPurchaseLine(itemId, itemType) {
+      var type = itemType === "component" ? "component" : "product";
+      var key = purchaseLineKey(type, itemId);
+      var product = type === "product" ? products.find(function (p) { return p.id === itemId; }) : null;
+      var component = type === "component" ? components.find(function (c) { return c.id === itemId; }) : null;
       setPurchaseDraft(function (current) {
-        var existing = current.items.find(function (it) { return it.productId === productId; });
+        var existing = current.items.find(function (it) {
+          return (it.lineKey || purchaseLineKey(it.itemType || "product", it.itemId || it.productId || it.componentId)) === key;
+        });
         if (existing) {
           return Object.assign({}, current, {
             items: current.items.map(function (it) {
-              return it.productId === productId
+              var currentKey = it.lineKey || purchaseLineKey(it.itemType || "product", it.itemId || it.productId || it.componentId);
+              return currentKey === key
                 ? Object.assign({}, it, { qty: (Number(it.qty) || 0) + 1 })
                 : it;
             })
@@ -8043,29 +8053,39 @@
         }
         return Object.assign({}, current, {
           items: current.items.concat([{
-            productId: productId,
-            productName: product ? product.name : productId,
+            lineKey: key,
+            itemType: type,
+            itemId: itemId,
+            productId: type === "product" ? itemId : "",
+            componentId: type === "component" ? itemId : "",
+            productName: product ? product.name : (component ? L(component.label) : itemId),
+            itemName: product ? product.name : (component ? L(component.label) : itemId),
+            unit: type === "component" && component ? component.unit || "" : (product ? product.unit || "" : ""),
             qty: 1,
             unitCost: product ? Number(product.costPrice) || 0 : 0
           }])
         });
       });
     }
-    function updatePurchaseLine(productId, field, value) {
+    function updatePurchaseLine(lineKey, field, value) {
       setPurchaseDraft(function (current) {
         return Object.assign({}, current, {
           items: current.items.map(function (it) {
-            if (it.productId !== productId) return it;
+            var currentKey = it.lineKey || purchaseLineKey(it.itemType || "product", it.itemId || it.productId || it.componentId);
+            if (currentKey !== lineKey) return it;
             var v = (field === "qty" || field === "unitCost") ? Number(value) || 0 : value;
             return Object.assign({}, it, { [field]: v });
           })
         });
       });
     }
-    function removePurchaseLine(productId) {
+    function removePurchaseLine(lineKey) {
       setPurchaseDraft(function (current) {
         return Object.assign({}, current, {
-          items: current.items.filter(function (it) { return it.productId !== productId; })
+          items: current.items.filter(function (it) {
+            var currentKey = it.lineKey || purchaseLineKey(it.itemType || "product", it.itemId || it.productId || it.componentId);
+            return currentKey !== lineKey;
+          })
         });
       });
     }
@@ -8083,9 +8103,24 @@
       // Optimistic: bump local stock immediately.
       setProducts(function (current) {
         return current.map(function (p) {
-          var line = purchaseDraft.items.find(function (it) { return it.productId === p.id; });
+          var line = purchaseDraft.items.find(function (it) {
+            return (it.itemType || "product") !== "component" && it.productId === p.id;
+          });
           if (!line) return p;
-          return Object.assign({}, p, { stock: (Number(p.stock) || 0) + (Number(line.qty) || 0) });
+          var nextStock = (Number(p.rawStock != null ? p.rawStock : p.stock) || 0) + (Number(line.qty) || 0);
+          return Object.assign({}, p, { stock: nextStock, rawStock: nextStock });
+        });
+      });
+      setComponents(function (current) {
+        return current.map(function (component) {
+          var line = purchaseDraft.items.find(function (it) {
+            return it.itemType === "component" && (it.componentId || it.itemId) === component.id;
+          });
+          if (!line) return component;
+          return Object.assign({}, component, {
+            stockQty: (Number(component.stockQty) || 0) + (Number(line.qty) || 0),
+            unit: component.unit || line.unit || ""
+          });
         });
       });
       syncEnqueue({
@@ -8099,7 +8134,19 @@
           paidAmount: total,
           note: purchaseDraft.note || null,
           items: purchaseDraft.items.map(function (it) {
+            if (it.itemType === "component") {
+              return {
+                itemType: "component",
+                componentId: it.componentId || it.itemId,
+                componentName: it.itemName || it.productName,
+                productName: it.itemName || it.productName,
+                unit: it.unit || "",
+                qty: Number(it.qty) || 0,
+                unitCost: Number(it.unitCost) || 0
+              };
+            }
             return {
+              itemType: "product",
               productId: it.productId,
               productName: it.productName,
               qty: Number(it.qty) || 0,
@@ -8357,9 +8404,27 @@
                 </label>
               </div>
 
-              <h3 className="section-title" style=${{ marginTop: 24 }}>${L("Thêm mặt hàng / Add Product")}</h3>
+              <h3 className="section-title" style=${{ marginTop: 24 }}>${L("Thêm mặt hàng / Add Stock Item")}</h3>
+              <div className="toggle-grid" style=${{ marginBottom: 12 }}>
+                <button
+                  type="button"
+                  className=${"ghost-btn" + (purchaseItemType === "product" ? " active-toggle" : "")}
+                  onClick=${function () { setPurchaseItemType("product"); setPurchaseProductSearch(""); }}
+                >
+                  ${L("Sản phẩm bán lẻ / Retail Product")}
+                </button>
+                <button
+                  type="button"
+                  className=${"ghost-btn" + (purchaseItemType === "component" ? " active-toggle" : "")}
+                  onClick=${function () { setPurchaseItemType("component"); setPurchaseProductSearch(""); }}
+                >
+                  ${L("Thành phần / Component")}
+                </button>
+              </div>
               <input
-                placeholder=${L("Tìm sản phẩm theo tên, mã vạch... / Search product by name, barcode...")}
+                placeholder=${purchaseItemType === "component"
+                  ? L("Tìm thành phần/nguyên liệu... / Search component or ingredient...")
+                  : L("Tìm sản phẩm theo tên, mã vạch... / Search product by name, barcode...")}
                 value=${purchaseProductSearch}
                 onInput=${function (e) { setPurchaseProductSearch(e.target.value); }}
                 style=${{ marginBottom: "10px" }}
@@ -8368,15 +8433,49 @@
                 <div className="management-list" style=${{ maxHeight: "240px", overflowY: "auto", marginBottom: "12px" }}>
                   ${(function () {
                     var nq = normalizeSearchText(purchaseProductSearch);
-                    var matched = products.filter(function (p) { return productMatchesQuery(p, nq); }).slice(0, 20);
-                    if (!matched.length) return html`<p style=${{ color: "#7b6b5d", padding: "8px" }}>${L("Không tìm thấy. / No products found.")}</p>`;
+                    if (purchaseItemType === "component") {
+                      var matchedComponents = components.filter(function (component) {
+                        var haystack = normalizeSearchText([
+                          component.id,
+                          component.label,
+                          L(component.label),
+                          component.unit,
+                          component.note
+                        ].join(" "));
+                        return haystack.indexOf(nq) !== -1;
+                      }).slice(0, 20);
+                      if (!matchedComponents.length) return html`<p style=${{ color: "#7b6b5d", padding: "8px" }}>${L("Không tìm thấy thành phần. / No components found.")}</p>`;
+                      return matchedComponents.map(function (component) {
+                        return html`
+                          <button
+                            key=${component.id}
+                            type="button"
+                            className="list-row"
+                            onClick=${function () { addPurchaseLine(component.id, "component"); setPurchaseProductSearch(""); }}
+                            style=${{ cursor: "pointer", width: "100%", textAlign: "left", border: "1px solid rgba(111,84,41,0.08)", background: "rgba(255,255,255,0.78)", borderRadius: "14px", padding: "12px 16px", marginBottom: "6px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}
+                          >
+                            <div>
+                              <strong>🧺 ${L(component.label)}</strong>
+                              <p style=${{ margin: "4px 0 0", color: "#7b6b5d", fontSize: "0.88rem" }}>
+                                ${component.id} · ${L("tồn")}: ${Number(component.stockQty) || 0} ${component.unit || ""}
+                              </p>
+                            </div>
+                            <span style=${{ color: "#de631d", fontWeight: 700, flexShrink: 0 }}>+ ${L("Thêm / Add")}</span>
+                          </button>
+                        `;
+                      });
+                    }
+                    var matched = products.filter(function (p) {
+                      return !p.isMixedDrink && productMatchesQuery(p, nq);
+                    }).slice(0, 20);
+                    if (!matched.length) return html`<p style=${{ color: "#7b6b5d", padding: "8px" }}>${L("Không tìm thấy sản phẩm. / No products found.")}</p>`;
                     return matched.map(function (p) {
                       return html`
                         <button
                           key=${p.id}
                           type="button"
                           className="list-row"
-                          onClick=${function () { addPurchaseLine(p.id); setPurchaseProductSearch(""); }}
+                          onClick=${function () { addPurchaseLine(p.id, "product"); setPurchaseProductSearch(""); }}
                           style=${{ cursor: "pointer", width: "100%", textAlign: "left", border: "1px solid rgba(111,84,41,0.08)", background: "rgba(255,255,255,0.78)", borderRadius: "14px", padding: "12px 16px", marginBottom: "6px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}
                         >
                           <div>
@@ -8395,22 +8494,42 @@
                 ${purchaseDraft.items.length === 0
                   ? html`<p style=${{ color: "#7b6b5d" }}>${L("Chưa có dòng hàng. / No lines yet.")}</p>`
                   : purchaseDraft.items.map(function (it) {
+                      var lineKey = it.lineKey || purchaseLineKey(it.itemType || "product", it.itemId || it.productId || it.componentId);
+                      var isComponentLine = it.itemType === "component";
                       return html`
-                        <article key=${it.productId} className="list-row list-row-actions">
+                        <article key=${lineKey} className="list-row list-row-actions">
                           <div>
-                            <strong>${it.productName}</strong>
-                            <p>${formatCurrency((Number(it.qty) || 0) * (Number(it.unitCost) || 0))}</p>
+                            <strong>${it.productName || it.itemName}</strong>
+                            <p>
+                              <span className="stock-badge" style=${{ marginRight: 8 }}>
+                                ${isComponentLine ? L("Thành phần / Component") : L("Sản phẩm / Product")}
+                              </span>
+                              ${formatCurrency((Number(it.qty) || 0) * (Number(it.unitCost) || 0))}
+                              ${it.unit ? " · " + L("Đơn vị / Unit") + ": " + it.unit : ""}
+                            </p>
                           </div>
                           <div className="row-actions">
                             <label className="field" style=${{ width: 90 }}>
                               <span>${L("SL / Qty")}</span>
-                              <input type="number" min="1" value=${it.qty} onInput=${function (e) { updatePurchaseLine(it.productId, "qty", e.target.value); }} />
+                              <input
+                                type="number"
+                                min=${isComponentLine ? "0" : "1"}
+                                step=${isComponentLine ? "0.1" : "1"}
+                                value=${it.qty}
+                                onInput=${function (e) { updatePurchaseLine(lineKey, "qty", e.target.value); }}
+                              />
                             </label>
+                            ${isComponentLine ? html`
+                              <label className="field" style=${{ width: 110 }}>
+                                <span>${L("Đơn vị / Unit")}</span>
+                                <input value=${it.unit || ""} onInput=${function (e) { updatePurchaseLine(lineKey, "unit", e.target.value); }} />
+                              </label>
+                            ` : null}
                             <label className="field" style=${{ width: 130 }}>
                               <span>${L("Giá nhập / Cost")}</span>
-                              <input type="number" min="0" value=${it.unitCost} onInput=${function (e) { updatePurchaseLine(it.productId, "unitCost", e.target.value); }} />
+                              <input type="number" min="0" value=${it.unitCost} onInput=${function (e) { updatePurchaseLine(lineKey, "unitCost", e.target.value); }} />
                             </label>
-                            <button className="ghost-btn danger-text" onClick=${function () { removePurchaseLine(it.productId); }}>${L("Xóa / Remove")}</button>
+                            <button className="ghost-btn danger-text" onClick=${function () { removePurchaseLine(lineKey); }}>${L("Xóa / Remove")}</button>
                           </div>
                         </article>
                       `;

@@ -3742,17 +3742,22 @@
         return;
       }
 
-      // B7: Warn when cash payment is short of total.
-      var cashReceivedNumber = Number(activeOrder.cashReceived) || 0;
-      var isCashLike = isCashPaymentMethod(activeOrder.paymentMethod);
-      if (isCashLike && cashReceivedNumber < (Number(totals.total) || 0)) {
-        var shortBy = (Number(totals.total) || 0) - cashReceivedNumber;
-        if (!window.confirm(
-          L("Khách trả ít hơn tổng tiền. Thiếu") + " " + formatCurrency(shortBy) + ". " +
-          L("Vẫn ghi nhận thanh toán? / Customer paid less than total. Short by the amount above. Record payment anyway?")
-        )) {
-          return;
-        }
+      // Payment must be fully entered before a completed sale is recorded.
+      var totalDue = Number(totals.total) || 0;
+      var cashReceivedRaw = activeOrder.cashReceived;
+      var hasPaymentAmount = cashReceivedRaw !== "" && cashReceivedRaw !== null && cashReceivedRaw !== undefined;
+      var cashReceivedNumber = Number(cashReceivedRaw);
+      if (totalDue > 0 && (!hasPaymentAmount || !Number.isFinite(cashReceivedNumber) || cashReceivedNumber <= 0)) {
+        window.alert(L("Vui lòng nhập tiền khách đưa trước khi hoàn tất bán hàng. / Please enter the amount received before completing the sale."));
+        return;
+      }
+      if (totalDue > 0 && cashReceivedNumber < totalDue) {
+        var shortBy = totalDue - cashReceivedNumber;
+        window.alert(
+          L("Tiền khách đưa chưa đủ để thanh toán đơn hàng. / Amount received is less than the total payment.") +
+          "\n" + L("Còn thiếu / Short by") + ": " + formatCurrency(shortBy)
+        );
+        return;
       }
 
       var stockRequirements = getOrderStockRequirements(activeOrder.items);

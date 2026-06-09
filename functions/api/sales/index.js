@@ -221,6 +221,33 @@ export const onRequestPost = async ({ env, request }) => {
     );
   }
 
+  const paymentMethod = normalizePaymentMethod(body.paymentMethod);
+  const hasPaidAmount =
+    body.paid !== undefined &&
+    body.paid !== null &&
+    String(body.paid).trim() !== "";
+  const rawPaidAmount = Number(body.paid);
+  if (serverTotal > 0 && (!hasPaidAmount || !Number.isFinite(rawPaidAmount) || rawPaidAmount <= 0)) {
+    return badRequest("paid amount required", {
+      code: "PAYMENT_REQUIRED",
+      total: serverTotal,
+      paymentMethod,
+    });
+  }
+
+  // A completed checkout must be fully paid. This keeps sales reports,
+  // payment-method dashboards, and later DB imports consistent.
+  const paidAmount = Math.max(0, Math.round(rawPaidAmount || 0));
+  if (serverTotal > 0 && paidAmount < serverTotal) {
+    return badRequest("paid amount is less than total", {
+      code: "PAYMENT_INSUFFICIENT",
+      total: serverTotal,
+      paid: paidAmount,
+      shortBy: serverTotal - paidAmount,
+      paymentMethod,
+    });
+  }
+
   const ts = now();
   const saleId = body.id || await nextDocId(env.DB, "HD", ts);
 
@@ -234,9 +261,7 @@ export const onRequestPost = async ({ env, request }) => {
 
   const stmts = [];
   // Use SERVER-computed amounts so a tampered client can't change billing.
-  const paidAmount = Math.max(0, Math.round(Number(body.paid) || 0));
   const changeAmount = Math.max(0, paidAmount - serverTotal);
-  const paymentMethod = normalizePaymentMethod(body.paymentMethod);
   stmts.push(
     env.DB.prepare(
       `INSERT INTO sales

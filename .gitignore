@@ -1,8 +1,15 @@
 SHOPPROGRAM-cloudflare-upload.zip
 .DS_Store
 
+# Local credentials / deploy env values. Keep examples tracked, never real env.
+.env
+.env.local
+.env.vercel
+.env.vercel.local
+.env.supabase-upload
+.env.supabase-upload.local
+
 # Wrangler local state + dev D1
 .wrangler/
 .dev.vars
 node_modules/
-

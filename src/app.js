@@ -2072,6 +2072,18 @@
       stockQty: 0,
       minStock: 0
     });
+    var [conversionDraft, setConversionDraft] = useState({
+      productId: "",
+      productQty: 1,
+      componentMode: "existing",
+      componentId: "",
+      componentLabelVi: "",
+      componentLabelEn: "",
+      componentUnit: "",
+      componentQty: "",
+      expiryDays: 1,
+      note: ""
+    });
     var [selectedBarcodeProductId, setSelectedBarcodeProductId] = useState(initialState.products[0] ? initialState.products[0].id : "");
     var barcodeInputRef = useRef(null);
     var barcodeCaptureInputRef = useRef(null);
@@ -2626,6 +2638,7 @@
         var ep = payload && payload.endpoint || "";
         var op = payload && payload.opType || "";
         if (ep.indexOf("/inventory/adjust") !== -1) return L("Đã lưu tồn kho / Stock saved");
+        if (ep.indexOf("/inventory/convert") !== -1) return L("Đã chuyển tồn sang thành phần / Stock converted to component");
         if (ep.indexOf("/products") !== -1)        return L("Đã lưu sản phẩm / Product saved");
         if (ep.indexOf("/sales") !== -1)           return L("Đã lưu hóa đơn / Sale saved");
         if (ep.indexOf("/purchases") !== -1)       return L("Đã lưu phiếu nhập / Purchase saved");
@@ -3108,6 +3121,7 @@
 
     var inventoryTabs = [
       { id: "stock", label: "Kiểm hàng tồn kho / Stock Check" },
+      { id: "convert", label: "Chuyển thành phần / Convert Stock" },
       { id: "product", label: "Thêm sản phẩm / Add Product" },
       { id: "catalog", label: "Điều chỉnh danh mục / Catalog Adjustments" }
     ];
@@ -5673,6 +5687,174 @@
       });
     }
 
+    function updateConversionDraft(field, value) {
+      setConversionDraft(function (currentDraft) {
+        var next = Object.assign({}, currentDraft, { [field]: value });
+        if (field === "componentMode" && value === "new") {
+          next.componentId = "";
+          next.componentUnit = currentDraft.componentUnit || "gram";
+        }
+        if (field === "componentMode" && value !== "new") {
+          next.componentUnit = "";
+        }
+        return next;
+      });
+    }
+
+    function getConvertibleProducts() {
+      return products.filter(function (product) {
+        return !product.isMixedDrink && (Number(product.rawStock != null ? product.rawStock : product.stock) || 0) > 0;
+      });
+    }
+
+    function getConversionProduct() {
+      var candidates = getConvertibleProducts();
+      var productId = conversionDraft.productId || (candidates[0] && candidates[0].id) || "";
+      return candidates.find(function (product) { return product.id === productId; }) || null;
+    }
+
+    function getConversionComponent() {
+      if (conversionDraft.componentMode === "new") return null;
+      var componentId = conversionDraft.componentId || (components[0] && components[0].id) || "";
+      return components.find(function (component) { return component.id === componentId; }) || null;
+    }
+
+    function resetConversionDraft(keepTarget) {
+      setConversionDraft(function (currentDraft) {
+        return {
+          productId: keepTarget ? currentDraft.productId : "",
+          productQty: 1,
+          componentMode: currentDraft.componentMode || "existing",
+          componentId: keepTarget ? currentDraft.componentId : "",
+          componentLabelVi: "",
+          componentLabelEn: "",
+          componentUnit: currentDraft.componentMode === "new" ? (currentDraft.componentUnit || "gram") : "",
+          componentQty: "",
+          expiryDays: 1,
+          note: ""
+        };
+      });
+    }
+
+    function submitStockConversion(event) {
+      event.preventDefault();
+      var sourceProduct = getConversionProduct();
+      if (!sourceProduct) {
+        window.alert(L("Chọn sản phẩm retail còn tồn để chuyển. / Select an in-stock retail product to convert."));
+        return;
+      }
+
+      var productQty = Math.max(0, Number(conversionDraft.productQty) || 0);
+      if (productQty <= 0) {
+        window.alert(L("Nhập số lượng sản phẩm cần chuyển. / Enter product quantity to convert."));
+        return;
+      }
+      var currentStock = Number(sourceProduct.rawStock != null ? sourceProduct.rawStock : sourceProduct.stock) || 0;
+      if (productQty > currentStock) {
+        window.alert(L("Số lượng chuyển lớn hơn tồn hiện tại. / Convert quantity is higher than current stock."));
+        return;
+      }
+
+      var componentId = "";
+      var componentLabel = "";
+      var componentUnit = conversionDraft.componentUnit || "";
+      var existingComponent = null;
+      if (conversionDraft.componentMode === "new") {
+        componentLabel = buildBilingualLabel(conversionDraft.componentLabelVi, conversionDraft.componentLabelEn);
+        if (!componentLabel.trim()) {
+          window.alert(L("Nhập tên thành phần mới. / Enter the new component name."));
+          return;
+        }
+        var baseId = slugify(conversionDraft.componentLabelEn || conversionDraft.componentLabelVi || uid("component"));
+        componentId = baseId;
+        var suffix = 1;
+        while (components.some(function (component) { return component.id === componentId; })) {
+          componentId = baseId + "-" + suffix;
+          suffix += 1;
+        }
+      } else {
+        existingComponent = getConversionComponent();
+        if (!existingComponent) {
+          window.alert(L("Chọn thành phần nhận tồn. / Select a target component."));
+          return;
+        }
+        componentId = existingComponent.id;
+        componentLabel = existingComponent.label;
+        componentUnit = existingComponent.unit || componentUnit;
+      }
+
+      var componentQty = Math.max(0, Number(conversionDraft.componentQty) || productQty);
+      if (componentQty <= 0) {
+        window.alert(L("Nhập lượng thành phần nhận được. / Enter received component quantity."));
+        return;
+      }
+
+      var expiryDays = Math.max(0, Number(conversionDraft.expiryDays) || 0);
+      var expiryNote = expiryDays
+        ? (expiryDays + " " + L("ngày dùng sau chuyển đổi / days usable after conversion"))
+        : L("Dùng trong ngày / Same-day use");
+      var note = [
+        L("Chuyển từ thành phẩm retail sang nguyên liệu / Converted from retail product"),
+        conversionDraft.note || "",
+        expiryNote
+      ].filter(Boolean).join(" · ");
+      var nextProductStock = Math.max(0, currentStock - productQty);
+
+      setProducts(function (currentProducts) {
+        return currentProducts.map(function (product) {
+          return product.id === sourceProduct.id
+            ? Object.assign({}, product, { stock: nextProductStock, rawStock: nextProductStock })
+            : product;
+        });
+      });
+
+      setComponents(function (currentComponents) {
+        var found = false;
+        var updated = currentComponents.map(function (component) {
+          if (component.id !== componentId) return component;
+          found = true;
+          return Object.assign({}, component, {
+            stockQty: (Number(component.stockQty) || 0) + componentQty,
+            unit: component.unit || componentUnit,
+            note: component.note || note,
+            active: true
+          });
+        });
+        if (!found) {
+          updated.push({
+            id: componentId,
+            label: componentLabel,
+            unit: componentUnit,
+            note: note,
+            stockQty: componentQty,
+            minStock: 0,
+            active: true
+          });
+        }
+        return updated;
+      });
+
+      syncEnqueue({
+        endpoint: "/inventory/convert",
+        method: "POST",
+        opType: "inventory-convert",
+        body: {
+          productId: sourceProduct.id,
+          productQty: productQty,
+          componentId: componentId,
+          componentLabel: componentLabel,
+          componentUnit: componentUnit,
+          componentQty: componentQty,
+          expiryNote: expiryNote,
+          note: conversionDraft.note || "",
+          reason: "Retail to component conversion"
+        }
+      });
+
+      pushToast("success", L("Đã chuyển tồn sang thành phần / Stock converted to component"));
+      resetConversionDraft(true);
+    }
+
     function submitProduct(event) {
       event.preventDefault();
 
@@ -7058,6 +7240,15 @@
         return min > 0 && qty <= min;
       });
       var allProductsSelected = products.length > 0 && selectedProductIds.length === products.length;
+      var convertibleProducts = getConvertibleProducts();
+      var conversionProduct = getConversionProduct();
+      var conversionComponent = getConversionComponent();
+      var conversionProductQty = Math.max(0, Number(conversionDraft.productQty) || 0);
+      var conversionComponentQty = Math.max(0, Number(conversionDraft.componentQty) || conversionProductQty);
+      var conversionSourceStock = conversionProduct
+        ? (Number(conversionProduct.rawStock != null ? conversionProduct.rawStock : conversionProduct.stock) || 0)
+        : 0;
+      var conversionComponentStock = conversionComponent ? (Number(conversionComponent.stockQty) || 0) : 0;
 
       return html`
         <section className="settings-layout">
@@ -7254,6 +7445,193 @@
                     </div>
                   </section>
                 </div>
+              </div>
+            ` : null}
+
+            ${inventorySection === "convert" ? html`
+              <div className="stack-view">
+                <section className="surface section-card form-card">
+                  <div className="section-top">
+                    <div>
+                      <p className="eyebrow">${L("Chuyển đổi tồn kho / Stock Conversion")}</p>
+                      <h2 className="section-title">${L("Chuyển hộp retail sang thành phần / Convert Retail Stock to Component")}</h2>
+                      <p className="muted-copy">
+                        ${L("Dùng khi trái cây cắt sẵn/hộp bán lẻ còn tồn nhưng cần chuyển sang nguyên liệu pha chế trong ngày. / Use this when pre-cut retail boxes should become same-day prep ingredients.")}
+                      </p>
+                    </div>
+                  </div>
+
+                  <form className="conversion-board" onSubmit=${submitStockConversion}>
+                    <article className="conversion-panel">
+                      <span className="conversion-step">1</span>
+                      <h3>${L("Chọn hàng retail / Select Retail Stock")}</h3>
+                      <label className="field">
+                        <span>${L("Sản phẩm còn tồn / In-stock Product")}</span>
+                        <select
+                          value=${conversionDraft.productId || (convertibleProducts[0] && convertibleProducts[0].id) || ""}
+                          onChange=${function (event) { updateConversionDraft("productId", event.target.value); }}
+                        >
+                          ${convertibleProducts.map(function (product) {
+                            var category = categories.find(function (item) { return item.id === product.category; });
+                            var stock = Number(product.rawStock != null ? product.rawStock : product.stock) || 0;
+                            return html`
+                              <option key=${product.id} value=${product.id}>
+                                ${product.name} · ${stock} ${product.unit || L("món")}
+                                ${category ? " · " + L(category.label) : ""}
+                              </option>
+                            `;
+                          })}
+                        </select>
+                        ${!convertibleProducts.length ? html`
+                          <small>${L("Chưa có sản phẩm retail nào còn tồn để chuyển. / No in-stock retail products available to convert.")}</small>
+                        ` : null}
+                      </label>
+                      <label className="field">
+                        <span>${L("Số lượng chuyển / Quantity to Convert")}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          value=${conversionDraft.productQty}
+                          onInput=${function (event) { updateConversionDraft("productQty", event.target.value); }}
+                        />
+                        <small>
+                          ${conversionProduct
+                            ? L("Tồn hiện tại / Current stock") + ": " + conversionSourceStock + (conversionProduct.unit ? " " + conversionProduct.unit : "")
+                            : L("Chọn sản phẩm trước. / Select a product first.")}
+                        </small>
+                      </label>
+                    </article>
+
+                    <article className="conversion-panel">
+                      <span className="conversion-step">2</span>
+                      <h3>${L("Chọn thành phần nhận / Select Target Component")}</h3>
+                      <div className="toggle-grid">
+                        <button
+                          type="button"
+                          className=${"ghost-btn" + (conversionDraft.componentMode !== "new" ? " active-toggle" : "")}
+                          onClick=${function () { updateConversionDraft("componentMode", "existing"); }}
+                        >
+                          ${L("Có sẵn / Existing")}
+                        </button>
+                        <button
+                          type="button"
+                          className=${"ghost-btn" + (conversionDraft.componentMode === "new" ? " active-toggle" : "")}
+                          onClick=${function () { updateConversionDraft("componentMode", "new"); }}
+                        >
+                          ${L("Tạo mới / New")}
+                        </button>
+                      </div>
+
+                      ${conversionDraft.componentMode === "new" ? html`
+                        <div className="field-grid">
+                          <label className="field">
+                            <span>${L("Tên TV / Vietnamese Name")}</span>
+                            <input
+                              value=${conversionDraft.componentLabelVi}
+                              placeholder=${L("VD: Xoài cắt sẵn")}
+                              onInput=${function (event) { updateConversionDraft("componentLabelVi", event.target.value); }}
+                            />
+                          </label>
+                          <label className="field">
+                            <span>${L("Tên EN / English Name")}</span>
+                            <input
+                              value=${conversionDraft.componentLabelEn}
+                              placeholder="Cut mango prep"
+                              onInput=${function (event) { updateConversionDraft("componentLabelEn", event.target.value); }}
+                            />
+                          </label>
+                        </div>
+                      ` : html`
+                        <label className="field">
+                          <span>${L("Thành phần / Component")}</span>
+                          <select
+                            value=${conversionDraft.componentId || (components[0] && components[0].id) || ""}
+                            onChange=${function (event) { updateConversionDraft("componentId", event.target.value); }}
+                          >
+                            ${components.map(function (component) {
+                              return html`
+                                <option key=${component.id} value=${component.id}>
+                                  ${L(component.label)} · ${Number(component.stockQty) || 0} ${component.unit || ""}
+                                </option>
+                              `;
+                            })}
+                          </select>
+                        </label>
+                      `}
+
+                      <div className="field-grid">
+                        <label className="field">
+                          <span>${L("Lượng nhận / Received Qty")}</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            value=${conversionDraft.componentQty}
+                            placeholder=${String(conversionProductQty || 1)}
+                            onInput=${function (event) { updateConversionDraft("componentQty", event.target.value); }}
+                          />
+                        </label>
+                        <label className="field">
+                          <span>${L("Đơn vị / Unit")}</span>
+                          <input
+                            value=${conversionDraft.componentUnit || (conversionComponent && conversionComponent.unit) || ""}
+                            placeholder=${L("gram, ml, phần...")}
+                            onInput=${function (event) { updateConversionDraft("componentUnit", event.target.value); }}
+                          />
+                        </label>
+                      </div>
+
+                      <div className="field-grid">
+                        <label className="field">
+                          <span>${L("Hạn dùng sau chuyển / Use Within")}</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value=${conversionDraft.expiryDays}
+                            onInput=${function (event) { updateConversionDraft("expiryDays", event.target.value); }}
+                          />
+                          <small>${L("0 = dùng trong ngày. / 0 = same-day use.")}</small>
+                        </label>
+                        <label className="field">
+                          <span>${L("Ghi chú / Note")}</span>
+                          <input
+                            value=${conversionDraft.note}
+                            placeholder=${L("VD: chuyển từ hộp gần hết hạn")}
+                            onInput=${function (event) { updateConversionDraft("note", event.target.value); }}
+                          />
+                        </label>
+                      </div>
+                    </article>
+
+                    <aside className="conversion-summary">
+                      <p className="eyebrow">${L("Xem trước / Preview")}</p>
+                      <h3>${L("Sau khi chuyển / After Conversion")}</h3>
+                      <div className="conversion-preview-row">
+                        <span>${conversionProduct ? conversionProduct.name : L("Sản phẩm")}</span>
+                        <strong>${conversionSourceStock} → ${Math.max(0, conversionSourceStock - conversionProductQty)}</strong>
+                      </div>
+                      <div className="conversion-preview-row">
+                        <span>
+                          ${conversionDraft.componentMode === "new"
+                            ? (buildBilingualLabel(conversionDraft.componentLabelVi, conversionDraft.componentLabelEn) || L("Thành phần mới / New component"))
+                            : (conversionComponent ? L(conversionComponent.label) : L("Thành phần / Component"))}
+                        </span>
+                        <strong>
+                          ${conversionDraft.componentMode === "new" ? 0 : conversionComponentStock}
+                          → ${(conversionDraft.componentMode === "new" ? 0 : conversionComponentStock) + conversionComponentQty}
+                        </strong>
+                      </div>
+                      <p className="muted-copy">
+                        ${L("Hệ thống sẽ ghi sổ chuyển đổi và giữ báo cáo tồn kho rõ ràng. / The system records the conversion so stock reports stay clean.")}
+                      </p>
+                      <button type="submit" className="primary-btn" disabled=${!convertibleProducts.length}>
+                        ${L("Chuyển sang thành phần / Convert to Component")}
+                      </button>
+                    </aside>
+                  </form>
+                </section>
               </div>
             ` : null}
 

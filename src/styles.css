@@ -856,6 +856,70 @@ textarea:focus {
   gap: 12px;
 }
 
+.muted-copy {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.conversion-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(280px, 0.8fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.conversion-panel,
+.conversion-summary {
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  padding: 18px;
+  background: rgba(255, 252, 247, 0.82);
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  min-width: 0;
+}
+
+.conversion-panel h3,
+.conversion-summary h3 {
+  margin: 0;
+  font-size: clamp(1.05rem, 1.7vw, 1.35rem);
+}
+
+.conversion-step {
+  width: 42px;
+  height: 42px;
+  border-radius: 16px;
+  display: inline-grid;
+  place-items: center;
+  background: linear-gradient(135deg, #ffe2bf 0%, #ffc47f 100%);
+  color: #7b3817;
+  font-weight: 800;
+}
+
+.conversion-summary {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 196, 127, 0.28), transparent 34%),
+    rgba(255, 248, 239, 0.92);
+}
+
+.conversion-preview-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  border: 1px dashed rgba(149, 116, 88, 0.28);
+  border-radius: 18px;
+  padding: 12px 14px;
+  color: var(--muted);
+}
+
+.conversion-preview-row strong {
+  color: var(--text);
+  white-space: nowrap;
+}
+
 .invoice-template-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1326,6 +1390,7 @@ textarea:focus {
   .toggle-grid,
   .invoice-template-grid,
   .export-table-grid,
+  .conversion-board,
   .settings-layout,
   .payment-grid,
   .payment-grid-single {
@@ -1521,6 +1586,7 @@ textarea:focus {
   .toggle-grid,
   .invoice-template-grid,
   .export-table-grid,
+  .conversion-board,
   .settings-layout,
   .payment-grid,
   .payment-grid-single {

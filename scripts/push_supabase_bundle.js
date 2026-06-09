@@ -9,6 +9,7 @@ const SEED_PATH = path.join(SUPABASE_DIR, "seed.sql");
 const PROJECT_REF = process.env.SUPABASE_PROJECT_REF;
 const ACCESS_TOKEN = process.env.SUPABASE_ACCESS_TOKEN;
 const API_BASE = "https://api.supabase.com/v1";
+const UPLOAD_MODE = (process.env.SUPABASE_UPLOAD_MODE || "all").toLowerCase();
 
 if (!PROJECT_REF) {
   console.error("Missing SUPABASE_PROJECT_REF");
@@ -78,13 +79,21 @@ async function runBatch(label, statements) {
 }
 
 async function main() {
+  if (!["all", "schema", "seed"].includes(UPLOAD_MODE)) {
+    throw new Error("SUPABASE_UPLOAD_MODE must be one of: all, schema, seed");
+  }
+
   const schemaSql = readSql(SCHEMA_PATH);
   const seedSql = readSql(SEED_PATH);
   const schemaStatements = splitSqlStatements(schemaSql);
   const seedStatements = splitSqlStatements(seedSql);
 
-  await runBatch("schema", schemaStatements);
-  await runBatch("seed", seedStatements);
+  if (UPLOAD_MODE === "all" || UPLOAD_MODE === "schema") {
+    await runBatch("schema", schemaStatements);
+  }
+  if (UPLOAD_MODE === "all" || UPLOAD_MODE === "seed") {
+    await runBatch("seed", seedStatements);
+  }
   console.log("\nSupabase upload complete.");
 }
 

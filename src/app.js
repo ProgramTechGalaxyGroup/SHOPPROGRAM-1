@@ -98,13 +98,13 @@
   repairKnownLocalPaymentIssues();
 
   // Bump this version to force a full re-sync for all clients when data structure changes
-  var CACHE_VERSION = 5;
+  var CACHE_VERSION = 6;
   if (window.localStorage && window.localStorage.getItem("shopflow-cache-version") !== String(CACHE_VERSION)) {
     window.localStorage.removeItem("shopflow-last-sync-at");
     window.localStorage.removeItem("shopflow-categories");
     window.localStorage.setItem("shopflow-cache-version", String(CACHE_VERSION));
   }
-  var APP_VERSION = "3.5.2";
+  var APP_VERSION = "3.5.3";
   var VAT_RATE = 0.08;
   var LANGUAGE_OPTIONS = [
     { id: "vi", label: "VI" },
@@ -1635,6 +1635,10 @@
 
   function normalizeProduct(product) {
     var baseProduct = product || {};
+    var explicitInventoryMode = baseProduct.inventoryMode || baseProduct.inventory_mode || "";
+    var normalizedInventoryMode = explicitInventoryMode === "recipe" || explicitInventoryMode === "stock"
+      ? explicitInventoryMode
+      : "";
     var normalizedBarcode = getScannableBarcode(
       baseProduct.barcode,
       [baseProduct.id, baseProduct.name, baseProduct.category, baseProduct.barcode].join("|")
@@ -1642,7 +1646,7 @@
     return Object.assign({}, baseProduct, {
       barcode: normalizedBarcode,
       componentIds: Array.isArray(baseProduct.componentIds) ? baseProduct.componentIds : [],
-      inventoryMode: baseProduct.inventoryMode === "recipe" ? "recipe" : "stock",
+      inventoryMode: normalizedInventoryMode,
       unit: baseProduct.unit || "",
       skuCode: baseProduct.skuCode || baseProduct.sku_code || baseProduct.id
     });
@@ -1673,6 +1677,7 @@
 
   function getEffectiveInventoryMode(product, categoryList) {
     if (product && product.inventoryMode === "recipe") return "recipe";
+    if (product && product.inventoryMode === "stock") return "stock";
     if (product && isRecipeProductId(product.id)) return "recipe";
     if (isRecipeCategory(product && product.category, categoryList)) return "recipe";
     return "stock";

@@ -110,6 +110,8 @@ export const onRequestPost = async ({ env, request }) => {
     let isMixedDrink = false;
     if (info && info.inventory_mode === "recipe") {
       isMixedDrink = true;
+    } else if (info && info.inventory_mode === "stock") {
+      isMixedDrink = false;
     } else if (info && info.category_code) {
       const codeNum = parseInt(info.category_code, 10);
       if (codeNum >= 10000 && codeNum <= 50000) {

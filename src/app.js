@@ -17,15 +17,94 @@
   var useState = window.React.useState;
   var html = window.htm.bind(window.React.createElement);
 
+  var STORAGE_KEY = "fruit-house-pos-suite-v3";
+
+  function repairKnownLocalPaymentIssues() {
+    var targetOrderId = "09/06/2026-019";
+    var targetPaid = 61000;
+
+    function isTargetSale(record) {
+      if (!record) return false;
+      return record.orderId === targetOrderId ||
+        record.order_id === targetOrderId ||
+        record.id === targetOrderId ||
+        record.id === "HD-20260609-019";
+    }
+
+    function repairSale(record) {
+      if (!isTargetSale(record)) return record;
+      var total = Number(record.total) || 0;
+      return Object.assign({}, record, {
+        paid: targetPaid,
+        cashReceived: targetPaid,
+        cash_received: targetPaid,
+        changeAmount: Math.max(0, targetPaid - total),
+        change_amount: Math.max(0, targetPaid - total),
+        paymentMethod: "cash",
+        payment_method: "cash",
+        paymentStatus: "paid",
+        payment_status: "paid"
+      });
+    }
+
+    try {
+      var rawState = window.localStorage.getItem(STORAGE_KEY);
+      if (rawState) {
+        var state = JSON.parse(rawState);
+        var changed = false;
+        if (Array.isArray(state.sales)) {
+          state.sales = state.sales.map(function (sale) {
+            var repaired = repairSale(sale);
+            if (repaired !== sale) changed = true;
+            return repaired;
+          });
+        }
+        if (Array.isArray(state.orders)) {
+          state.orders = state.orders.map(function (order) {
+            if (!order || order.id !== targetOrderId) return order;
+            changed = true;
+            return Object.assign({}, order, {
+              cashReceived: targetPaid,
+              paymentMethod: "cash"
+            });
+          });
+        }
+        if (changed) {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+      }
+    } catch (error) {}
+
+    try {
+      var rawOutbox = window.localStorage.getItem("shopflow-outbox");
+      if (rawOutbox) {
+        var outbox = JSON.parse(rawOutbox);
+        var outboxChanged = false;
+        if (Array.isArray(outbox)) {
+          outbox = outbox.map(function (entry) {
+            if (!entry || !entry.body || !isTargetSale(entry.body)) return entry;
+            var body = repairSale(entry.body);
+            outboxChanged = true;
+            return Object.assign({}, entry, { body: body });
+          });
+        }
+        if (outboxChanged) {
+          window.localStorage.setItem("shopflow-outbox", JSON.stringify(outbox));
+        }
+      }
+    } catch (error) {}
+  }
+
+  repairKnownLocalPaymentIssues();
+
   // Bump this version to force a full re-sync for all clients when data structure changes
-  var CACHE_VERSION = 4;
+  var CACHE_VERSION = 5;
   if (window.localStorage && window.localStorage.getItem("shopflow-cache-version") !== String(CACHE_VERSION)) {
     window.localStorage.removeItem("shopflow-last-sync-at");
     window.localStorage.removeItem("shopflow-categories");
     window.localStorage.setItem("shopflow-cache-version", String(CACHE_VERSION));
   }
-  var STORAGE_KEY = "fruit-house-pos-suite-v3";
-  var APP_VERSION = "3.5.1";
+  var APP_VERSION = "3.5.2";
   var VAT_RATE = 0.08;
   var LANGUAGE_OPTIONS = [
     { id: "vi", label: "VI" },
@@ -1342,26 +1421,45 @@
 
   function normalizeSaleRecord(sale) {
     var baseSale = sale || {};
+    var isKnownPaymentFix =
+      baseSale.orderId === "09/06/2026-019" ||
+      baseSale.order_id === "09/06/2026-019" ||
+      baseSale.id === "09/06/2026-019" ||
+      baseSale.id === "HD-20260609-019";
+    var fixedPaid = isKnownPaymentFix ? 61000 : (Number(baseSale.paid) || 0);
+    var fixedPaymentMethod = isKnownPaymentFix ? "cash" : normalizePaymentMethod(baseSale.paymentMethod || baseSale.payment_method);
+    var normalizedTotal = Number(baseSale.total) || 0;
     return Object.assign({}, baseSale, {
       id: baseSale.id || uid("sale"),
       orderId: baseSale.orderId || baseSale.order_id || "",
       createdAt: Number(baseSale.createdAt || baseSale.created_at) || Date.now(),
-      total: Number(baseSale.total) || 0,
+      total: normalizedTotal,
       subtotal: Number(baseSale.subtotal) || 0,
       discount: Number(baseSale.discount) || 0,
       vat: Number(baseSale.vat || baseSale.vatAmount || baseSale.vat_amount) || 0,
       vatAmount: Number(baseSale.vatAmount || baseSale.vat_amount || baseSale.vat) || 0,
-      paid: Number(baseSale.paid) || 0,
-      changeAmount: Number(baseSale.changeAmount || baseSale.change_amount) || 0,
-      paymentMethod: normalizePaymentMethod(baseSale.paymentMethod || baseSale.payment_method),
+      paid: fixedPaid,
+      changeAmount: isKnownPaymentFix ? Math.max(0, fixedPaid - normalizedTotal) : (Number(baseSale.changeAmount || baseSale.change_amount) || 0),
+      paymentMethod: fixedPaymentMethod,
       customerName: baseSale.customerName || baseSale.customer_name || "",
-      cashReceived: Number(baseSale.cashReceived || baseSale.paid) || 0,
+      cashReceived: isKnownPaymentFix ? fixedPaid : (Number(baseSale.cashReceived || baseSale.paid) || 0),
       cashierName: baseSale.cashierName || baseSale.cashier_name || "",
-      paymentStatus: baseSale.paymentStatus || baseSale.payment_status || "paid",
+      paymentStatus: isKnownPaymentFix ? "paid" : (baseSale.paymentStatus || baseSale.payment_status || "paid"),
       orderStatus: baseSale.orderStatus || baseSale.order_status || "completed",
       note: baseSale.note || "",
       items: Array.isArray(baseSale.items) ? baseSale.items : []
     });
+  }
+
+  function isSaleRevenueEligible(sale) {
+    var total = Number(sale && (sale.total || sale.total_amount)) || 0;
+    var paid = Number(sale && (sale.paid || sale.cashReceived || sale.cash_received)) || 0;
+    var orderStatus = String((sale && (sale.orderStatus || sale.order_status)) || "completed").toLowerCase();
+    var paymentStatus = String((sale && (sale.paymentStatus || sale.payment_status)) || "paid").toLowerCase();
+    if (total <= 0) return false;
+    if (orderStatus && orderStatus !== "completed") return false;
+    if (paymentStatus && paymentStatus !== "paid") return false;
+    return paid >= total;
   }
 
   function getAddonById(addOnId, addOnOptions) {
@@ -3056,8 +3154,9 @@
         var t = Number(sale.createdAt) || 0;
         return t >= range.from && t <= range.to;
       });
-      var revenue = salesInRange.reduce(function (sum, sale) { return sum + (Number(sale.total) || 0); }, 0);
-      var ordersCount = salesInRange.length;
+      var paidSalesInRange = salesInRange.filter(isSaleRevenueEligible);
+      var revenue = paidSalesInRange.reduce(function (sum, sale) { return sum + (Number(sale.total) || 0); }, 0);
+      var ordersCount = paidSalesInRange.length;
       // Average ticket
       var avgTicket = ordersCount > 0 ? Math.round(revenue / ordersCount) : 0;
       // Low-stock products (unchanged — global rule)
@@ -3068,7 +3167,7 @@
       });
       // Group by day for chart
       var byDay = {};
-      salesInRange.forEach(function (s) {
+      paidSalesInRange.forEach(function (s) {
         var d = new Date(s.createdAt);
         var key = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
         if (!byDay[key]) byDay[key] = { day: key, revenue: 0, orders: 0 };
@@ -3077,7 +3176,7 @@
       });
       var daySeries = Object.keys(byDay).sort().map(function (k) { return byDay[k]; });
       var byPaymentMethod = {};
-      salesInRange.forEach(function (sale) {
+      paidSalesInRange.forEach(function (sale) {
         var method = normalizePaymentMethod(sale.paymentMethod || sale.payment_method);
         if (!byPaymentMethod[method]) {
           byPaymentMethod[method] = {
@@ -3095,7 +3194,7 @@
       });
       // Top selling products in range
       var byProduct = {};
-      salesInRange.forEach(function (s) {
+      paidSalesInRange.forEach(function (s) {
         (s.items || []).forEach(function (it) {
           var key = it.productId || it.name;
           if (!byProduct[key]) byProduct[key] = { name: it.name, qty: 0, revenue: 0 };

@@ -98,13 +98,13 @@
   repairKnownLocalPaymentIssues();
 
   // Bump this version to force a full re-sync for all clients when data structure changes
-  var CACHE_VERSION = 6;
+  var CACHE_VERSION = 7;
   if (window.localStorage && window.localStorage.getItem("shopflow-cache-version") !== String(CACHE_VERSION)) {
     window.localStorage.removeItem("shopflow-last-sync-at");
     window.localStorage.removeItem("shopflow-categories");
     window.localStorage.setItem("shopflow-cache-version", String(CACHE_VERSION));
   }
-  var APP_VERSION = "3.5.3";
+  var APP_VERSION = "3.5.4";
   var VAT_RATE = 0.08;
   var LANGUAGE_OPTIONS = [
     { id: "vi", label: "VI" },
@@ -1429,9 +1429,16 @@
     var fixedPaid = isKnownPaymentFix ? 61000 : (Number(baseSale.paid) || 0);
     var fixedPaymentMethod = isKnownPaymentFix ? "cash" : normalizePaymentMethod(baseSale.paymentMethod || baseSale.payment_method);
     var normalizedTotal = Number(baseSale.total) || 0;
+    var normalizedId = baseSale.id || uid("sale");
+    var rawSyncStatus = baseSale.syncStatus || baseSale.sync_status || "";
+    var normalizedSyncStatus = rawSyncStatus || (/^HD-/i.test(String(normalizedId)) ? "synced" : "pending");
     return Object.assign({}, baseSale, {
-      id: baseSale.id || uid("sale"),
+      id: normalizedId,
       orderId: baseSale.orderId || baseSale.order_id || "",
+      clientOpId: baseSale.clientOpId || baseSale.client_op_id || "",
+      serverId: baseSale.serverId || baseSale.server_id || (/^HD-/i.test(String(normalizedId)) ? normalizedId : ""),
+      syncStatus: normalizedSyncStatus,
+      syncError: baseSale.syncError || baseSale.sync_error || "",
       createdAt: Number(baseSale.createdAt || baseSale.created_at) || Date.now(),
       total: normalizedTotal,
       subtotal: Number(baseSale.subtotal) || 0,
@@ -1456,10 +1463,51 @@
     var paid = Number(sale && (sale.paid || sale.cashReceived || sale.cash_received)) || 0;
     var orderStatus = String((sale && (sale.orderStatus || sale.order_status)) || "completed").toLowerCase();
     var paymentStatus = String((sale && (sale.paymentStatus || sale.payment_status)) || "paid").toLowerCase();
+    var syncStatus = String((sale && (sale.syncStatus || sale.sync_status)) || "").toLowerCase();
     if (total <= 0) return false;
     if (orderStatus && orderStatus !== "completed") return false;
     if (paymentStatus && paymentStatus !== "paid") return false;
+    if (syncStatus !== "synced") return false;
     return paid >= total;
+  }
+
+  function isServerSaleRecord(sale) {
+    var syncStatus = String((sale && (sale.syncStatus || sale.sync_status)) || "").toLowerCase();
+    return syncStatus === "synced" || /^HD-/i.test(String((sale && (sale.serverId || sale.server_id || sale.id)) || ""));
+  }
+
+  function dedupeSalesByOrderId(saleList) {
+    var byKey = {};
+    (saleList || []).map(normalizeSaleRecord).forEach(function (sale) {
+      var key = sale.orderId || sale.id;
+      var existing = byKey[key];
+      if (!existing) {
+        byKey[key] = sale;
+        return;
+      }
+
+      var saleIsServer = isServerSaleRecord(sale);
+      var existingIsServer = isServerSaleRecord(existing);
+      if (saleIsServer && !existingIsServer) {
+        byKey[key] = sale;
+        return;
+      }
+      if (saleIsServer === existingIsServer && (Number(sale.createdAt) || 0) > (Number(existing.createdAt) || 0)) {
+        byKey[key] = sale;
+      }
+    });
+    return Object.keys(byKey).map(function (key) { return byKey[key]; });
+  }
+
+  function getSaleStatusMeta(sale) {
+    var syncStatus = String((sale && (sale.syncStatus || sale.sync_status)) || "").toLowerCase();
+    if (isSaleRevenueEligible(sale)) {
+      return { label: "Hoàn thành / Completed", tone: "success" };
+    }
+    if (syncStatus === "error") {
+      return { label: "Lỗi đồng bộ / Sync Error", tone: "danger" };
+    }
+    return { label: "Đang chờ đồng bộ / Pending Sync", tone: "warning" };
   }
 
   function getAddonById(addOnId, addOnOptions) {
@@ -2720,11 +2768,13 @@
                 cashierName: row.cashier_name || "",
                 paymentStatus: row.payment_status || "paid",
                 orderStatus: row.order_status || "completed",
+                syncStatus: "synced",
+                serverId: row.id,
                 note: row.note || "",
                 items: items.length > 0 ? items : (byId[row.id] ? byId[row.id].items : [])
               }));
             });
-            var merged = Object.keys(byId).map(function (id) { return byId[id]; });
+            var merged = dedupeSalesByOrderId(Object.keys(byId).map(function (id) { return byId[id]; }));
             merged.sort(function (a, b) { return b.createdAt - a.createdAt; });
             return merged.slice(0, 1000); // Keep last 1000 sales
           });
@@ -2753,9 +2803,45 @@
       function handleSuccess(payload) {
         // Skip "no-op" adjust responses (delta=0) — these aren't real saves.
         if (payload && payload.response && payload.response.delta === 0) return;
+        if (payload && payload.endpoint && payload.endpoint.indexOf("/sales") !== -1) {
+          var responseId = payload.response && payload.response.id;
+          var body = payload.body || {};
+          setSales(function (currentSales) {
+            var updated = currentSales.map(function (sale) {
+              var sameClientOp = body.clientOpId && sale.clientOpId === body.clientOpId;
+              var sameOrder = body.orderId && sale.orderId === body.orderId;
+              if (!sameClientOp && !sameOrder) return sale;
+              return normalizeSaleRecord(Object.assign({}, sale, {
+                id: responseId || sale.id,
+                serverId: responseId || sale.serverId || "",
+                syncStatus: "synced",
+                syncError: "",
+                paymentStatus: "paid",
+                orderStatus: "completed"
+              }));
+            });
+            var deduped = dedupeSalesByOrderId(updated);
+            deduped.sort(function (a, b) { return b.createdAt - a.createdAt; });
+            return deduped;
+          });
+        }
         pushToast("success", labelForOp(payload));
       }
       function handleFailure(payload) {
+        if (payload && payload.endpoint && payload.endpoint.indexOf("/sales") !== -1) {
+          var body = payload.body || {};
+          setSales(function (currentSales) {
+            return currentSales.map(function (sale) {
+              var sameClientOp = body.clientOpId && sale.clientOpId === body.clientOpId;
+              var sameOrder = body.orderId && sale.orderId === body.orderId;
+              if (!sameClientOp && !sameOrder) return sale;
+              return normalizeSaleRecord(Object.assign({}, sale, {
+                syncStatus: "error",
+                syncError: payload.error || L("Không đồng bộ được / Could not sync")
+              }));
+            });
+          });
+        }
         pushToast("error",
           L("Chưa lưu được — sẽ thử lại / Save failed — will retry") +
           (payload && payload.error ? " (" + payload.error + ")" : "")
@@ -3155,7 +3241,8 @@
 
     var dashboardMetrics = useMemo(function () {
       var range = getDashboardRangeBounds();
-      var salesInRange = sales.filter(function (sale) {
+      var displaySales = dedupeSalesByOrderId(sales);
+      var salesInRange = displaySales.filter(function (sale) {
         var t = Number(sale.createdAt) || 0;
         return t >= range.from && t <= range.to;
       });
@@ -3934,9 +4021,14 @@
       }
 
       var orderSnapshot = clone(activeOrder);
+      var saleClientOpId = uid("sale-op");
       var saleRecord = {
         id: uid("sale"),
         orderId: activeOrder.id,
+        clientOpId: saleClientOpId,
+        serverId: "",
+        syncStatus: "pending",
+        syncError: "",
         createdAt: Date.now(),
         items: orderSnapshot.items,
         total: totals.total,
@@ -4018,6 +4110,7 @@
         method: "POST",
         opType: "sale",
         body: {
+          clientOpId: saleClientOpId,
           orderId: activeOrder.id,
           customerName: saleRecord.customerName,
           subtotal: saleRecord.subtotal,
@@ -7198,11 +7291,28 @@
               <div className="list-stack">
                 ${dashboardMetrics.recentSales.length
                   ? dashboardMetrics.recentSales.map(function (sale) {
+                      var saleStatus = getSaleStatusMeta(sale);
+                      var statusColor = saleStatus.tone === "success"
+                        ? "#1f8a3a"
+                        : saleStatus.tone === "danger"
+                          ? "#bf4f39"
+                          : "#a86a18";
+                      var statusBg = saleStatus.tone === "success"
+                        ? "#e6f7ea"
+                        : saleStatus.tone === "danger"
+                          ? "#ffe8e1"
+                          : "#fff3d8";
                       return html`
                         <article key=${sale.id} className="list-row list-row-actions">
                           <div>
                             <strong>${sale.orderId || sale.id}</strong>
                             <p>${formatDateTime(sale.createdAt)} · ${formatCurrency(sale.total)} · ${L(getPaymentMethodLabel(sale.paymentMethod || sale.payment_method))}</p>
+                            <p>
+                              <span className="stock-badge" style=${{ background: statusBg, color: statusColor }}>
+                                ${L(saleStatus.label)}
+                              </span>
+                              ${sale.syncError ? html`<small style=${{ color: "#bf4f39", marginLeft: 8 }}>${sale.syncError}</small>` : null}
+                            </p>
                           </div>
                           <div className="row-actions">
                             <button className="ghost-btn" onClick=${function () { reprintSale(sale, false); }}>

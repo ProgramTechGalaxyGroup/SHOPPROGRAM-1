@@ -50,6 +50,9 @@ export const onRequestPost = async ({ env, request }) => {
   if (product.inventory_mode === "recipe") {
     return badRequest("recipe products do not keep direct stock");
   }
+  if (product.inventory_mode !== "stock") {
+    return badRequest("inventory mode required before converting stock");
+  }
 
   const available = Number(product.stock) || 0;
   if (!body.allowNegativeStock && available < productQty) {

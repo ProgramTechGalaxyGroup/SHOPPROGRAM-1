@@ -35,7 +35,7 @@ export const onRequestGet = async ({ env, request }) => {
     isActive: !!r.is_active,
     stock: Number(r.stock) || 0,
     unit: r.unit || "",
-    inventoryMode: r.inventory_mode || "stock",
+    inventoryMode: r.inventory_mode || "",
     skuCode: r.sku_code || r.id,
     updatedAt: Number(r.updated_at) || 0,
   }));
@@ -43,8 +43,8 @@ export const onRequestGet = async ({ env, request }) => {
 };
 
 // POST /api/products
-// Upsert (create or update). Body: { id?, name, category, price, costPrice?,
-//   barcode?, image?, description?, componentIds?, minStock?, clientOpId? }
+// Upsert (create or update). Body: { id?, name, category, inventoryMode, price,
+//   costPrice?, barcode?, image?, description?, componentIds?, minStock?, clientOpId? }
 export const onRequestPost = async ({ env, request }) => {
   await ensureProductsInventoryModeColumn(env.DB);
   const body = await readJson(request);
@@ -57,6 +57,10 @@ export const onRequestPost = async ({ env, request }) => {
 
   const id = body.id || ("p-" + Math.random().toString(36).slice(2, 10));
   const ts = now();
+  const inventoryMode = body.inventoryMode === "recipe" || body.inventoryMode === "stock"
+    ? body.inventoryMode
+    : "";
+  if (!inventoryMode) return badRequest("inventoryMode must be stock or recipe");
   const componentIds = Array.isArray(body.componentIds)
     ? JSON.stringify(body.componentIds)
     : "[]";
@@ -96,7 +100,7 @@ export const onRequestPost = async ({ env, request }) => {
       ts,
       body.unit || null,
       body.skuCode || id,
-      body.inventoryMode === "recipe" ? "recipe" : "stock"
+      inventoryMode
     ),
     // Ensure an inventory row exists even if 0.
     env.DB.prepare(

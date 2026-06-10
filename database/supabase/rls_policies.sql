@@ -27,7 +27,7 @@ alter table public.doc_sequences enable row level security;
 alter table public.components add column if not exists stock_qty integer not null default 0;
 alter table public.components add column if not exists min_stock integer not null default 0;
 alter table public.components add column if not exists is_active integer not null default 1;
-alter table public.products add column if not exists inventory_mode text not null default 'stock';
+alter table public.products add column if not exists inventory_mode text;
 
 grant usage on schema public to anon, authenticated;
 grant select on public.categories, public.add_ons, public.components, public.products, public.inventory, public.settings to anon, authenticated;

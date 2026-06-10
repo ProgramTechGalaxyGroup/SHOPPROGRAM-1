@@ -33,6 +33,9 @@ export const onRequestPost = async ({ env, request }) => {
   if (productMeta && productMeta.inventory_mode === "recipe") {
     return badRequest("recipe-based product stock is derived from components");
   }
+  if (!productMeta || productMeta.inventory_mode !== "stock") {
+    return badRequest("inventory mode required before adjusting direct stock");
+  }
 
   // Resolve target qty.
   let targetQty;

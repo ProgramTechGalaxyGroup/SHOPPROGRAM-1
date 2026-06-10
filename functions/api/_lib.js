@@ -222,7 +222,7 @@ export async function ensureProductsInventoryModeColumn(db) {
   const hasColumn = await columnExists(db, "products", "inventory_mode");
   if (!hasColumn) {
     await db.prepare(
-      `ALTER TABLE products ADD COLUMN inventory_mode TEXT NOT NULL DEFAULT 'stock'`
+      `ALTER TABLE products ADD COLUMN inventory_mode TEXT`
     ).run();
   }
 }

@@ -98,13 +98,13 @@
   repairKnownLocalPaymentIssues();
 
   // Bump this version to force a full re-sync for all clients when data structure changes
-  var CACHE_VERSION = 7;
+  var CACHE_VERSION = 8;
   if (window.localStorage && window.localStorage.getItem("shopflow-cache-version") !== String(CACHE_VERSION)) {
     window.localStorage.removeItem("shopflow-last-sync-at");
     window.localStorage.removeItem("shopflow-categories");
     window.localStorage.setItem("shopflow-cache-version", String(CACHE_VERSION));
   }
-  var APP_VERSION = "3.5.4";
+  var APP_VERSION = "3.5.5";
   var VAT_RATE = 0.08;
   var LANGUAGE_OPTIONS = [
     { id: "vi", label: "VI" },
@@ -1709,26 +1709,10 @@
     });
   }
 
-  function getCategoryCode(categoryId, categoryList) {
-    var category = (categoryList || []).find(function (item) { return item.id === categoryId; });
-    return parseInt((category && category.code) || "0", 10) || 0;
-  }
-
-  function isRecipeCategory(categoryId, categoryList) {
-    var code = getCategoryCode(categoryId, categoryList);
-    return code >= 10000 && code <= 50000;
-  }
-
-  function isRecipeProductId(productId) {
-    return /^ORIA(10|20|30|40|50)\d+$/i.test(String(productId || ""));
-  }
-
   function getEffectiveInventoryMode(product, categoryList) {
     if (product && product.inventoryMode === "recipe") return "recipe";
     if (product && product.inventoryMode === "stock") return "stock";
-    if (product && isRecipeProductId(product.id)) return "recipe";
-    if (isRecipeCategory(product && product.category, categoryList)) return "recipe";
-    return "stock";
+    return "";
   }
 
   function isRecipeTrackedProduct(product, categoryList) {
@@ -2187,7 +2171,7 @@
       idTouched: false,
       name: "",
       category: initialState.categories[0] ? initialState.categories[0].id : "",
-      inventoryMode: initialState.categories[0] && isRecipeCategory(initialState.categories[0].id, initialState.categories) ? "recipe" : "stock",
+      inventoryMode: "",
       inventoryModeTouched: false,
       price: 0,
       stock: 0,
@@ -2625,7 +2609,9 @@
                 image: row.image || prev.image || "🛒",
                 description: row.description || "",
                 componentIds: row.component_ids ? safeJsonParse(row.component_ids, []) : (prev.componentIds || []),
-                inventoryMode: row.inventory_mode || prev.inventoryMode || "stock",
+                inventoryMode: row.inventory_mode === "recipe" || row.inventory_mode === "stock"
+                  ? row.inventory_mode
+                  : (prev.inventoryMode === "recipe" || prev.inventoryMode === "stock" ? prev.inventoryMode : ""),
                 minStock: Number(row.min_stock) || 0,
                 unit: row.unit || prev.unit || "",
                 skuCode: row.sku_code || prev.skuCode || row.id
@@ -5382,9 +5368,6 @@
             if (!next.skuTouched) next.skuCode = suggestion;
           }
         }
-        if (field === "category" && !next.inventoryModeTouched) {
-          next.inventoryMode = isRecipeCategory(value, categories) ? "recipe" : "stock";
-        }
         if (field === "inventoryMode") next.inventoryModeTouched = true;
         // Đánh dấu user đã gõ tay customId → không auto override nữa
         if (field === "customId" && value) next.idTouched = true;
@@ -5434,7 +5417,7 @@
         idTouched: false,
         name: "",
         category: firstCat,
-        inventoryMode: isRecipeCategory(firstCat, categories) ? "recipe" : "stock",
+        inventoryMode: "",
         inventoryModeTouched: false,
         price: 0,
         stock: 0,
@@ -5907,7 +5890,7 @@
 
     function getConvertibleProducts() {
       return products.filter(function (product) {
-        return !product.isMixedDrink && (Number(product.rawStock != null ? product.rawStock : product.stock) || 0) > 0;
+        return product.inventoryMode === "stock" && (Number(product.rawStock != null ? product.rawStock : product.stock) || 0) > 0;
       });
     }
 
@@ -6066,6 +6049,13 @@
         window.alert(L("Nhập tên sản phẩm trước khi lưu. / Enter a product name before saving."));
         return;
       }
+      var selectedInventoryMode = productDraft.inventoryMode === "recipe" || productDraft.inventoryMode === "stock"
+        ? productDraft.inventoryMode
+        : "";
+      if (!selectedInventoryMode) {
+        window.alert(L("Chọn loại hàng trước khi lưu: Hàng bán lẻ hoặc Đồ pha chế. / Choose a product type before saving: Direct Stock or Recipe."));
+        return;
+      }
 
       // Validate any user-typed ID — both for new products AND when
       // editing existing (rename).
@@ -6136,9 +6126,9 @@
               ? Object.assign({}, product, {
                   name: productDraft.name,
                   category: productDraft.category,
-                  inventoryMode: productDraft.inventoryMode === "recipe" ? "recipe" : "stock",
+                  inventoryMode: selectedInventoryMode,
                   price: Number(productDraft.price) || 0,
-                  stock: productDraft.inventoryMode === "recipe" ? 0 : (Number(productDraft.stock) || 0),
+                  stock: selectedInventoryMode === "recipe" ? 0 : (Number(productDraft.stock) || 0),
                   barcode: getScannableBarcode(
                     productDraft.barcode || product.barcode,
                     [effectiveId, productDraft.name, productDraft.category].join("|")
@@ -6177,9 +6167,9 @@
           id: newId,
           name: productDraft.name,
           category: productDraft.category,
-          inventoryMode: productDraft.inventoryMode === "recipe" ? "recipe" : "stock",
+          inventoryMode: selectedInventoryMode,
           price: Number(productDraft.price) || 0,
-          stock: productDraft.inventoryMode === "recipe" ? 0 : (Number(productDraft.stock) || 0),
+          stock: selectedInventoryMode === "recipe" ? 0 : (Number(productDraft.stock) || 0),
           barcode: getScannableBarcode(
             productDraft.barcode,
             [newId, productDraft.name, productDraft.category, productDraft.price, productDraft.stock, Date.now()].join("|")
@@ -6208,14 +6198,14 @@
       //   • Creating new → typed or auto
       var productId = effectiveId
         || (typeof newProduct !== "undefined" ? newProduct.id : ("p-" + Math.random().toString(36).slice(2, 10)));
-      var newStockValue = productDraft.inventoryMode === "recipe" ? 0 : Math.max(0, Number(productDraft.stock) || 0);
+      var newStockValue = selectedInventoryMode === "recipe" ? 0 : Math.max(0, Number(productDraft.stock) || 0);
       var oldStockValue = saved ? Number(saved.rawStock != null ? saved.rawStock : saved.stock) || 0 : 0;
 
       var payload = {
         id: productId,
         name: productDraft.name,
         category: productDraft.category,
-        inventoryMode: productDraft.inventoryMode === "recipe" ? "recipe" : "stock",
+        inventoryMode: selectedInventoryMode,
         price: Number(productDraft.price) || 0,
         barcode: productDraft.barcode || "",
         image: productDraft.image || "🍊",
@@ -6320,7 +6310,7 @@
     // the user is offline + F5s, the edit reaches D1 on next online session.
     function updateProductStock(productId, nextStock) {
       var targetProduct = products.find(function (product) { return product.id === productId; });
-      if (targetProduct && targetProduct.isMixedDrink) {
+      if (targetProduct && targetProduct.inventoryMode !== "stock") {
         return;
       }
       var target = Math.max(0, Math.floor(Number(nextStock) || 0));
@@ -7546,14 +7536,14 @@
                                   <p>${category ? L(category.label) : product.category} · ${product.barcode}</p>
                                 </div>
                                 <div className="row-actions stock-editor">
-                                  ${product.isMixedDrink ? html`<span className="stock-badge" title="Tồn ảo / Virtual stock" style=${{ background: "#f0f0f0", color: "#555" }}>${product.stock}</span>` : html`<${LocalNumberInput}
+                                  ${product.inventoryMode === "recipe" ? html`<span className="stock-badge" title="Tồn ảo / Virtual stock" style=${{ background: "#f0f0f0", color: "#555" }}>${product.stock}</span>` : product.inventoryMode === "stock" ? html`<${LocalNumberInput}
                                     min="0"
                                     value=${product.stock}
                                     onChange=${function (val) {
                                       updateProductStock(product.id, val);
                                     }}
                                     onBlur=${function () { flushPendingStockEdit(product.id); }}
-                                  />`}
+                                  />` : html`<span className="stock-badge" style=${{ background: "#fff3d8", color: "#a86a18" }}>${L("Chưa chọn loại / Unclassified")}</span>`}
                                   <button className="ghost-btn" onClick=${function () { startEditProduct(product); }}>${L("Sửa / Edit")}</button>
                                 </div>
                               </article>
@@ -7638,7 +7628,11 @@
                               <strong>${product.image} ${product.name}</strong>
                               <p>
                                 ${product.barcode} · ${category ? L(category.label) : product.category}
-                                ${product.isMixedDrink ? " · " + L("Pha chế / Recipe-based") : ""}
+                                ${product.inventoryMode === "recipe"
+                                  ? " · " + L("Pha chế / Recipe-based")
+                                  : product.inventoryMode === "stock"
+                                    ? " · " + L("Bán lẻ / Direct Stock")
+                                    : " · " + L("Chưa chọn loại / Unclassified")}
                               </p>
                               <div className="barcode-inline-card">
                                 <${BarcodeGraphic}
@@ -7653,7 +7647,7 @@
                               </div>
                             </div>
                             <div className="row-actions">
-                              <span className="stock-badge" title=${product.isMixedDrink ? L("Tồn ảo tính theo nguyên liệu / Virtual stock based on ingredients") : ""}>${product.stock}</span>
+                              <span className="stock-badge" title=${product.inventoryMode === "recipe" ? L("Tồn ảo tính theo nguyên liệu / Virtual stock based on ingredients") : ""}>${product.stock}</span>
                               <label className="label-qty-field">
                                 <span>${L("Số tem / Qty")}</span>
                                 <input
@@ -7967,7 +7961,7 @@
                     <div className="toggle-grid" style=${{ marginBottom: 12 }}>
                       <button
                         type="button"
-                        className=${"ghost-btn" + (productDraft.inventoryMode !== "recipe" ? " active-toggle" : "")}
+                        className=${"ghost-btn" + (productDraft.inventoryMode === "stock" ? " active-toggle" : "")}
                         onClick=${function () { updateProductDraft("inventoryMode", "stock"); }}
                       >
                         ${L("Hàng bán lẻ / Direct Stock")}
@@ -7998,14 +7992,16 @@
                         <input
                           type="number"
                           min="0"
-                          disabled=${productDraft.inventoryMode === "recipe"}
+                          disabled=${productDraft.inventoryMode !== "stock"}
                           value=${productDraft.inventoryMode === "recipe" ? 0 : productDraft.stock}
                           onInput=${function (event) { updateProductDraft("stock", event.target.value); }}
                         />
                         <small>
                           ${productDraft.inventoryMode === "recipe"
                             ? L("Món pha chế không có tồn kho riêng; tồn được tính từ thành phần bên dưới. / Prepared items do not keep direct stock; stock is derived from recipe ingredients below.")
-                            : L("Số tồn hiện tại; thường để hệ thống cập nhật qua Nhập/Xuất. / Usually updated via Stock-In/Out.")}
+                            : productDraft.inventoryMode === "stock"
+                              ? L("Số tồn hiện tại; thường để hệ thống cập nhật qua Nhập/Xuất. / Usually updated via Stock-In/Out.")
+                              : L("Chọn loại hàng trước: Hàng bán lẻ mới nhập tồn trực tiếp. / Choose a product type first; only Direct Stock keeps on-hand inventory.")}
                         </small>
                       </label>
                       <label className="field">
@@ -8694,9 +8690,9 @@
                       });
                     }
                     var matched = products.filter(function (p) {
-                      return !p.isMixedDrink && productMatchesQuery(p, nq);
+                      return p.inventoryMode === "stock" && productMatchesQuery(p, nq);
                     }).slice(0, 20);
-                    if (!matched.length) return html`<p style=${{ color: "#7b6b5d", padding: "8px" }}>${L("Không tìm thấy sản phẩm. / No products found.")}</p>`;
+                    if (!matched.length) return html`<p style=${{ color: "#7b6b5d", padding: "8px" }}>${L("Không tìm thấy hàng bán lẻ. Nếu sản phẩm có tồn thật, hãy vào Sửa sản phẩm và chọn Hàng bán lẻ. / No direct-stock product found. If this item keeps real stock, edit it and choose Direct Stock.")}</p>`;
                     return matched.map(function (p) {
                       return html`
                         <button

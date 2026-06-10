@@ -176,7 +176,7 @@ alter table public.doc_sequences enable row level security;
 alter table public.components add column if not exists stock_qty integer not null default 0;
 alter table public.components add column if not exists min_stock integer not null default 0;
 alter table public.components add column if not exists is_active integer not null default 1;
-alter table public.products add column if not exists inventory_mode text not null default 'stock';
+alter table public.products add column if not exists inventory_mode text;
 
 grant usage on schema public to anon, authenticated;
 grant select on public.categories, public.add_ons, public.components, public.products, public.inventory, public.settings to anon, authenticated;
@@ -341,7 +341,7 @@ create table if not exists products (
   image text,
   description text,
   component_ids text,
-  inventory_mode text not null default 'stock',
+  inventory_mode text,
   min_stock integer not null default 0,
   is_active integer not null default 1,
   updated_at bigint not null,
@@ -536,7 +536,7 @@ function readProducts() {
         image: CATEGORY_ICON_MAP[row.category_id] || "🛒",
         description: row.description || null,
         component_ids: "[]",
-        inventory_mode: row.inventory_mode || "stock",
+        inventory_mode: row.inventory_mode || null,
         min_stock: Number(row.min_stock) || 0,
         is_active: 1,
         updated_at: NOW,

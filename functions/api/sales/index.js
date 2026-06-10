@@ -79,15 +79,14 @@ export const onRequestPost = async ({ env, request }) => {
   }
 
   // -------- B1: Server-side stock guard & BOM Expansion --------
-  // Expand mixed drinks (category code 10000-50000) into their components.
+  // Expand explicitly-marked recipe products into their components.
   const productIds = [...new Set(body.items.map((it) => it.productId).filter(Boolean))];
   let productInfoMap = new Map();
   if (productIds.length > 0) {
     const placeholders = productIds.map(() => "?").join(",");
     const sql = `
-      SELECT p.id, p.component_ids, p.inventory_mode, c.code as category_code
+      SELECT p.id, p.component_ids, p.inventory_mode
       FROM products p
-      LEFT JOIN categories c ON p.category_id = c.id
       WHERE p.id IN (${placeholders})
     `;
     const { results } = await env.DB.prepare(sql).bind(...productIds).all();
@@ -112,11 +111,8 @@ export const onRequestPost = async ({ env, request }) => {
       isMixedDrink = true;
     } else if (info && info.inventory_mode === "stock") {
       isMixedDrink = false;
-    } else if (info && info.category_code) {
-      const codeNum = parseInt(info.category_code, 10);
-      if (codeNum >= 10000 && codeNum <= 50000) {
-        isMixedDrink = true;
-      }
+    } else if (info) {
+      return badRequest(`inventory mode required for product: ${it.productId}`);
     }
 
     if (isMixedDrink) {

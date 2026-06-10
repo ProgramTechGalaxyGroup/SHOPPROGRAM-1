@@ -206,6 +206,9 @@ export const onRequestPost = async ({ env, request }) => {
     if (state.inventory_mode === "recipe") {
       return badRequest(`recipe product stock is derived from components: ${itemRows[i].productId}`);
     }
+    if (state.inventory_mode !== "stock") {
+      return badRequest(`inventory mode required for product: ${itemRows[i].productId}`);
+    }
   }
 
   const stmts = [];

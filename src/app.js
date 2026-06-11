@@ -98,13 +98,13 @@
   repairKnownLocalPaymentIssues();
 
   // Bump this version to force a full re-sync for all clients when data structure changes
-  var CACHE_VERSION = 8;
+  var CACHE_VERSION = 9;
   if (window.localStorage && window.localStorage.getItem("shopflow-cache-version") !== String(CACHE_VERSION)) {
     window.localStorage.removeItem("shopflow-last-sync-at");
     window.localStorage.removeItem("shopflow-categories");
     window.localStorage.setItem("shopflow-cache-version", String(CACHE_VERSION));
   }
-  var APP_VERSION = "3.5.5";
+  var APP_VERSION = "3.6.0";
   var VAT_RATE = 0.08;
   var LANGUAGE_OPTIONS = [
     { id: "vi", label: "VI" },
@@ -118,6 +118,12 @@
     { value: "ewallet", label: "Ví điện tử / E-wallet" }
   ];
   var PAYMENT_METHOD_OTHER = { value: "other", label: "Khác / Other" };
+  var COMPONENT_ITEM_TYPE_OPTIONS = [
+    { value: "raw_material", label: "Nguyên liệu thô / Raw Material" },
+    { value: "semi_finished", label: "Bán thành phẩm / Semi-finished" },
+    { value: "packaging", label: "Bao bì / Packaging" },
+    { value: "retail_product", label: "Hàng bán lẻ / Retail Product" }
+  ];
 
   function stripVietnameseAccents(value) {
     return String(value || "")
@@ -180,6 +186,19 @@
 
   function isCashPaymentMethod(value) {
     return normalizePaymentMethod(value) === "cash";
+  }
+
+  function normalizeComponentItemType(value) {
+    var type = String(value || "raw_material").trim();
+    return COMPONENT_ITEM_TYPE_OPTIONS.some(function (option) { return option.value === type; })
+      ? type
+      : "raw_material";
+  }
+
+  function getComponentItemTypeLabel(value) {
+    var type = normalizeComponentItemType(value);
+    var option = COMPONENT_ITEM_TYPE_OPTIONS.find(function (item) { return item.value === type; });
+    return option ? option.label : COMPONENT_ITEM_TYPE_OPTIONS[0].label;
   }
 
   var FILTER_ALL_CATEGORY = { id: "all", label: "Tất cả / All", icon: "🛒" };
@@ -1631,6 +1650,8 @@
       addOns: Array.isArray(safeStored.addOns) && safeStored.addOns.length ? safeStored.addOns : clone(DEFAULT_ADD_ON_OPTIONS),
       components: Array.isArray(safeStored.components) && safeStored.components.length ? safeStored.components.map(normalizeComponent) : clone(DEFAULT_COMPONENT_OPTIONS).map(normalizeComponent),
       products: Array.isArray(safeStored.products) && safeStored.products.length ? safeStored.products.map(normalizeProduct) : clone(DEFAULT_PRODUCTS).map(normalizeProduct),
+      productionRecipes: Array.isArray(safeStored.productionRecipes) ? safeStored.productionRecipes.map(normalizeProductionRecipe) : [],
+      productionBatches: Array.isArray(safeStored.productionBatches) ? safeStored.productionBatches.map(normalizeProductionBatch) : [],
       sales: Array.isArray(safeStored.sales) ? safeStored.sales.map(normalizeSaleRecord) : [],
       orders: normalizedOrders,
       activeOrderId: safeStored.activeOrderId || null,
@@ -1668,6 +1689,8 @@
       addOns: clone(DEFAULT_ADD_ON_OPTIONS),
       components: clone(DEFAULT_COMPONENT_OPTIONS).map(normalizeComponent),
       products: clone(DEFAULT_PRODUCTS).map(normalizeProduct),
+      productionRecipes: [],
+      productionBatches: [],
       sales: [],
       orders: [firstOrder],
       activeOrderId: firstOrder.id,
@@ -1705,8 +1728,63 @@
     return Object.assign({}, baseComponent, {
       stockQty: Math.max(0, Number(baseComponent.stockQty != null ? baseComponent.stockQty : baseComponent.stock_qty) || 0),
       minStock: Math.max(0, Number(baseComponent.minStock != null ? baseComponent.minStock : baseComponent.min_stock) || 0),
+      itemType: normalizeComponentItemType(baseComponent.itemType || baseComponent.item_type),
+      costPerUnit: Math.max(0, Math.round(Number(baseComponent.costPerUnit != null ? baseComponent.costPerUnit : baseComponent.cost_per_unit) || 0)),
       active: baseComponent.active !== false && baseComponent.is_active !== 0
     });
+  }
+
+  function safeInputsArray(value) {
+    if (Array.isArray(value)) return value;
+    if (typeof value === "string") {
+      try {
+        var parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        return [];
+      }
+    }
+    return [];
+  }
+
+  function normalizeProductionRecipe(recipe) {
+    var base = recipe || {};
+    return {
+      id: base.id || "",
+      name: base.name || "",
+      outputComponentId: base.outputComponentId || base.output_component_id || "",
+      outputLabel: base.outputLabel || base.output_label || "",
+      plannedOutputQty: Math.max(0, Number(base.plannedOutputQty != null ? base.plannedOutputQty : base.planned_output_qty) || 0),
+      outputUnit: base.outputUnit || base.output_unit || "",
+      inputs: safeInputsArray(base.inputs || base.inputs_json).map(function (item) {
+        return {
+          componentId: item.componentId || item.component_id || "",
+          qty: Math.max(0, Number(item.qty) || 0),
+          unit: item.unit || ""
+        };
+      }).filter(function (item) { return item.componentId; }),
+      note: base.note || "",
+      isActive: base.isActive !== false && base.is_active !== 0,
+      updatedAt: Number(base.updatedAt != null ? base.updatedAt : base.updated_at) || 0
+    };
+  }
+
+  function normalizeProductionBatch(batch) {
+    var base = batch || {};
+    return {
+      id: base.id || "",
+      recipeId: base.recipeId || base.recipe_id || "",
+      recipeName: base.recipeName || base.recipe_name || "",
+      outputComponentId: base.outputComponentId || base.output_component_id || "",
+      outputLabel: base.outputLabel || base.output_label || "",
+      plannedOutputQty: Math.max(0, Number(base.plannedOutputQty != null ? base.plannedOutputQty : base.planned_output_qty) || 0),
+      actualOutputQty: Math.max(0, Number(base.actualOutputQty != null ? base.actualOutputQty : base.actual_output_qty) || 0),
+      outputUnit: base.outputUnit || base.output_unit || "",
+      totalInputCost: Math.max(0, Number(base.totalInputCost != null ? base.totalInputCost : base.total_input_cost) || 0),
+      actualCostPerUnit: Math.max(0, Number(base.actualCostPerUnit != null ? base.actualCostPerUnit : base.actual_cost_per_unit) || 0),
+      note: base.note || "",
+      createdAt: Number(base.createdAt != null ? base.createdAt : base.created_at) || 0
+    };
   }
 
   function getEffectiveInventoryMode(product, categoryList) {
@@ -2068,6 +2146,8 @@
     var [categories, setCategories] = useState(initialState.categories);
     var [addOns, setAddOns] = useState(initialState.addOns);
     var [components, setComponents] = useState(initialState.components);
+    var [productionRecipes, setProductionRecipes] = useState(initialState.productionRecipes || []);
+    var [productionBatches, setProductionBatches] = useState(initialState.productionBatches || []);
     var [rawProducts, setProducts] = useState(initialState.products);
     var products = useMemo(function () {
       return rawProducts.map(function(product) {
@@ -2202,9 +2282,27 @@
       labelEn: "",
       unit: "",
       note: "",
+      itemType: "raw_material",
+      costPerUnit: 0,
       stockQty: 0,
       minStock: 0
     });
+    var [productionRecipeDraft, setProductionRecipeDraft] = useState({
+      id: null,
+      name: "",
+      outputComponentId: "",
+      plannedOutputQty: 0,
+      outputUnit: "",
+      inputs: [],
+      note: "",
+      isActive: true
+    });
+    var [productionBatchDraft, setProductionBatchDraft] = useState({
+      recipeId: "",
+      actualOutputQty: "",
+      note: ""
+    });
+    var [lastProductionResult, setLastProductionResult] = useState(null);
     var [conversionDraft, setConversionDraft] = useState({
       productId: "",
       productQty: 1,
@@ -2246,6 +2344,8 @@
         categories: categories,
         addOns: addOns,
         components: components,
+        productionRecipes: productionRecipes,
+        productionBatches: productionBatches,
         products: products,
         sales: sales,
         orders: orders,
@@ -2266,6 +2366,8 @@
       setCategories(hydrated.categories);
       setAddOns(hydrated.addOns);
       setComponents(hydrated.components);
+      setProductionRecipes(hydrated.productionRecipes || []);
+      setProductionBatches(hydrated.productionBatches || []);
       setProducts(hydrated.products);
       setSales(hydrated.sales);
       setOrders(hydrated.orders);
@@ -2370,6 +2472,8 @@
       categories,
       addOns,
       components,
+      productionRecipes,
+      productionBatches,
       products,
       sales,
       orders,
@@ -2675,11 +2779,39 @@
                 note: row.note || "",
                 stockQty: Number(row.stock_qty) || 0,
                 minStock: Number(row.min_stock) || 0,
+                itemType: row.item_type || "raw_material",
+                costPerUnit: Number(row.cost_per_unit) || 0,
                 active: row.is_active !== 0
               }));
             });
             var result = Object.keys(byId).map(function (id) { return byId[id]; });
             return result.length ? result : current;
+          });
+        }
+        if (Array.isArray(data.productionRecipes) && data.productionRecipes.length) {
+          var isProductionRecipeFullSnapshot = !data.since;
+          setProductionRecipes(function (current) {
+            var byId = {};
+            if (!isProductionRecipeFullSnapshot) {
+              current.forEach(function (recipe) { byId[recipe.id] = recipe; });
+            }
+            data.productionRecipes.forEach(function (row) {
+              if (row.is_active === 0) { delete byId[row.id]; return; }
+              byId[row.id] = normalizeProductionRecipe(row);
+            });
+            return Object.keys(byId).map(function (id) { return byId[id]; });
+          });
+        }
+        if (Array.isArray(data.productionBatches) && data.productionBatches.length) {
+          setProductionBatches(function (current) {
+            var byId = {};
+            current.forEach(function (batch) { byId[batch.id] = batch; });
+            data.productionBatches.forEach(function (row) {
+              byId[row.id] = normalizeProductionBatch(row);
+            });
+            return Object.keys(byId).map(function (id) { return byId[id]; }).sort(function (a, b) {
+              return (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0);
+            });
           });
         }
 
@@ -3301,6 +3433,7 @@
       { id: "issues", label: "Xuất hàng / Stock Out" },
       { id: "warehouse", label: "Lưu kho / Warehouse" },
       { id: "convert", label: "Chuyển thành phần / Convert Stock" },
+      { id: "production", label: "Sơ chế / Production" },
       { id: "product", label: "Thêm sản phẩm / Add Product" },
       { id: "catalog", label: "Điều chỉnh danh mục / Catalog Adjustments" }
     ];
@@ -4629,9 +4762,9 @@
           return {
             ingredient_id: component.id,
             ingredient_name: L(component.label),
-            category: "ingredient",
+            category: component.itemType || "raw_material",
             unit: component.unit || "",
-            cost_per_unit: 0,
+            cost_per_unit: Number(component.costPerUnit) || 0,
             stock_qty: Number(component.stockQty) || 0,
             min_stock: Number(component.minStock) || 0,
             supplier_id: "",
@@ -5731,6 +5864,8 @@
         labelEn: "",
         unit: "",
         note: "",
+        itemType: "raw_material",
+        costPerUnit: 0,
         stockQty: 0,
         minStock: 0
       });
@@ -5744,6 +5879,8 @@
         labelEn: labelParts.en,
         unit: component.unit || "",
         note: component.note || "",
+        itemType: normalizeComponentItemType(component.itemType),
+        costPerUnit: Number(component.costPerUnit) || 0,
         stockQty: Number(component.stockQty) || 0,
         minStock: Number(component.minStock) || 0
       });
@@ -5768,6 +5905,8 @@
                   label: label,
                   unit: componentDraft.unit,
                   note: componentDraft.note,
+                  itemType: normalizeComponentItemType(componentDraft.itemType),
+                  costPerUnit: Math.max(0, Math.round(Number(componentDraft.costPerUnit) || 0)),
                   stockQty: Math.max(0, Number(componentDraft.stockQty) || 0),
                   minStock: Math.max(0, Number(componentDraft.minStock) || 0),
                   active: true
@@ -5789,6 +5928,8 @@
             label: label,
             unit: componentDraft.unit,
             note: componentDraft.note,
+            itemType: normalizeComponentItemType(componentDraft.itemType),
+            costPerUnit: Math.max(0, Math.round(Number(componentDraft.costPerUnit) || 0)),
             stockQty: Math.max(0, Number(componentDraft.stockQty) || 0),
             minStock: Math.max(0, Number(componentDraft.minStock) || 0),
             active: true
@@ -5804,6 +5945,8 @@
             label: label,
             unit: componentDraft.unit || "",
             note: componentDraft.note || "",
+            itemType: normalizeComponentItemType(componentDraft.itemType),
+            costPerUnit: Math.max(0, Math.round(Number(componentDraft.costPerUnit) || 0)),
             stockQty: Math.max(0, Number(componentDraft.stockQty) || 0),
             minStock: Math.max(0, Number(componentDraft.minStock) || 0)
           }
@@ -5821,6 +5964,8 @@
           label: label,
           unit: componentDraft.unit || "",
           note: componentDraft.note || "",
+          itemType: normalizeComponentItemType(componentDraft.itemType),
+          costPerUnit: Math.max(0, Math.round(Number(componentDraft.costPerUnit) || 0)),
           stockQty: Math.max(0, Number(componentDraft.stockQty) || 0),
           minStock: Math.max(0, Number(componentDraft.minStock) || 0)
         }
@@ -5871,6 +6016,219 @@
         method: "DELETE",
         opType: "component",
         body: { id: componentId }
+      });
+    }
+
+    function resetProductionRecipeDraft() {
+      setProductionRecipeDraft({
+        id: null,
+        name: "",
+        outputComponentId: "",
+        plannedOutputQty: 0,
+        outputUnit: "",
+        inputs: [],
+        note: "",
+        isActive: true
+      });
+    }
+
+    function updateProductionRecipeDraft(field, value) {
+      setProductionRecipeDraft(function (currentDraft) {
+        var next = Object.assign({}, currentDraft, { [field]: value });
+        if (field === "outputComponentId") {
+          var output = components.find(function (component) { return component.id === value; });
+          next.outputUnit = output ? output.unit || "" : "";
+        }
+        return next;
+      });
+    }
+
+    function addProductionRecipeInput() {
+      var firstInput = components.find(function (component) {
+        return component.id !== productionRecipeDraft.outputComponentId;
+      });
+      if (!firstInput) {
+        window.alert(L("Cần có ít nhất một thành phần input. / Add at least one input component first."));
+        return;
+      }
+      setProductionRecipeDraft(function (currentDraft) {
+        return Object.assign({}, currentDraft, {
+          inputs: (currentDraft.inputs || []).concat([{
+            componentId: firstInput.id,
+            qty: 1,
+            unit: firstInput.unit || ""
+          }])
+        });
+      });
+    }
+
+    function updateProductionRecipeInput(index, field, value) {
+      setProductionRecipeDraft(function (currentDraft) {
+        var inputs = (currentDraft.inputs || []).map(function (input, currentIndex) {
+          if (currentIndex !== index) return input;
+          var nextInput = Object.assign({}, input, { [field]: field === "qty" ? Number(value) || 0 : value });
+          if (field === "componentId") {
+            var component = components.find(function (item) { return item.id === value; });
+            nextInput.unit = component ? component.unit || "" : "";
+          }
+          return nextInput;
+        });
+        return Object.assign({}, currentDraft, { inputs: inputs });
+      });
+    }
+
+    function removeProductionRecipeInput(index) {
+      setProductionRecipeDraft(function (currentDraft) {
+        return Object.assign({}, currentDraft, {
+          inputs: (currentDraft.inputs || []).filter(function (_, currentIndex) { return currentIndex !== index; })
+        });
+      });
+    }
+
+    function startEditProductionRecipe(recipe) {
+      setProductionRecipeDraft(normalizeProductionRecipe(recipe));
+      setInventorySection("production");
+    }
+
+    function submitProductionRecipe(event) {
+      event.preventDefault();
+      var output = components.find(function (component) { return component.id === productionRecipeDraft.outputComponentId; });
+      if (!productionRecipeDraft.name.trim()) {
+        window.alert(L("Nhập tên công thức sơ chế. / Enter a production recipe name."));
+        return;
+      }
+      if (!output || output.itemType !== "semi_finished") {
+        window.alert(L("Output phải là thành phần loại Bán thành phẩm. / Output must be a Semi-finished component."));
+        return;
+      }
+      if (!(Number(productionRecipeDraft.plannedOutputQty) > 0)) {
+        window.alert(L("Sản lượng dự kiến phải lớn hơn 0. / Planned output must be greater than 0."));
+        return;
+      }
+      if (!(productionRecipeDraft.inputs || []).length) {
+        window.alert(L("Thêm ít nhất một input. / Add at least one input."));
+        return;
+      }
+      var payload = {
+        id: productionRecipeDraft.id || undefined,
+        name: productionRecipeDraft.name.trim(),
+        outputComponentId: output.id,
+        plannedOutputQty: Number(productionRecipeDraft.plannedOutputQty) || 0,
+        outputUnit: output.unit || productionRecipeDraft.outputUnit || "",
+        inputs: (productionRecipeDraft.inputs || []).map(function (input) {
+          var component = components.find(function (item) { return item.id === input.componentId; });
+          return {
+            componentId: input.componentId,
+            qty: Number(input.qty) || 0,
+            unit: component ? component.unit || "" : input.unit || ""
+          };
+        }),
+        note: productionRecipeDraft.note || "",
+        isActive: productionRecipeDraft.isActive !== false
+      };
+      fetch("/api/production-recipes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }).then(function (res) {
+        return res.json().then(function (data) {
+          if (!res.ok || !data.ok) throw new Error(data.error || "Cannot save production recipe");
+          var saved = normalizeProductionRecipe(Object.assign({}, payload, { id: data.id, updatedAt: Date.now() }));
+          setProductionRecipes(function (current) {
+            var exists = current.some(function (recipe) { return recipe.id === saved.id; });
+            return exists
+              ? current.map(function (recipe) { return recipe.id === saved.id ? saved : recipe; })
+              : current.concat([saved]);
+          });
+          resetProductionRecipeDraft();
+          pushToast("success", L("Đã lưu công thức sơ chế. / Production recipe saved."));
+        });
+      }).catch(function (error) {
+        window.alert(error && error.message ? error.message : L("Không thể lưu công thức. / Cannot save recipe."));
+      });
+    }
+
+    function removeProductionRecipe(recipeId) {
+      if (!window.confirm(L("Ẩn công thức sơ chế này? / Deactivate this production recipe?"))) return;
+      fetch("/api/production-recipes", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: recipeId })
+      }).then(function () {
+        setProductionRecipes(function (current) {
+          return current.filter(function (recipe) { return recipe.id !== recipeId; });
+        });
+      });
+    }
+
+    function updateProductionBatchDraft(field, value) {
+      setProductionBatchDraft(function (currentDraft) {
+        var next = Object.assign({}, currentDraft, { [field]: value });
+        if (field === "recipeId") {
+          var recipe = productionRecipes.find(function (item) { return item.id === value; });
+          next.actualOutputQty = recipe ? recipe.plannedOutputQty : "";
+        }
+        return next;
+      });
+    }
+
+    function submitProductionBatch(event) {
+      event.preventDefault();
+      var recipe = productionRecipes.find(function (item) { return item.id === productionBatchDraft.recipeId; });
+      if (!recipe) {
+        window.alert(L("Chọn công thức sơ chế trước. / Select a production recipe first."));
+        return;
+      }
+      var actualOutputQty = Number(productionBatchDraft.actualOutputQty) || 0;
+      if (actualOutputQty <= 0) {
+        window.alert(L("Sản lượng thực tế phải lớn hơn 0. / Actual output must be greater than 0."));
+        return;
+      }
+      fetch("/api/production-batches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productionRecipeId: recipe.id,
+          actualOutputQuantity: actualOutputQty,
+          note: productionBatchDraft.note || "",
+          clientOpId: uid("op")
+        })
+      }).then(function (res) {
+        return res.json().then(function (data) {
+          if (!res.ok || !data.ok) throw new Error(data.error || "Cannot produce batch");
+          var outputComponentId = data.outputComponentId;
+          var deducted = data.deductedInputs || [];
+          setComponents(function (current) {
+            return current.map(function (component) {
+              var input = deducted.find(function (item) { return item.componentId === component.id; });
+              if (input) {
+                return Object.assign({}, component, {
+                  stockQty: Math.max(0, (Number(component.stockQty) || 0) - (Number(input.qty) || 0))
+                });
+              }
+              if (component.id === outputComponentId) {
+                return Object.assign({}, component, {
+                  stockQty: (Number(component.stockQty) || 0) + actualOutputQty,
+                  costPerUnit: Number(data.actualCostPerUnit) || Number(component.costPerUnit) || 0
+                });
+              }
+              return component;
+            });
+          });
+          var outputComponentForBatch = components.find(function (item) { return item.id === outputComponentId; });
+          var batch = normalizeProductionBatch(Object.assign({}, data, {
+            recipeId: recipe.id,
+            recipeName: recipe.name,
+            outputLabel: outputComponentForBatch ? outputComponentForBatch.label : outputComponentId,
+            createdAt: Date.now()
+          }));
+          setProductionBatches(function (current) { return [batch].concat(current).slice(0, 100); });
+          setLastProductionResult(data);
+          setProductionBatchDraft({ recipeId: recipe.id, actualOutputQty: recipe.plannedOutputQty, note: "" });
+          pushToast("success", L("Đã tạo mẻ sơ chế. / Production batch completed."));
+        });
+      }).catch(function (error) {
+        window.alert(error && error.message ? error.message : L("Không thể tạo mẻ sơ chế. / Cannot produce batch."));
       });
     }
 
@@ -7464,6 +7822,12 @@
         ? (Number(conversionProduct.rawStock != null ? conversionProduct.rawStock : conversionProduct.stock) || 0)
         : 0;
       var conversionComponentStock = conversionComponent ? (Number(conversionComponent.stockQty) || 0) : 0;
+      var semiFinishedComponents = components.filter(function (component) {
+        return component.itemType === "semi_finished";
+      });
+      var selectedProductionRecipe = productionRecipes.find(function (recipe) {
+        return recipe.id === productionBatchDraft.recipeId;
+      }) || null;
 
       return html`
         <section className="settings-layout">
@@ -7858,6 +8222,200 @@
               </div>
             ` : null}
 
+            ${inventorySection === "production" ? html`
+              <div className="stack-view">
+                <div className="split-grid">
+                  <section className="surface section-card form-card">
+                    <div className="section-top">
+                      <div>
+                        <p className="eyebrow">${L("Công thức sơ chế / Production Recipes")}</p>
+                        <h2 className="section-title">${productionRecipeDraft.id ? L("Sửa công thức sơ chế / Edit Prep Recipe") : L("Tạo công thức sơ chế / Create Prep Recipe")}</h2>
+                      </div>
+                      ${productionRecipeDraft.id ? html`<button type="button" className="ghost-btn" onClick=${resetProductionRecipeDraft}>${L("Hủy / Cancel")}</button>` : null}
+                    </div>
+                    <form className="form-card" onSubmit=${submitProductionRecipe}>
+                      <div className="field-grid">
+                        <label className="field">
+                          <span>${L("Tên công thức / Recipe Name")}</span>
+                          <input value=${productionRecipeDraft.name} onInput=${function (event) { updateProductionRecipeDraft("name", event.target.value); }} placeholder="Sugar Syrup" />
+                        </label>
+                        <label className="field">
+                          <span>${L("Output bán thành phẩm / Semi-finished Output")}</span>
+                          <select value=${productionRecipeDraft.outputComponentId} onChange=${function (event) { updateProductionRecipeDraft("outputComponentId", event.target.value); }}>
+                            <option value="">${L("Chọn output / Select output")}</option>
+                            ${semiFinishedComponents.map(function (component) {
+                              return html`<option key=${component.id} value=${component.id}>${L(component.label)} · ${component.unit || ""}</option>`;
+                            })}
+                          </select>
+                          <small>${L("Output phải được đánh dấu là Bán thành phẩm trong Thành phần. / Output must be marked Semi-finished in Components.")}</small>
+                        </label>
+                        <label className="field">
+                          <span>${L("Sản lượng dự kiến / Planned Output")}</span>
+                          <input type="number" min="0" step="0.1" value=${productionRecipeDraft.plannedOutputQty} onInput=${function (event) { updateProductionRecipeDraft("plannedOutputQty", event.target.value); }} />
+                        </label>
+                        <label className="field">
+                          <span>${L("Đơn vị output / Output Unit")}</span>
+                          <input value=${productionRecipeDraft.outputUnit} readOnly />
+                        </label>
+                      </div>
+
+                      <div className="section-top" style=${{ marginTop: 8 }}>
+                        <div>
+                          <p className="eyebrow">${L("Inputs / Inputs")}</p>
+                          <h3 className="template-preview-title">${L("Nguyên liệu đầu vào / Input Items")}</h3>
+                        </div>
+                        <button type="button" className="ghost-btn" onClick=${addProductionRecipeInput}>+ ${L("Thêm input / Add Input")}</button>
+                      </div>
+
+                      <div className="list-stack">
+                        ${(productionRecipeDraft.inputs || []).length ? productionRecipeDraft.inputs.map(function (input, index) {
+                          var inputComponent = components.find(function (component) { return component.id === input.componentId; });
+                          return html`
+                            <article key=${index} className="list-row list-row-actions" style=${{ flexWrap: "wrap" }}>
+                              <label className="field" style=${{ flex: "2 1 220px", margin: 0 }}>
+                                <span>${L("Thành phần / Component")}</span>
+                                <select value=${input.componentId} onChange=${function (event) { updateProductionRecipeInput(index, "componentId", event.target.value); }}>
+                                  ${components.filter(function (component) {
+                                    return component.id !== productionRecipeDraft.outputComponentId;
+                                  }).map(function (component) {
+                                    return html`<option key=${component.id} value=${component.id}>${L(component.label)} · ${L(getComponentItemTypeLabel(component.itemType))}</option>`;
+                                  })}
+                                </select>
+                              </label>
+                              <label className="field" style=${{ width: 120, margin: 0 }}>
+                                <span>${L("SL / Qty")}</span>
+                                <input type="number" min="0" step="0.1" value=${input.qty} onInput=${function (event) { updateProductionRecipeInput(index, "qty", event.target.value); }} />
+                              </label>
+                              <label className="field" style=${{ width: 120, margin: 0 }}>
+                                <span>${L("Đơn vị / Unit")}</span>
+                                <input value=${(inputComponent && inputComponent.unit) || input.unit || ""} readOnly />
+                              </label>
+                              <button type="button" className="ghost-btn danger-text" onClick=${function () { removeProductionRecipeInput(index); }}>${L("Xóa / Remove")}</button>
+                            </article>
+                          `;
+                        }) : html`<div className="empty-state align-left">${L("Chưa có input. / No inputs yet.")}</div>`}
+                      </div>
+
+                      <label className="field">
+                        <span>${L("Ghi chú / Note")}</span>
+                        <input value=${productionRecipeDraft.note} onInput=${function (event) { updateProductionRecipeDraft("note", event.target.value); }} />
+                      </label>
+                      <button type="submit" className="primary-btn">${productionRecipeDraft.id ? L("Lưu công thức / Save Recipe") : L("Tạo công thức / Create Recipe")}</button>
+                    </form>
+                  </section>
+
+                  <section className="surface section-card">
+                    <div className="section-top">
+                      <div>
+                        <p className="eyebrow">${L("Danh sách / List")}</p>
+                        <h2 className="section-title">${L("Công thức đang dùng / Active Production Recipes")}</h2>
+                      </div>
+                    </div>
+                    <div className="list-stack">
+                      ${productionRecipes.length ? productionRecipes.map(function (recipe) {
+                        var output = components.find(function (component) { return component.id === recipe.outputComponentId; });
+                        return html`
+                          <article key=${recipe.id} className="list-row list-row-actions">
+                            <div>
+                              <strong>${recipe.name}</strong>
+                              <p>${L("Output")}: ${output ? L(output.label) : recipe.outputComponentId} · ${recipe.plannedOutputQty} ${recipe.outputUnit}</p>
+                              <p>${(recipe.inputs || []).length} ${L("inputs / inputs")}</p>
+                            </div>
+                            <div className="row-actions">
+                              <button className="ghost-btn" onClick=${function () { startEditProductionRecipe(recipe); }}>${L("Sửa / Edit")}</button>
+                              <button className="ghost-btn danger-text" onClick=${function () { removeProductionRecipe(recipe.id); }}>${L("Ẩn / Deactivate")}</button>
+                            </div>
+                          </article>
+                        `;
+                      }) : html`<div className="empty-state">${L("Chưa có công thức sơ chế. / No production recipes yet.")}</div>`}
+                    </div>
+                  </section>
+                </div>
+
+                <section className="surface section-card form-card">
+                  <div className="section-top">
+                    <div>
+                      <p className="eyebrow">${L("Tạo mẻ / Produce Batch")}</p>
+                      <h2 className="section-title">${L("Sơ chế bán thành phẩm / Produce Semi-finished Item")}</h2>
+                    </div>
+                  </div>
+                  <form className="form-card" onSubmit=${submitProductionBatch}>
+                    <div className="field-grid">
+                      <label className="field">
+                        <span>${L("Công thức / Recipe")}</span>
+                        <select value=${productionBatchDraft.recipeId || ""} onChange=${function (event) { updateProductionBatchDraft("recipeId", event.target.value); }}>
+                          <option value="">${L("Chọn công thức / Select recipe")}</option>
+                          ${productionRecipes.map(function (recipe) {
+                            return html`<option key=${recipe.id} value=${recipe.id}>${recipe.name}</option>`;
+                          })}
+                        </select>
+                      </label>
+                      <label className="field">
+                        <span>${L("Sản lượng thực tế / Actual Output")}</span>
+                        <input type="number" min="0" step="0.1" value=${productionBatchDraft.actualOutputQty} placeholder=${selectedProductionRecipe ? String(selectedProductionRecipe.plannedOutputQty) : ""} onInput=${function (event) { updateProductionBatchDraft("actualOutputQty", event.target.value); }} />
+                      </label>
+                      <label className="field">
+                        <span>${L("Ghi chú / Note")}</span>
+                        <input value=${productionBatchDraft.note} onInput=${function (event) { updateProductionBatchDraft("note", event.target.value); }} />
+                      </label>
+                    </div>
+
+                    ${selectedProductionRecipe ? html`
+                      <div className="split-grid">
+                        <div className="empty-state align-left">
+                          <strong>${L("Output / Output")}:</strong>
+                          ${(function () {
+                            var output = components.find(function (component) { return component.id === selectedProductionRecipe.outputComponentId; });
+                            return " " + (output ? L(output.label) : selectedProductionRecipe.outputComponentId) + " · " + selectedProductionRecipe.plannedOutputQty + " " + selectedProductionRecipe.outputUnit;
+                          })()}
+                        </div>
+                        <div className="empty-state align-left">
+                          <strong>${L("Inputs / Inputs")}:</strong>
+                          ${(selectedProductionRecipe.inputs || []).map(function (input) {
+                            var component = components.find(function (item) { return item.id === input.componentId; });
+                            return (component ? L(component.label) : input.componentId) + " " + input.qty + input.unit;
+                          }).join(", ")}
+                        </div>
+                      </div>
+                    ` : null}
+
+                    <button type="submit" className="primary-btn" disabled=${!productionRecipes.length}>${L("Produce / Save Batch")}</button>
+                  </form>
+
+                  ${lastProductionResult ? html`
+                    <div className="empty-state align-left">
+                      <strong>${L("Mẻ vừa tạo / Last Batch")}:</strong> ${lastProductionResult.id}<br/>
+                      ${L("Tổng cost input / Total input cost")}: ${formatCurrency(lastProductionResult.totalInputCost || 0)} ·
+                      ${L("Cost thực tế / Actual cost per unit")}: ${formatCurrency(lastProductionResult.actualCostPerUnit || 0)}
+                    </div>
+                  ` : null}
+                </section>
+
+                <section className="surface section-card">
+                  <div className="section-top">
+                    <div>
+                      <p className="eyebrow">${L("Lịch sử / History")}</p>
+                      <h2 className="section-title">${L("Mẻ sơ chế gần đây / Recent Production Batches")}</h2>
+                    </div>
+                  </div>
+                  <div className="list-stack">
+                    ${productionBatches.length ? productionBatches.slice(0, 20).map(function (batch) {
+                      var output = components.find(function (component) { return component.id === batch.outputComponentId; });
+                      return html`
+                        <article key=${batch.id} className="list-row">
+                          <div>
+                            <strong>${batch.recipeName || batch.recipeId}</strong>
+                            <p>${formatDateTime(batch.createdAt)} · ${(output ? L(output.label) : batch.outputComponentId)} +${batch.actualOutputQty} ${batch.outputUnit}</p>
+                          </div>
+                          <strong>${formatCurrency(batch.actualCostPerUnit || 0)} / ${batch.outputUnit}</strong>
+                        </article>
+                      `;
+                    }) : html`<div className="empty-state">${L("Chưa có mẻ sơ chế. / No production batches yet.")}</div>`}
+                  </div>
+                </section>
+              </div>
+            ` : null}
+
             ${inventorySection === "product" ? html`
               <div className="stack-view" style=${{ gap: 16 }}>
                 <form
@@ -8219,7 +8777,16 @@
                       <label className="field"><span>${L("Tên tiếng Việt / Vietnamese Name")}</span><input value=${componentDraft.labelVi} onInput=${function (event) { updateComponentDraft("labelVi", event.target.value); }} /></label>
                       <label className="field"><span>${L("Tên tiếng Anh / English Name")}</span><input value=${componentDraft.labelEn} onInput=${function (event) { updateComponentDraft("labelEn", event.target.value); }} /></label>
                       <label className="field"><span>${L("Đơn vị / Unit")}</span><input value=${componentDraft.unit} onInput=${function (event) { updateComponentDraft("unit", event.target.value); }} /></label>
+                      <label className="field">
+                        <span>${L("Loại tồn kho / Inventory Item Type")}</span>
+                        <select value=${componentDraft.itemType} onChange=${function (event) { updateComponentDraft("itemType", event.target.value); }}>
+                          ${COMPONENT_ITEM_TYPE_OPTIONS.map(function (option) {
+                            return html`<option key=${option.value} value=${option.value}>${L(option.label)}</option>`;
+                          })}
+                        </select>
+                      </label>
                       <label className="field"><span>${L("Tồn kho thật / Real Stock")}</span><input type="number" min="0" step="0.1" value=${componentDraft.stockQty} onInput=${function (event) { updateComponentDraft("stockQty", event.target.value); }} /></label>
+                      <label className="field"><span>${L("Cost / đơn vị / Cost per Unit")}</span><input type="number" min="0" step="1" value=${componentDraft.costPerUnit} onInput=${function (event) { updateComponentDraft("costPerUnit", event.target.value); }} /></label>
                       <label className="field"><span>${L("Mức cảnh báo / Min Stock")}</span><input type="number" min="0" step="0.1" value=${componentDraft.minStock} onInput=${function (event) { updateComponentDraft("minStock", event.target.value); }} /></label>
                       <label className="field"><span>${L("Ghi chú / Note")}</span><input value=${componentDraft.note} onInput=${function (event) { updateComponentDraft("note", event.target.value); }} /></label>
                     </div>
@@ -8228,12 +8795,12 @@
                   <div className="management-list">
                     ${components.map(function (component) {
                       return html`
-                        <article key=${component.id} className="list-row list-row-actions">
-                          <div>
-                            <strong>${L(component.label)}</strong>
-                            <p>${component.unit || L("Chưa có đơn vị / No unit")} · ${L("Tồn thực / Real stock")}: ${Number(component.stockQty) || 0} · ${L("Min")}: ${Number(component.minStock) || 0}</p>
-                            ${component.note ? html`<p>${component.note}</p>` : null}
-                          </div>
+                          <article key=${component.id} className="list-row list-row-actions">
+                            <div>
+                              <strong>${L(component.label)}</strong>
+                              <p>${L(getComponentItemTypeLabel(component.itemType))} · ${component.unit || L("Chưa có đơn vị / No unit")} · ${L("Tồn thực / Real stock")}: ${Number(component.stockQty) || 0} · ${L("Cost")}: ${formatCurrency(component.costPerUnit || 0)}</p>
+                              ${component.note ? html`<p>${component.note}</p>` : null}
+                            </div>
                           <div className="row-actions">
                             <button className="ghost-btn" onClick=${function () { startEditComponent(component); }}>${L("Sửa / Edit")}</button>
                             <button className="ghost-btn danger-text" onClick=${function () { removeComponent(component.id); }}>${L("Xóa / Remove")}</button>

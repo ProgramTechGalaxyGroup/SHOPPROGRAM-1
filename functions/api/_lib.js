@@ -196,6 +196,24 @@ export function movementStmt(db, params) {
     );
 }
 
+export function componentMovementStmt(db, params) {
+  return db.prepare(
+    `INSERT INTO component_stock_movements
+       (id, component_id, movement_type, qty_change, unit_cost, ref_type, ref_id, note, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    params.id || uid("cmv"),
+    params.componentId,
+    params.movementType,
+    params.qtyChange,
+    params.unitCost == null ? null : params.unitCost,
+    params.refType || null,
+    params.refId || null,
+    params.note || null,
+    params.createdAt || Date.now()
+  );
+}
+
 // Pull a product's current cost_price (used as snapshot for OUT/SALE moves).
 export async function getProductCost(db, productId) {
   const row = await db
@@ -243,4 +261,92 @@ export async function ensureComponentsInventoryColumns(db) {
       `ALTER TABLE components ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1`
     ).run();
   }
+  if (!(await columnExists(db, "components", "item_type"))) {
+    await db.prepare(
+      `ALTER TABLE components ADD COLUMN item_type TEXT NOT NULL DEFAULT 'raw_material'`
+    ).run();
+  }
+  if (!(await columnExists(db, "components", "cost_per_unit"))) {
+    await db.prepare(
+      `ALTER TABLE components ADD COLUMN cost_per_unit INTEGER NOT NULL DEFAULT 0`
+    ).run();
+  }
+}
+
+export function normalizeInventoryItemType(value) {
+  const allowed = new Set(["raw_material", "semi_finished", "packaging", "retail_product"]);
+  const type = String(value || "raw_material").trim();
+  return allowed.has(type) ? type : "raw_material";
+}
+
+export function normalizeUnit(value) {
+  const unit = String(value || "").trim().toLowerCase();
+  if (unit === "g" || unit === "gram" || unit === "grams") return "gram";
+  if (unit === "ml" || unit === "milliliter" || unit === "milliliters") return "ml";
+  if (unit === "piece" || unit === "pieces" || unit === "pcs" || unit === "cai") return "piece";
+  return unit;
+}
+
+export async function ensureProductionTables(db) {
+  await ensureComponentsInventoryColumns(db);
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS component_stock_movements (
+      id            TEXT PRIMARY KEY,
+      component_id  TEXT NOT NULL REFERENCES components(id),
+      movement_type TEXT NOT NULL,
+      qty_change    REAL NOT NULL,
+      unit_cost     INTEGER,
+      ref_type      TEXT,
+      ref_id        TEXT,
+      note          TEXT,
+      created_at    INTEGER NOT NULL
+    )`
+  ).run();
+  await db.prepare(
+    `CREATE INDEX IF NOT EXISTS idx_component_mov_component
+     ON component_stock_movements(component_id, created_at)`
+  ).run();
+  await db.prepare(
+    `CREATE INDEX IF NOT EXISTS idx_component_mov_ref
+     ON component_stock_movements(ref_type, ref_id)`
+  ).run();
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS production_recipes (
+      id                 TEXT PRIMARY KEY,
+      name               TEXT NOT NULL,
+      output_component_id TEXT NOT NULL REFERENCES components(id),
+      planned_output_qty REAL NOT NULL,
+      output_unit        TEXT NOT NULL,
+      inputs_json        TEXT NOT NULL,
+      note               TEXT,
+      is_active          INTEGER NOT NULL DEFAULT 1,
+      updated_at         INTEGER NOT NULL
+    )`
+  ).run();
+  await db.prepare(
+    `CREATE INDEX IF NOT EXISTS idx_production_recipes_output
+     ON production_recipes(output_component_id)`
+  ).run();
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS production_batches (
+      id                   TEXT PRIMARY KEY,
+      recipe_id            TEXT NOT NULL REFERENCES production_recipes(id),
+      output_component_id  TEXT NOT NULL REFERENCES components(id),
+      planned_output_qty   REAL NOT NULL,
+      actual_output_qty    REAL NOT NULL,
+      output_unit          TEXT NOT NULL,
+      total_input_cost     INTEGER NOT NULL DEFAULT 0,
+      actual_cost_per_unit INTEGER NOT NULL DEFAULT 0,
+      note                 TEXT,
+      created_at           INTEGER NOT NULL
+    )`
+  ).run();
+  await db.prepare(
+    `CREATE INDEX IF NOT EXISTS idx_production_batches_recipe
+     ON production_batches(recipe_id, created_at)`
+  ).run();
+  await db.prepare(
+    `CREATE INDEX IF NOT EXISTS idx_production_batches_output
+     ON production_batches(output_component_id, created_at)`
+  ).run();
 }

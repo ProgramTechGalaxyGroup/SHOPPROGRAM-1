@@ -2,6 +2,7 @@ import {
   json,
   ensureProductsInventoryModeColumn,
   ensureComponentsInventoryColumns,
+  ensureProductionTables,
 } from "../_lib.js";
 
 // GET /api/sync/pull?since=<ts>
@@ -10,10 +11,11 @@ import {
 export const onRequestGet = async ({ env, request }) => {
   await ensureProductsInventoryModeColumn(env.DB);
   await ensureComponentsInventoryColumns(env.DB);
+  await ensureProductionTables(env.DB);
   const url = new URL(request.url);
   const since = Number(url.searchParams.get("since")) || 0;
 
-  const [categories, addOns, components, products, inventory, settings, recentSales] =
+  const [categories, addOns, components, products, inventory, settings, recentSales, productionRecipes, productionBatches] =
     await Promise.all([
       env.DB.prepare(
         `SELECT id, label, icon, sort_order, is_active, updated_at,
@@ -32,7 +34,7 @@ export const onRequestGet = async ({ env, request }) => {
       // When `since=0` (first pull) we return EVERYTHING; otherwise only
       // rows touched after `since`.
       env.DB.prepare(
-        `SELECT id, label, unit, note, stock_qty, min_stock, is_active, updated_at
+        `SELECT id, label, unit, note, stock_qty, min_stock, item_type, cost_per_unit, is_active, updated_at
          FROM components WHERE updated_at > ? OR is_active = 0`
       ).bind(since).all(),
 
@@ -84,6 +86,22 @@ export const onRequestGet = async ({ env, request }) => {
          WHERE s.created_at > ? 
          ORDER BY s.created_at DESC LIMIT 500`
       ).bind(since).all(),
+
+      env.DB.prepare(
+        `SELECT id, name, output_component_id, planned_output_qty, output_unit,
+                inputs_json, note, is_active, updated_at
+         FROM production_recipes
+         WHERE updated_at > ? OR is_active = 0`
+      ).bind(since).all(),
+
+      env.DB.prepare(
+        `SELECT id, recipe_id, output_component_id, planned_output_qty,
+                actual_output_qty, output_unit, total_input_cost,
+                actual_cost_per_unit, note, created_at
+         FROM production_batches
+         WHERE created_at > ?
+         ORDER BY created_at DESC LIMIT 500`
+      ).bind(since).all(),
     ]);
 
   return json({
@@ -97,5 +115,7 @@ export const onRequestGet = async ({ env, request }) => {
     inventory:  inventory.results || [],
     settings:   settings.results || [],
     recentSales: recentSales.results || [],
+    productionRecipes: productionRecipes.results || [],
+    productionBatches: productionBatches.results || [],
   });
 };

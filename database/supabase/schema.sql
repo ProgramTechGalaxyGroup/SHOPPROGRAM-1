@@ -31,6 +31,8 @@ create table if not exists components (
   note text,
   stock_qty integer not null default 0,
   min_stock integer not null default 0,
+  item_type text not null default 'raw_material' check (item_type in ('raw_material','semi_finished','packaging','retail_product')),
+  cost_per_unit integer not null default 0,
   is_active integer not null default 1,
   updated_at bigint not null
 );
@@ -143,6 +145,34 @@ create table if not exists component_stock_movements (
 create index if not exists idx_component_mov_component on component_stock_movements(component_id, created_at);
 create index if not exists idx_component_mov_ref on component_stock_movements(ref_type, ref_id);
 
+create table if not exists production_recipes (
+  id text primary key,
+  name text not null,
+  output_component_id text not null references components(id),
+  planned_output_qty numeric not null,
+  output_unit text not null,
+  inputs_json text not null,
+  note text,
+  is_active integer not null default 1,
+  updated_at bigint not null
+);
+create index if not exists idx_production_recipes_output on production_recipes(output_component_id);
+
+create table if not exists production_batches (
+  id text primary key,
+  recipe_id text not null references production_recipes(id),
+  output_component_id text not null references components(id),
+  planned_output_qty numeric not null,
+  actual_output_qty numeric not null,
+  output_unit text not null,
+  total_input_cost integer not null default 0,
+  actual_cost_per_unit integer not null default 0,
+  note text,
+  created_at bigint not null
+);
+create index if not exists idx_production_batches_recipe on production_batches(recipe_id, created_at);
+create index if not exists idx_production_batches_output on production_batches(output_component_id, created_at);
+
 create table if not exists stock_issues (
   id text primary key,
   reason text not null check (reason in ('damaged','sample','internal','transfer','other')),
@@ -239,6 +269,8 @@ alter table public.purchase_orders enable row level security;
 alter table public.purchase_order_items enable row level security;
 alter table public.purchase_component_items enable row level security;
 alter table public.component_stock_movements enable row level security;
+alter table public.production_recipes enable row level security;
+alter table public.production_batches enable row level security;
 alter table public.stock_issues enable row level security;
 alter table public.stock_issue_items enable row level security;
 alter table public.sales enable row level security;
@@ -250,11 +282,14 @@ alter table public.doc_sequences enable row level security;
 alter table public.components add column if not exists stock_qty integer not null default 0;
 alter table public.components add column if not exists min_stock integer not null default 0;
 alter table public.components add column if not exists is_active integer not null default 1;
+alter table public.components add column if not exists item_type text not null default 'raw_material';
+alter table public.components add column if not exists cost_per_unit integer not null default 0;
 alter table public.products add column if not exists inventory_mode text;
+alter table public.products alter column inventory_mode drop not null;
 
 grant usage on schema public to anon, authenticated;
 grant select on public.categories, public.add_ons, public.components, public.products, public.inventory, public.settings to anon, authenticated;
-grant select on public.suppliers, public.sales, public.sale_items, public.purchase_orders, public.purchase_order_items, public.purchase_component_items, public.stock_issues, public.stock_issue_items, public.stock_movements, public.component_stock_movements to authenticated;
+grant select on public.suppliers, public.sales, public.sale_items, public.purchase_orders, public.purchase_order_items, public.purchase_component_items, public.stock_issues, public.stock_issue_items, public.stock_movements, public.component_stock_movements, public.production_recipes, public.production_batches to authenticated;
 
 drop policy if exists "catalog_select_active_categories" on public.categories;
 create policy "catalog_select_active_categories"
@@ -346,6 +381,18 @@ using (true);
 drop policy if exists "staff_select_component_stock_movements" on public.component_stock_movements;
 create policy "staff_select_component_stock_movements"
 on public.component_stock_movements for select
+to authenticated
+using (true);
+
+drop policy if exists "staff_select_production_recipes" on public.production_recipes;
+create policy "staff_select_production_recipes"
+on public.production_recipes for select
+to authenticated
+using (true);
+
+drop policy if exists "staff_select_production_batches" on public.production_batches;
+create policy "staff_select_production_batches"
+on public.production_batches for select
 to authenticated
 using (true);
 

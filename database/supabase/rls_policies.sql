@@ -16,6 +16,8 @@ alter table public.purchase_orders enable row level security;
 alter table public.purchase_order_items enable row level security;
 alter table public.purchase_component_items enable row level security;
 alter table public.component_stock_movements enable row level security;
+alter table public.production_recipes enable row level security;
+alter table public.production_batches enable row level security;
 alter table public.stock_issues enable row level security;
 alter table public.stock_issue_items enable row level security;
 alter table public.sales enable row level security;
@@ -27,11 +29,13 @@ alter table public.doc_sequences enable row level security;
 alter table public.components add column if not exists stock_qty integer not null default 0;
 alter table public.components add column if not exists min_stock integer not null default 0;
 alter table public.components add column if not exists is_active integer not null default 1;
+alter table public.components add column if not exists item_type text not null default 'raw_material';
+alter table public.components add column if not exists cost_per_unit integer not null default 0;
 alter table public.products add column if not exists inventory_mode text;
 
 grant usage on schema public to anon, authenticated;
 grant select on public.categories, public.add_ons, public.components, public.products, public.inventory, public.settings to anon, authenticated;
-grant select on public.suppliers, public.sales, public.sale_items, public.purchase_orders, public.purchase_order_items, public.purchase_component_items, public.stock_issues, public.stock_issue_items, public.stock_movements, public.component_stock_movements to authenticated;
+grant select on public.suppliers, public.sales, public.sale_items, public.purchase_orders, public.purchase_order_items, public.purchase_component_items, public.stock_issues, public.stock_issue_items, public.stock_movements, public.component_stock_movements, public.production_recipes, public.production_batches to authenticated;
 
 drop policy if exists "catalog_select_active_categories" on public.categories;
 create policy "catalog_select_active_categories"
@@ -123,6 +127,18 @@ using (true);
 drop policy if exists "staff_select_component_stock_movements" on public.component_stock_movements;
 create policy "staff_select_component_stock_movements"
 on public.component_stock_movements for select
+to authenticated
+using (true);
+
+drop policy if exists "staff_select_production_recipes" on public.production_recipes;
+create policy "staff_select_production_recipes"
+on public.production_recipes for select
+to authenticated
+using (true);
+
+drop policy if exists "staff_select_production_batches" on public.production_batches;
+create policy "staff_select_production_batches"
+on public.production_batches for select
 to authenticated
 using (true);
 

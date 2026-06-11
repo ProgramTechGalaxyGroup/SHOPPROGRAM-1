@@ -164,6 +164,7 @@ async function fetchAllData() {
     productsPayload,
     inventoryPayload,
     movementsPayload,
+    componentsPayload,
     suppliersPayload,
     purchasesPayload,
     issuesPayload,
@@ -175,6 +176,7 @@ async function fetchAllData() {
     fetchJson("/api/products"),
     fetchJson("/api/inventory"),
     fetchJson("/api/inventory/movements"),
+    fetchJson("/api/components"),
     fetchJson("/api/suppliers"),
     fetchJson("/api/purchases"),
     fetchJson("/api/issues"),
@@ -279,7 +281,7 @@ async function fetchAllData() {
       unit_cost: item.unit_cost == null ? null : Number(item.unit_cost)
     })),
     settings: buildSettingsRows(settingsPayload.settings || {}),
-    components: defaultComponents()
+    components: componentsPayload.components || defaultComponents()
   };
 }
 
@@ -309,6 +311,11 @@ function normalizeTables(data) {
       label: row.label,
       unit: row.unit || null,
       note: row.note || null,
+      stock_qty: Number(row.stockQty ?? row.stock_qty) || 0,
+      min_stock: Number(row.minStock ?? row.min_stock) || 0,
+      item_type: row.itemType || row.item_type || "raw_material",
+      cost_per_unit: Number(row.costPerUnit ?? row.cost_per_unit) || 0,
+      is_active: row.active === false || row.is_active === 0 ? 0 : 1,
       updated_at: Number(row.updated_at) || NOW
     })),
     products: data.products.map((row) => ({
@@ -321,6 +328,7 @@ function normalizeTables(data) {
       image: row.image || null,
       description: row.description || null,
       component_ids: JSON.stringify(Array.isArray(row.componentIds) ? row.componentIds : []),
+      inventory_mode: row.inventoryMode || row.inventory_mode || null,
       min_stock: Number(row.minStock ?? row.min_stock) || 0,
       is_active: row.isActive === false || row.is_active === 0 ? 0 : 1,
       updated_at: Number(row.updatedAt ?? row.updated_at) || NOW,
@@ -379,6 +387,7 @@ function normalizeTables(data) {
       image: null,
       description: "Auto-created placeholder from Cloudflare live history",
       component_ids: "[]",
+      inventory_mode: null,
       min_stock: 0,
       is_active: 0,
       updated_at: NOW,
@@ -404,8 +413,8 @@ function buildStatements(tables) {
   return [
     ...buildUpsertStatements("categories", ["id", "label", "icon", "sort_order", "is_active", "updated_at", "parent_id", "level", "code"], tables.categories, { conflict: ["id"] }),
     ...buildUpsertStatements("add_ons", ["id", "label", "price", "group_key", "is_active", "updated_at"], tables.add_ons, { conflict: ["id"] }),
-    ...buildUpsertStatements("components", ["id", "label", "unit", "note", "updated_at"], tables.components, { conflict: ["id"] }),
-    ...buildUpsertStatements("products", ["id", "name", "category_id", "price", "cost_price", "barcode", "image", "description", "component_ids", "min_stock", "is_active", "updated_at", "unit", "sku_code"], tables.products, { conflict: ["id"] }),
+    ...buildUpsertStatements("components", ["id", "label", "unit", "note", "stock_qty", "min_stock", "item_type", "cost_per_unit", "is_active", "updated_at"], tables.components, { conflict: ["id"] }),
+    ...buildUpsertStatements("products", ["id", "name", "category_id", "price", "cost_price", "barcode", "image", "description", "component_ids", "inventory_mode", "min_stock", "is_active", "updated_at", "unit", "sku_code"], tables.products, { conflict: ["id"] }),
     ...buildUpsertStatements("inventory", ["product_id", "qty_on_hand", "location", "updated_at"], tables.inventory, { conflict: ["product_id"] }),
     ...buildUpsertStatements("stock_movements", ["id", "product_id", "movement_type", "qty_change", "unit_cost", "ref_type", "ref_id", "note", "created_at"], tables.stock_movements, { conflict: ["id"] }),
     ...buildUpsertStatements("suppliers", ["id", "name", "phone", "address", "note", "is_active", "updated_at"], tables.suppliers, { conflict: ["id"] }),

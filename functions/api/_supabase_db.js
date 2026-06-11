@@ -89,6 +89,7 @@ async function callSupabaseRpc(env, fn, payload) {
   }
   if (!response.ok) {
     const error = new Error((data && (data.message || data.error)) || `Supabase RPC ${response.status}`);
+    error.status = response.status;
     error.data = data;
     throw error;
   }
@@ -176,6 +177,14 @@ export function getSupabaseUrl(env) {
     env.SUPABASE_PROJECT_URL ||
     ""
   ).replace(/\/+$/, "");
+}
+
+export function getSupabaseHost(env) {
+  try {
+    return new URL(getSupabaseUrl(env)).host;
+  } catch (_) {
+    return "";
+  }
 }
 
 export function getSupabaseServiceRoleKey(env) {

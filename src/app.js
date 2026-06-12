@@ -1624,6 +1624,12 @@
     }).format(Number(value) || 0);
   }
 
+  function formatQuantity(value, maximumFractionDigits) {
+    return new Intl.NumberFormat("vi-VN", {
+      maximumFractionDigits: maximumFractionDigits == null ? 2 : maximumFractionDigits
+    }).format(Number(value) || 0);
+  }
+
   function formatDateTime(dateValue) {
     return new Intl.DateTimeFormat("vi-VN", {
       day: "2-digit",
@@ -1739,6 +1745,51 @@
     };
   }
 
+  function normalizeWastePercent(value) {
+    var n = Number(value);
+    if (!Number.isFinite(n)) return 0;
+    return Math.min(99, Math.max(0, n));
+  }
+
+  function getRecipeEntryWastePercent(entry) {
+    var safeEntry = entry || {};
+    if (safeEntry.wastePercent !== undefined) return normalizeWastePercent(safeEntry.wastePercent);
+    if (safeEntry.waste_percent !== undefined) return normalizeWastePercent(safeEntry.waste_percent);
+    if (safeEntry.wasteRate !== undefined) {
+      var wasteRate = Number(safeEntry.wasteRate);
+      return normalizeWastePercent(wasteRate > 0 && wasteRate <= 1 ? wasteRate * 100 : wasteRate);
+    }
+    if (safeEntry.waste_rate !== undefined) {
+      var snakeWasteRate = Number(safeEntry.waste_rate);
+      return normalizeWastePercent(snakeWasteRate > 0 && snakeWasteRate <= 1 ? snakeWasteRate * 100 : snakeWasteRate);
+    }
+    return 0;
+  }
+
+  function normalizeRecipeEntry(entry) {
+    if (typeof entry === "string") {
+      return { id: entry, qty: 1, unit: "", wastePercent: 0, note: "" };
+    }
+    var safeEntry = entry || {};
+    return {
+      id: safeEntry.id || safeEntry.componentId || safeEntry.component_id || "",
+      qty: safeEntry.qty === undefined || safeEntry.qty === null
+        ? 1
+        : Math.max(0, Number(safeEntry.qty) || 0),
+      unit: safeEntry.unit || "",
+      wastePercent: getRecipeEntryWastePercent(safeEntry),
+      note: safeEntry.note || ""
+    };
+  }
+
+  function getRecipeEntryStockQty(entry) {
+    var normalizedEntry = normalizeRecipeEntry(entry);
+    var netQty = Math.max(0, Number(normalizedEntry.qty) || 0);
+    var usableRate = 1 - (normalizeWastePercent(normalizedEntry.wastePercent) / 100);
+    if (usableRate <= 0) usableRate = 0.01;
+    return netQty / usableRate;
+  }
+
   function normalizeProduct(product) {
     var baseProduct = product || {};
     var explicitInventoryMode = baseProduct.inventoryMode || baseProduct.inventory_mode || "";
@@ -1751,7 +1802,9 @@
     );
     return Object.assign({}, baseProduct, {
       barcode: normalizedBarcode,
-      componentIds: Array.isArray(baseProduct.componentIds) ? baseProduct.componentIds : [],
+      componentIds: Array.isArray(baseProduct.componentIds)
+        ? baseProduct.componentIds.map(normalizeRecipeEntry).filter(function (entry) { return entry.id; })
+        : [],
       inventoryMode: normalizedInventoryMode,
       unit: baseProduct.unit || "",
       skuCode: baseProduct.skuCode || baseProduct.sku_code || baseProduct.id
@@ -1835,10 +1888,7 @@
   function getRecipeEntries(product) {
     if (!product || !Array.isArray(product.componentIds)) return [];
     return product.componentIds.map(function (entry) {
-      if (typeof entry === "string") {
-        return { id: entry, qty: 1, unit: "", note: "" };
-      }
-      return Object.assign({ qty: 1, unit: "", note: "" }, entry || {});
+      return normalizeRecipeEntry(entry);
     }).filter(function (entry) {
       return !!entry.id;
     });
@@ -1852,7 +1902,7 @@
       var entry = recipeEntries[i];
       var sourceComponent = (componentList || []).find(function (component) { return component.id === entry.id; });
       if (!sourceComponent) return 0;
-      var qtyNeeded = Math.max(0.0001, Number(entry.qty) || 1);
+      var qtyNeeded = Math.max(0.0001, getRecipeEntryStockQty(entry) || 1);
       var available = Math.max(0, Number(sourceComponent.stockQty) || 0);
       var possible = Math.floor(available / qtyNeeded);
       if (possible < minPossible) minPossible = possible;
@@ -4091,7 +4141,7 @@
           var recipeEntries = getRecipeEntries(product);
           if (recipeEntries.length > 0) {
             recipeEntries.forEach(function(entry) {
-              var compQty = Number(entry.qty) || 1;
+              var compQty = getRecipeEntryStockQty(entry) || 1;
               quantitiesByComponent[entry.id] = (quantitiesByComponent[entry.id] || 0) + (compQty * qty);
             });
           }
@@ -4945,7 +4995,7 @@
             ingredient_id: entry.id,
             qty_used: Number(entry.qty) || 1,
             unit: entry.unit || component.unit || "",
-            waste_rate: 0,
+            waste_rate: normalizeWastePercent(entry.wastePercent) / 100,
             note: entry.note || component.note || "",
             created_at: "",
             updated_at: ""
@@ -5712,7 +5762,7 @@
     }
 
     // The recipe (BOM) for a product is stored as an array of entries shaped
-    //   { id, qty, unit, note }
+    //   { id, qty, unit, wastePercent, note }
     // backed by the JSON `products.component_ids` column. We keep the legacy
     // name `componentIds` so the old toggle/printing code still works — each
     // entry's `id` matches `components.id`.
@@ -5723,8 +5773,7 @@
       var raw = draft.componentIds;
       if (!Array.isArray(raw)) return [];
       return raw.map(function (it) {
-        if (typeof it === "string") return { id: it, qty: 1, unit: "", note: "" };
-        return Object.assign({ qty: 1, unit: "", note: "" }, it);
+        return normalizeRecipeEntry(it);
       });
     }
     function toggleProductDraftComponent(componentId) {
@@ -5737,6 +5786,7 @@
             id: componentId,
             qty: 1,
             unit: comp ? (comp.unit || "") : "",
+            wastePercent: 0,
             note: ""
           });
         } else {
@@ -5751,6 +5801,7 @@
           if (e.id !== componentId) return e;
           var next = Object.assign({}, e);
           if (field === "qty") next.qty = Number(value) || 0;
+          else if (field === "wastePercent") next.wastePercent = normalizeWastePercent(value);
           else next[field] = value;
           return next;
         });
@@ -8923,6 +8974,12 @@
                                       onInput=${function (e) { updateRecipeEntry(entry.id, "unit", e.target.value); }}
                                     />
                                   </label>
+                                  <label className="field" style=${{ width: 120, margin: 0 }}>
+                                    <span style=${{ fontSize: 11 }}>${L("% khấu hao / Waste %")}</span>
+                                    <input type="number" min="0" max="99" step="0.1" value=${entry.wastePercent || 0}
+                                      onInput=${function (e) { updateRecipeEntry(entry.id, "wastePercent", e.target.value); }}
+                                    />
+                                  </label>
                                   <label className="field" style=${{ flex: "2 1 200px", margin: 0 }}>
                                     <span style=${{ fontSize: 11 }}>${L("Ghi chú / Note")}</span>
                                     <input value=${entry.note || ""}
@@ -8930,6 +8987,11 @@
                                       onInput=${function (e) { updateRecipeEntry(entry.id, "note", e.target.value); }}
                                     />
                                   </label>
+                                  <small style=${{ flex: "1 1 100%", color: "#8a7565" }}>
+                                    ${L("Dùng được / Net used")}: ${Number(entry.qty) || 0} ${entry.unit || (comp && comp.unit) || ""} ·
+                                    ${L("Trừ kho / Deduct stock")}: ${formatQuantity(getRecipeEntryStockQty(entry), 2)} ${entry.unit || (comp && comp.unit) || ""}
+                                    ${entry.wastePercent ? " (" + entry.wastePercent + "% " + L("khấu hao / waste") + ")" : ""}
+                                  </small>
                                   <button type="button" className="ghost-btn danger-text"
                                     style=${{ alignSelf: "flex-end" }}
                                     onClick=${function () { toggleProductDraftComponent(entry.id); }}

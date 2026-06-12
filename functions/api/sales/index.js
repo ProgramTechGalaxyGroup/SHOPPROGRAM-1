@@ -6,6 +6,37 @@ import {
   normalizePaymentMethod,
 } from "../_lib.js";
 
+function normalizeWastePercent(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(99, Math.max(0, n));
+}
+
+function getRecipeWastePercent(entry) {
+  if (!entry || typeof entry !== "object") return 0;
+  if (entry.wastePercent !== undefined) return normalizeWastePercent(entry.wastePercent);
+  if (entry.waste_percent !== undefined) return normalizeWastePercent(entry.waste_percent);
+  if (entry.wasteRate !== undefined) {
+    const rate = Number(entry.wasteRate);
+    return normalizeWastePercent(rate > 0 && rate <= 1 ? rate * 100 : rate);
+  }
+  if (entry.waste_rate !== undefined) {
+    const snakeRate = Number(entry.waste_rate);
+    return normalizeWastePercent(snakeRate > 0 && snakeRate <= 1 ? snakeRate * 100 : snakeRate);
+  }
+  return 0;
+}
+
+function getRecipeComponentStockQty(entry) {
+  if (typeof entry === "string") return 1;
+  const netQty = entry && entry.qty !== undefined && entry.qty !== null
+    ? Math.max(0, Number(entry.qty) || 0)
+    : 1;
+  let usableRate = 1 - (getRecipeWastePercent(entry) / 100);
+  if (usableRate <= 0) usableRate = 0.01;
+  return netQty / usableRate;
+}
+
 // GET /api/sales?from=&to=&limit=
 export const onRequestGet = async ({ env, request }) => {
   const url = new URL(request.url);
@@ -123,7 +154,7 @@ export const onRequestPost = async ({ env, request }) => {
       if (Array.isArray(components) && components.length > 0) {
         for (const comp of components) {
           const compId = typeof comp === "string" ? comp : comp.id;
-          const compQty = typeof comp === "string" ? 1 : (Number(comp.qty) || 1);
+          const compQty = getRecipeComponentStockQty(comp) || 1;
           const totalCompQty = compQty * qty;
           requiredByComponent.set(compId, (requiredByComponent.get(compId) || 0) + totalCompQty);
           qtyByComponent.set(compId, (qtyByComponent.get(compId) || 0) + totalCompQty);

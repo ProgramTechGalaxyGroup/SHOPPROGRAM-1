@@ -134,7 +134,8 @@
     { id: "vi", label: "VI" },
     { id: "en", label: "EN" }
   ];
-  var PAYMENT_METHOD_DEFAULT = "bank_transfer";
+  var PAYMENT_METHOD_DEFAULT = "";
+  var PAYMENT_METHOD_PLACEHOLDER = "Chọn phương thức thanh toán / Select payment method";
   var PAYMENT_METHOD_OPTIONS = [
     { value: "cash", label: "Tiền mặt / Cash" },
     { value: "card", label: "Thẻ / Card" },
@@ -164,6 +165,9 @@
     }
 
     var raw = String(value).trim();
+    if (!raw) {
+      return PAYMENT_METHOD_DEFAULT;
+    }
     var key = raw.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
     var text = stripVietnameseAccents(raw);
 
@@ -205,6 +209,9 @@
   }
 
   function getPaymentMethodLabel(value) {
+    if (!normalizePaymentMethod(value)) {
+      return PAYMENT_METHOD_PLACEHOLDER;
+    }
     return getPaymentMethodOption(value).label;
   }
 
@@ -4128,7 +4135,7 @@
             takeAway: false,
             status: "open",
             customerName: "Khách lẻ / Walk-in",
-            paymentMethod: PAYMENT_METHOD_DEFAULT,
+            paymentMethod: "",
             cashReceived: 0
           });
         });
@@ -4210,6 +4217,11 @@
       }
       if (!activeOrder.items.length) {
         window.alert(L("Đơn hiện tại chưa có món. / This order is empty."));
+        return;
+      }
+      if (!normalizePaymentMethod(activeOrder.paymentMethod)) {
+        window.alert(L("Vui lòng chọn phương thức thanh toán trước khi hoàn tất bán hàng. / Please select a payment method before completing the sale."));
+        setPaymentMenuOpen(true);
         return;
       }
 
@@ -7525,7 +7537,7 @@
                 >
                   <button
                     type="button"
-                    className="payment-select-trigger"
+                    className=${"payment-select-trigger" + (!normalizePaymentMethod(activeOrder.paymentMethod) ? " is-placeholder" : "")}
                     onClick=${function (event) {
                       event.stopPropagation();
                       setPaymentMenuOpen(!paymentMenuOpen);

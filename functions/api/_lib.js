@@ -46,8 +46,9 @@ function stripVietnameseAccents(value) {
 }
 
 export function normalizePaymentMethod(value) {
-  if (!value) return "bank_transfer";
+  if (!value) return "";
   const raw = String(value).trim();
+  if (!raw) return "";
   const key = raw.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
   const text = stripVietnameseAccents(raw);
 

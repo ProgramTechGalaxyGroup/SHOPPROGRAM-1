@@ -639,6 +639,12 @@ textarea:focus {
   font-size: clamp(1rem, 1.4vw, 1.16rem);
 }
 
+.payment-select-trigger.is-placeholder {
+  color: #a79a8f;
+  border-color: rgba(205, 120, 76, 0.45);
+  background: #fffaf4;
+}
+
 .payment-select-icon {
   position: absolute;
   right: 14px;

@@ -58,7 +58,7 @@ export const onRequestGet = async ({ env, request }) => {
      FROM (
        SELECT total,
               CASE
-                WHEN payment_method IS NULL OR trim(payment_method) = '' THEN 'bank_transfer'
+                WHEN payment_method IS NULL OR trim(payment_method) = '' THEN 'unknown'
                 WHEN lower(payment_method) = 'cash' OR lower(payment_method) LIKE '%cash%' OR lower(payment_method) LIKE '%tiền mặt%' THEN 'cash'
                 WHEN lower(payment_method) = 'card' OR lower(payment_method) LIKE '%card%' OR lower(payment_method) LIKE '%thẻ%' THEN 'card'
                 WHEN lower(payment_method) IN ('bank_transfer', 'banktransfer', 'transfer')

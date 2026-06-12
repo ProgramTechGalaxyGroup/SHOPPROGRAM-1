@@ -220,6 +220,12 @@ export const onRequestPost = async ({ env, request }) => {
   }
 
   const paymentMethod = normalizePaymentMethod(body.paymentMethod);
+  if (!paymentMethod) {
+    return badRequest("payment method required", {
+      code: "PAYMENT_METHOD_REQUIRED",
+      total: serverTotal,
+    });
+  }
   const hasPaidAmount =
     body.paid !== undefined &&
     body.paid !== null &&

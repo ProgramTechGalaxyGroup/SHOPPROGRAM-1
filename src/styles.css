@@ -165,7 +165,49 @@ textarea:focus {
 }
 
 .search-box {
+  position: relative;
   min-width: 0;
+}
+
+.function-search-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  z-index: 60;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 22px;
+  max-height: min(420px, 62vh);
+  overflow-y: auto;
+}
+
+.function-search-item {
+  width: 100%;
+  display: grid;
+  gap: 4px;
+  padding: 13px 15px;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.66);
+  text-align: left;
+  color: var(--text);
+}
+
+.function-search-item:hover,
+.function-search-item:focus {
+  border-color: rgba(222, 99, 29, 0.18);
+  background: linear-gradient(135deg, rgba(255, 238, 219, 0.96), rgba(255, 248, 241, 0.96));
+}
+
+.function-search-item strong {
+  font-size: 0.98rem;
+}
+
+.function-search-item small {
+  color: var(--muted);
+  line-height: 1.35;
 }
 
 .lang-switch {
@@ -304,6 +346,40 @@ textarea:focus {
   margin: 6px 0 0;
   font-family: "Space Grotesk", sans-serif;
   font-size: clamp(1.35rem, 2vw, 1.9rem);
+}
+
+.page-section {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.page-header {
+  border-radius: var(--radius-xl);
+  padding: clamp(18px, 2.2vw, 28px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.page-header > div:first-child {
+  min-width: 0;
+}
+
+.page-header .section-title {
+  font-size: clamp(1.65rem, 3vw, 2.55rem);
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+}
+
+.page-header small {
+  display: block;
+  margin-top: 12px;
+  max-width: 780px;
+  line-height: 1.45;
 }
 
 .category-row {
@@ -861,6 +937,19 @@ textarea:focus {
   box-shadow: 0 16px 32px rgba(222, 99, 29, 0.14);
 }
 
+.component-workspace-switch {
+  position: sticky;
+  top: 128px;
+  z-index: 15;
+  margin-bottom: 16px;
+  padding: 10px;
+  border-radius: 24px;
+  background: rgba(255, 250, 244, 0.88);
+  border: 1px solid rgba(235, 221, 207, 0.78);
+  box-shadow: 0 18px 44px rgba(102, 65, 33, 0.08);
+  backdrop-filter: blur(18px);
+}
+
 .form-card {
   display: grid;
   gap: 16px;
@@ -1400,6 +1489,19 @@ textarea:focus {
   .search-box,
   .lang-switch {
     width: 100%;
+  }
+
+  .page-header {
+    flex-direction: column;
+    padding: 18px;
+  }
+
+  .page-header .section-title {
+    font-size: clamp(1.55rem, 8vw, 2.4rem);
+  }
+
+  .component-workspace-switch {
+    top: 10px;
   }
 
   .lang-switch {

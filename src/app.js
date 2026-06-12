@@ -2259,6 +2259,7 @@
     var [paymentMenuOpen, setPaymentMenuOpen] = useState(false);
     var [selectedCategory, setSelectedCategory] = useState("all");
     var [searchTerm, setSearchTerm] = useState("");
+    var [functionSearchTerm, setFunctionSearchTerm] = useState("");
     var [settingsSection, setSettingsSection] = useState("general");
     var [inventorySection, setInventorySection] = useState("stock");
     var [selectedProductIds, setSelectedProductIds] = useState([]);
@@ -3478,6 +3479,44 @@
       { id: "product", label: "Thêm sản phẩm / Add Product" },
       { id: "catalog", label: "Điều chỉnh, sửa / Adjust & Edit" }
     ];
+
+    var functionDestinations = [
+      { label: "Bán hàng / POS", help: "Quầy POS, scan mã, hoàn tất đơn / Counter checkout", view: "pos", keywords: "ban hang pos quay quet scan barcode thanh toan" },
+      { label: "Tổng quan / Dashboard", help: "Doanh thu, lịch sử thanh toán / Revenue and sales history", view: "dashboard", keywords: "tong quan dashboard doanh thu lich su thanh toan bao cao" },
+      { label: "Kiểm hàng tồn kho / Stock Check", help: "Sản phẩm, số tồn, in tem / Products, stock and barcode labels", view: "inventory", inventory: "stock", stockTab: "check", keywords: "kiem hang ton kho stock product san pham in tem" },
+      { label: "Sổ cái kho / Stock Ledger", help: "Lịch sử chuyển động kho / Inventory movement ledger", view: "inventory", inventory: "stock", stockTab: "ledger", keywords: "so cai kho ledger movement chuyen dong" },
+      { label: "Kiểm kê / Stocktake", help: "Ghi nhận số lượng thực tế / Count real stock", view: "inventory", inventory: "stock", stockTab: "stocktake", keywords: "kiem ke stocktake thuc te" },
+      { label: "Phiếu nhập / Stock In", help: "Nhập sản phẩm hoặc thành phần / Receive product or component stock", view: "inventory", inventory: "stock_ops", stockOps: "in", keywords: "phieu nhap nhap hang stock in purchase nha cung cap" },
+      { label: "Phiếu xuất / Stock Out", help: "Xuất hủy, mẫu, nội bộ / Issue damaged, sample or internal stock", view: "inventory", inventory: "stock_ops", stockOps: "out", keywords: "phieu xuat xuat hang stock out huy mau noi bo" },
+      { label: "Thành phần / Components", help: "Thêm/sửa nguyên liệu, tồn thành phần / Edit ingredients and component stock", view: "inventory", inventory: "components", componentMode: "edit", keywords: "thanh phan component nguyen lieu ingredient them sua" },
+      { label: "Chuyển thành phần / Convert Stock", help: "Chuyển hàng retail sang thành phần / Convert retail stock to component", view: "inventory", inventory: "components", componentMode: "convert", keywords: "chuyen thanh phan convert retail component" },
+      { label: "Sơ chế / Production", help: "Công thức và mẻ bán thành phẩm / Prep recipes and batches", view: "inventory", inventory: "production", keywords: "so che production recipe cong thuc ban thanh pham" },
+      { label: "Thêm sản phẩm / Add Product", help: "Tạo/sửa sản phẩm và công thức / Add products and BOM", view: "inventory", inventory: "product", keywords: "them san pham add product sua product barcode sku" },
+      { label: "Điều chỉnh, sửa / Adjust & Edit", help: "Danh mục và add-ons / Categories and add-ons", view: "inventory", inventory: "catalog", keywords: "dieu chinh sua danh muc category addon add on" },
+      { label: "Cài đặt chung / General Settings", help: "Thông tin cửa hàng / Shop details", view: "settings", settings: "general", keywords: "cai dat chung setting shop cua hang thong tin" },
+      { label: "Mẫu hóa đơn / Invoice Templates", help: "Mẫu bill, VAT, FnB invoice / Receipt and VAT templates", view: "settings", settings: "invoice", keywords: "hoa don invoice bill vat mau template" },
+      { label: "Mẫu tem mã vạch / Barcode Templates", help: "Tem barcode, khổ in 90x55 / Barcode label templates", view: "settings", settings: "barcode", keywords: "barcode ma vach tem label 90x55 in tem" },
+      { label: "Xuất dữ liệu / Export Backup", help: "CSV/ZIP backup cho Google Sheets/database / Database export backup", view: "dashboard", keywords: "export backup data database csv zip google sheets" }
+    ];
+
+    var functionSearchResults = useMemo(function () {
+      var query = normalizeSearchText(functionSearchTerm);
+      if (!query) return [];
+      return functionDestinations.filter(function (item) {
+        return normalizeSearchText([item.label, item.help, item.keywords].join(" ")).indexOf(query) !== -1;
+      }).slice(0, 7);
+    }, [functionSearchTerm, language, inventorySection, settingsSection]);
+
+    function openFunctionDestination(item) {
+      if (!item) return;
+      setActiveView(item.view);
+      if (item.inventory) setInventorySection(item.inventory);
+      if (item.stockTab) setStockCheckTab(item.stockTab);
+      if (item.stockOps) setStockOpsMode(item.stockOps);
+      if (item.componentMode) setComponentWorkspaceMode(item.componentMode);
+      if (item.settings) setSettingsSection(item.settings);
+      setFunctionSearchTerm("");
+    }
 
     var addOnGroupLabels = {
       sweetness: "Độ ngọt / Sweetness",
@@ -8899,7 +8938,7 @@
             ` : null}
 
             ${inventorySection === "components" ? html`
-              <div className="settings-nav" style=${{ marginBottom: 16 }}>
+              <div className="settings-nav component-workspace-switch">
                 <button
                   type="button"
                   className=${"settings-nav-btn" + (componentWorkspaceMode === "edit" ? " is-active" : "")}
@@ -9424,7 +9463,7 @@
           <header className="page-header surface">
             <div>
               <p className="eyebrow">${L("Phiếu kho / Stock Documents")}</p>
-              <h1 className="section-title">${L("Nhập / Xuất hàng chung một trang / Stock In-Out in One Workspace")}</h1>
+              <h1 className="section-title">${L("Nhập và xuất hàng chung một trang / Stock In-Out in One Workspace")}</h1>
               <small style=${{ color: "#7b6b5d" }}>
                 ${L("Chọn loại phiếu để đổi form. Nhập và xuất đều hỗ trợ sản phẩm hoặc thành phần. / Choose document type to switch templates. Both stock-in and stock-out support products or components.")}
               </small>
@@ -10564,10 +10603,39 @@
 
           <div className="search-box">
             <input
-              placeholder=${L("Tìm theo tên sản phẩm hoặc loại / Search by product or type")}
-              value=${searchTerm}
-              onInput=${function (event) { setSearchTerm(event.target.value); }}
+              placeholder=${L("Tìm chức năng: kho, hóa đơn, tem, thành phần... / Search functions: stock, invoice, label...")}
+              value=${functionSearchTerm}
+              onInput=${function (event) { setFunctionSearchTerm(event.target.value); }}
+              onKeyDown=${function (event) {
+                if (event.key === "Enter" && functionSearchResults.length) {
+                  event.preventDefault();
+                  openFunctionDestination(functionSearchResults[0]);
+                }
+                if (event.key === "Escape") {
+                  setFunctionSearchTerm("");
+                }
+              }}
             />
+            ${functionSearchResults.length ? html`
+              <div className="function-search-panel surface">
+                ${functionSearchResults.map(function (item) {
+                  return html`
+                    <button
+                      key=${item.label}
+                      type="button"
+                      className="function-search-item"
+                      onMouseDown=${function (event) {
+                        event.preventDefault();
+                        openFunctionDestination(item);
+                      }}
+                    >
+                      <strong>${L(item.label)}</strong>
+                      <small>${L(item.help)}</small>
+                    </button>
+                  `;
+                })}
+              </div>
+            ` : null}
           </div>
 
           <div className="topbar-actions" style=${{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>

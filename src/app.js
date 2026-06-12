@@ -6021,7 +6021,8 @@
         minStock: Number(component.minStock) || 0
       });
       setActiveView("inventory");
-      setInventorySection("catalog");
+      setInventorySection("components");
+      setComponentWorkspaceMode("edit");
     }
 
     function submitComponent(event) {

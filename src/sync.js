@@ -192,6 +192,9 @@
             setStatus({ pending: current.length });
           }
         }
+        if (readOutbox().length && state.online) {
+          scheduleRetry();
+        }
         throw err;
       });
   }
@@ -211,8 +214,19 @@
     });
   }
 
+  function scheduleRetry() {
+    if (retryTimer) window.clearTimeout(retryTimer);
+    var head = readOutbox()[0];
+    var retries = head ? Number(head.retries) || 1 : 1;
+    retryTimer = window.setTimeout(function () {
+      retryTimer = null;
+      flush().catch(function () {});
+    }, Math.min(5000 + retries * 2500, 15000));
+  }
+
   // ---------- init / online listeners ----------
   var pullTimer = null;
+  var retryTimer = null;
   function init(opts) {
     opts = opts || {};
     if (opts.onPulled)        listeners.pulled.push(opts.onPulled);

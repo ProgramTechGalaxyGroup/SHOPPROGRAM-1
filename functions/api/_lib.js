@@ -82,10 +82,10 @@ export function normalizePaymentMethod(value) {
 
 // YYYYMMDD in shop-local-ish UTC (no TZ adjust; good enough for daily ids)
 export function dateKey(ts) {
-  const d = new Date(ts || Date.now());
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+  const d = new Date((ts || Date.now()) + 7 * 60 * 60 * 1000);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}${m}${day}`;
 }
 

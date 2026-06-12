@@ -203,7 +203,7 @@
 
   var FILTER_ALL_CATEGORY = { id: "all", label: "Tất cả / All", icon: "🛒" };
   // Master category list — matches database/cloudflare/migrations/0004_oria_master.sql.
-  // Source of truth is Cloudflare D1; this default only seeds first-time
+  // Source of truth is the remote API database; this default only seeds first-time
   // localStorage so the app is usable before the initial /api/sync/pull lands.
   var DEFAULT_CATEGORY_OPTIONS = [
     // Level 1
@@ -243,7 +243,7 @@
   ];
 
   // Demo/seed product list — only used the very first time the app loads on
-  // a device that has no localStorage AND can't reach Cloudflare D1.
+  // a device that has no localStorage AND can't reach the remote API.
   // Once /api/sync/pull lands, these are replaced by the live master list.
   // (The legacy "p-*" demo products below are kept for offline first-run
   //  demo only; they are soft-deactivated in D1 by migration 0004.)
@@ -2069,7 +2069,7 @@
 
 
   // -----------------------------------------------------------------
-  // Cloudflare D1 sync bridge.
+  // Remote API sync bridge.
   // window.ShopFlowSync is provided by sync.js (loaded before app.js).
   // We guard every call so the app still works if sync.js failed to load
   // or the API is offline.
@@ -2178,7 +2178,7 @@
     var [activeView, setActiveView] = useState("pos");
     var [menuOpen, setMenuOpen] = useState(false);
 
-    // ---- Cloudflare D1 sync state -------------------------------
+    // ---- Remote API sync state ----------------------------------
     var [syncStatus, setSyncStatus] = useState({ online: true, pending: 0, lastSyncAt: 0, lastError: null });
     // Toast queue — array of { id, kind: "success"|"error"|"info", text, ts }.
     // Auto-dismissed by the renderer after ~3.5s.
@@ -2641,7 +2641,7 @@
       }
     }, [orders, activeOrderId]);
 
-    // ---------- Cloudflare D1 sync wiring ----------
+    // ---------- Remote API sync wiring ----------
     useEffect(function () {
       if (!window.ShopFlowSync) return undefined;
 
@@ -4223,7 +4223,7 @@
         }, 200);
       }
 
-      // ---- Push to Cloudflare D1 (non-blocking, queued offline) ----
+      // ---- Push to remote API (non-blocking, queued offline) ----
       syncEnqueue({
         endpoint: "/sales",
         method: "POST",
@@ -5688,7 +5688,7 @@
         });
       }
 
-      // Sync to Cloudflare D1
+      // Sync to remote API
       syncEnqueue({
         endpoint: "/categories",
         method: "POST",
@@ -5741,7 +5741,7 @@
         resetCategoryDraft();
       }
 
-      // Sync soft-delete to Cloudflare D1
+      // Sync soft-delete to remote API
       syncEnqueue({
         endpoint: "/categories",
         method: "DELETE",
@@ -9153,7 +9153,7 @@
             <div>
               <p className="eyebrow">${L("Nhập hàng / Stock In")}</p>
               <h1 className="section-title">${L("Tạo phiếu nhập / Create Purchase Order")}</h1>
-              <small style=${{ color: "#7b6b5d" }}>${L("Phiếu nhập sẽ ghi vào Cloudflare D1 + tự cộng tồn kho. / Purchase writes to Cloudflare D1 and adds to stock.")}</small>
+              <small style=${{ color: "#7b6b5d" }}>${L("Phiếu nhập sẽ ghi vào Supabase/API + tự cộng tồn kho. / Purchase writes to Supabase/API and adds to stock.")}</small>
             </div>
             <div className="row-actions">
               <span className="eyebrow">${L("Trạng thái / Status")}: ${syncStatus.online ? "🟢" : "🔴"} ${syncStatus.pending ? ("⏳" + syncStatus.pending) : ""}</span>
@@ -9510,7 +9510,7 @@
             <div>
               <p className="eyebrow">${L("Lưu kho / Warehouse")}</p>
               <h1 className="section-title">${L("Quản lý kho hàng / Inventory Management")}</h1>
-              <small style=${{ color: "#7b6b5d" }}>${L("Đồng bộ với Cloudflare D1. / Synced with Cloudflare D1.")}</small>
+              <small style=${{ color: "#7b6b5d" }}>${L("Đồng bộ với Supabase/API. / Synced with Supabase/API.")}</small>
             </div>
             <div className="row-actions">
               ${lowStockCount > 0 ? html`<span className="eyebrow" style=${{ color: "#c0392b" }}>⚠ ${lowStockCount} ${L("SP sắp hết / low-stock")}</span>` : null}
@@ -9731,7 +9731,7 @@
                 <div className="list-stack">
                   <div className="empty-state align-left">
                     ${syncStatus.online
-                      ? L("Mọi thay đổi tự động lưu lên Cloudflare D1 (1s delay). / Changes auto-save to Cloudflare D1 (1s delay).")
+                      ? L("Mọi thay đổi tự động lưu lên Supabase/API (1s delay). / Changes auto-save to Supabase/API (1s delay).")
                       : L("Đang offline – thay đổi sẽ đồng bộ khi có mạng lại. / Offline – changes will sync when reconnected.")}
                   </div>
                 </div>
@@ -10174,12 +10174,12 @@
           <div className="topbar-actions" style=${{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <div
               className="lang-switch surface"
-              title=${syncStatus.lastError ? syncStatus.lastError : (syncStatus.online ? "D1 online" : "Offline")}
+              title=${syncStatus.lastError ? syncStatus.lastError : (syncStatus.online ? "Supabase/API online" : "Offline")}
               style=${{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 10px" }}
             >
             <span style=${{ fontSize: 14 }}>${syncStatus.online ? "🟢" : "🔴"}</span>
             <small style=${{ color: "#7b6b5d" }}>
-              ${syncStatus.online ? "D1" : L("Ngoại tuyến / Offline")}
+              ${syncStatus.online ? "Supabase/API" : L("Ngoại tuyến / Offline")}
               ${syncStatus.pending ? " · ⏳" + syncStatus.pending : ""}
             </small>
           </div>

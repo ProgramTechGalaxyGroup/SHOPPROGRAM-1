@@ -135,7 +135,7 @@
     { id: "en", label: "EN" }
   ];
   var PAYMENT_METHOD_DEFAULT = "";
-  var PAYMENT_METHOD_PLACEHOLDER = "Chọn phương thức thanh toán / Select payment method";
+  var PAYMENT_METHOD_PLACEHOLDER = "Chọn / Select";
   var PAYMENT_METHOD_OPTIONS = [
     { value: "cash", label: "Tiền mặt / Cash" },
     { value: "card", label: "Thẻ / Card" },

@@ -3398,7 +3398,37 @@
         return min > 0 && qty <= min;
       });
     }, [products]);
-    var lowStockCount = lowStockProducts.length;
+    var lowStockComponents = useMemo(function () {
+      return components.filter(function (component) {
+        var qty = Number(component.stockQty) || 0;
+        var min = Number(component.minStock) || 0;
+        return min > 0 && qty <= min && component.active !== false;
+      });
+    }, [components]);
+    var lowStockAlerts = useMemo(function () {
+      return lowStockProducts.map(function (product) {
+        return {
+          id: "product-" + product.id,
+          type: "product",
+          label: product.name,
+          unit: product.unit || "",
+          qty: Number(product.stock) || 0,
+          min: Number(product.minStock) || 0,
+          meta: product.barcode || product.id
+        };
+      }).concat(lowStockComponents.map(function (component) {
+        return {
+          id: "component-" + component.id,
+          type: "component",
+          label: L(component.label),
+          unit: component.unit || "",
+          qty: Number(component.stockQty) || 0,
+          min: Number(component.minStock) || 0,
+          meta: L(getComponentItemTypeLabel(component.itemType)) || component.id
+        };
+      }));
+    }, [lowStockProducts, lowStockComponents, language]);
+    var lowStockCount = lowStockAlerts.length;
 
     var activeInvoiceTemplate = invoiceTemplates.find(function (template) {
       return template.id === selectedInvoiceTemplateId;
@@ -3470,12 +3500,7 @@
       var ordersCount = paidSalesInRange.length;
       // Average ticket
       var avgTicket = ordersCount > 0 ? Math.round(revenue / ordersCount) : 0;
-      // Low-stock products (unchanged — global rule)
-      var lowStock = products.filter(function (product) {
-        var qty = Number(product.stock) || 0;
-        var min = Number(product.minStock) || 0;
-        return min > 0 && qty <= min;
-      });
+      var lowStock = lowStockAlerts;
       // Group by day for chart
       var byDay = {};
       paidSalesInRange.forEach(function (s) {
@@ -3526,7 +3551,7 @@
         topProducts: topProducts,
         recentSales: clone(paidSalesInRange).sort(function (a, b) { return b.createdAt - a.createdAt; })
       };
-    }, [products, sales, dashboardRange, dashboardCustomFrom, dashboardCustomTo]);
+    }, [products, sales, dashboardRange, dashboardCustomFrom, dashboardCustomTo, lowStockAlerts]);
 
     var inventoryTabs = [
       { id: "stock", label: "Kiểm hàng tồn kho / Stock Check" },
@@ -7160,11 +7185,12 @@
               <span style=${{ fontSize: 22 }}>⚠</span>
               <div style=${{ flex: 1, minWidth: 200 }}>
                 <strong style=${{ color: "#a4451a" }}>
-                  ${L("Cảnh báo tồn kho / Low Stock Alert")}: ${lowStockCount} ${L("sản phẩm / products")}
+                  ${L("Cảnh báo tồn kho / Low Stock Alert")}: ${lowStockCount} ${L("mục / items")}
                 </strong>
                 <p style=${{ color: "#7b6b5d", margin: "4px 0 0", fontSize: 13 }}>
-                  ${lowStockProducts.slice(0, 3).map(function (p) {
-                    return p.name + " (" + (p.stock || 0) + "/" + (p.minStock || 0) + ")";
+                  ${lowStockAlerts.slice(0, 3).map(function (item) {
+                    return (item.type === "component" ? L("NL / Ingredient") : L("SP / Product")) +
+                      ": " + item.label + " (" + formatQuantity(item.qty, 2) + "/" + formatQuantity(item.min, 2) + (item.unit ? " " + item.unit : "") + ")";
                   }).join(" · ")}
                   ${lowStockCount > 3 ? " · +" + (lowStockCount - 3) + " " + L("khác / more") : ""}
                 </p>
@@ -7438,7 +7464,12 @@
                         <p>${product.barcode}${product.unit ? " · " + product.unit : ""} · ${formatCurrency(product.price)}</p>
                       </div>
                       <div className="row-actions">
-                        <span className="stock-badge">${product.stock}</span>
+                        <span
+                          className="stock-badge"
+                          title=${product.inventoryMode === "recipe" ? L("Tồn khả dụng tính từ nguyên liệu / Available units based on ingredients") : L("Tồn kho thật / Direct stock")}
+                        >
+                          ${product.inventoryMode === "recipe" ? L("Có thể bán / Available") + ": " : L("Tồn / Stock") + ": "}${product.stock}
+                        </span>
                         <button className="ghost-btn" onClick=${function () { addProductToOrder(product); }}>${L("Thêm / Add")}</button>
                       </div>
                     </article>
@@ -7925,14 +7956,14 @@
                 </div>
               </div>
               <div className="list-stack">
-                ${dashboardMetrics.lowStock.map(function (product) {
+                ${dashboardMetrics.lowStock.map(function (item) {
                   return html`
-                    <article key=${product.id} className="list-row">
+                    <article key=${item.id} className="list-row">
                       <div>
-                        <strong>${product.name}</strong>
-                        <p>${product.barcode} · ${L("min")}: ${product.minStock}</p>
+                        <strong>${item.type === "component" ? L("Nguyên liệu / Ingredient") : L("Sản phẩm / Product")}: ${item.label}</strong>
+                        <p>${item.meta} · ${L("min")}: ${formatQuantity(item.min, 2)} ${item.unit || ""}</p>
                       </div>
-                      <span className="stock-badge" style=${{ color: "#c0392b" }}>${product.stock} ${L("còn / left")}</span>
+                      <span className="stock-badge" style=${{ color: "#c0392b" }}>${formatQuantity(item.qty, 2)} ${item.unit || ""} ${L("còn / left")}</span>
                     </article>
                   `;
                 })}
@@ -8045,11 +8076,7 @@
       //   • only show products with min_stock > 0 (admin has set a threshold)
       //   • and current stock at/below that threshold
       // Products without a min_stock are NEVER hidden here.
-      var lowStockListForCheck = products.filter(function (product) {
-        var qty = Number(product.stock) || 0;
-        var min = Number(product.minStock) || 0;
-        return min > 0 && qty <= min;
-      });
+      var lowStockAlertsForCheck = lowStockAlerts;
       var allProductsSelected = products.length > 0 && selectedProductIds.length === products.length;
       var convertibleProducts = getConvertibleProducts();
       var conversionProduct = getConversionProduct();
@@ -8127,7 +8154,7 @@
                   </article>
                   <article className="metric-card surface">
                     <span className="metric-label">${L("Sắp hết hàng / Low Stock")}</span>
-                    <strong>${lowStockListForCheck.length}</strong>
+                    <strong>${lowStockAlertsForCheck.length}</strong>
                   </article>
                   <article className="metric-card surface">
                     <span className="metric-label">${L("Danh mục / Categories")}</span>
@@ -8144,13 +8171,33 @@
                       </div>
                     </div>
                     <div className="list-stack">
-                      ${lowStockListForCheck.length
-                        ? lowStockListForCheck.map(function (product) {
+                      ${lowStockAlertsForCheck.length
+                        ? lowStockAlertsForCheck.map(function (item) {
+                            if (item.type === "component") {
+                              var component = components.find(function (currentComponent) {
+                                return "component-" + currentComponent.id === item.id;
+                              }) || {};
+                              return html`
+                                <article key=${item.id} className="list-row list-row-actions stock-check-row">
+                                  <div className="stock-check-meta">
+                                    <strong>🧺 ${item.label}</strong>
+                                    <p>${L("Nguyên liệu / Ingredient")} · ${item.meta}</p>
+                                  </div>
+                                  <div className="row-actions stock-editor">
+                                    <span className="stock-badge" style=${{ color: "#c0392b" }}>${formatQuantity(item.qty, 2)} ${item.unit || ""} / ${formatQuantity(item.min, 2)}</span>
+                                    <button className="ghost-btn" onClick=${function () { startEditComponent(component); }}>${L("Sửa / Edit")}</button>
+                                  </div>
+                                </article>
+                              `;
+                            }
+                            var product = products.find(function (currentProduct) {
+                              return "product-" + currentProduct.id === item.id;
+                            }) || {};
                             var category = categories.find(function (item) {
                               return item.id === product.category;
                             });
                             return html`
-                              <article key=${product.id} className="list-row list-row-actions stock-check-row">
+                              <article key=${item.id} className="list-row list-row-actions stock-check-row">
                                 <div className="stock-check-meta">
                                   <strong>${product.image} ${product.name}</strong>
                                   <p>${category ? L(category.label) : product.category} · ${product.barcode}</p>
@@ -8267,7 +8314,9 @@
                               </div>
                             </div>
                             <div className="row-actions">
-                              <span className="stock-badge" title=${product.inventoryMode === "recipe" ? L("Tồn ảo tính theo nguyên liệu / Virtual stock based on ingredients") : ""}>${product.stock}</span>
+                              <span className="stock-badge" title=${product.inventoryMode === "recipe" ? L("Tồn khả dụng tính theo nguyên liệu / Available stock based on ingredients") : L("Tồn kho thật / Direct stock")}>
+                                ${product.inventoryMode === "recipe" ? L("Có thể bán / Available") + ": " : L("Tồn / Stock") + ": "}${product.stock}
+                              </span>
                               <label className="label-qty-field">
                                 <span>${L("Số tem / Qty")}</span>
                                 <input
@@ -10014,7 +10063,7 @@
         { id: "ledger",    label: "Sổ cái / Movement Ledger" },
         { id: "stocktake", label: "Kiểm kê / Stocktake" }
       ];
-      // Use the shared lowStockProducts (above) so this count matches the
+      // Use the shared lowStockAlerts (above) so this count matches the
       // topbar badge + POS banner.  (Avoids the previous min=0 false positive.)
 
       return html`
@@ -10026,7 +10075,7 @@
               <small style=${{ color: "#7b6b5d" }}>${L("Đồng bộ với Supabase/API. / Synced with Supabase/API.")}</small>
             </div>
             <div className="row-actions">
-              ${lowStockCount > 0 ? html`<span className="eyebrow" style=${{ color: "#c0392b" }}>⚠ ${lowStockCount} ${L("SP sắp hết / low-stock")}</span>` : null}
+              ${lowStockCount > 0 ? html`<span className="eyebrow" style=${{ color: "#c0392b" }}>⚠ ${lowStockCount} ${L("mục sắp hết / low-stock items")}</span>` : null}
               <span className="eyebrow">${syncStatus.online ? "🟢" : "🔴"} ${syncStatus.pending ? ("⏳" + syncStatus.pending) : ""}</span>
             </div>
           </header>
@@ -10730,8 +10779,8 @@
             <button
               type="button"
               className="lang-switch surface"
-              title=${lowStockProducts.slice(0, 8).map(function (p) {
-                return p.name + " (" + (p.stock || 0) + "/" + (p.minStock || 0) + ")";
+              title=${lowStockAlerts.slice(0, 8).map(function (item) {
+                return item.label + " (" + formatQuantity(item.qty, 2) + "/" + formatQuantity(item.min, 2) + (item.unit ? " " + item.unit : "") + ")";
               }).join("\n")}
               style=${{
                 display: "inline-flex", alignItems: "center", gap: 8,
@@ -10746,7 +10795,7 @@
               }}
             >
               <span style=${{ fontSize: 16 }}>⚠</span>
-              <span>${lowStockCount} ${L("SP sắp hết / low-stock")}</span>
+              <span>${lowStockCount} ${L("mục sắp hết / low-stock")}</span>
             </button>
           ` : null}
 

@@ -9,15 +9,40 @@ async function ensurePurchaseRequestTables(db) {
       items_json      TEXT NOT NULL,
       status          TEXT NOT NULL DEFAULT 'open',
       fulfilled_by    TEXT,
-      fulfilled_at    INTEGER,
+      fulfilled_at    BIGINT,
       purchase_id     TEXT,
-      created_at      INTEGER NOT NULL,
-      updated_at      INTEGER NOT NULL
+      created_at      BIGINT NOT NULL,
+      updated_at      BIGINT NOT NULL
     )`
   ).run();
+  await ensureTimestampColumns(db);
   await db.prepare(
     `CREATE INDEX IF NOT EXISTS idx_purchase_requests_status
      ON purchase_requests(status, created_at)`
+  ).run();
+}
+
+async function ensureTimestampColumns(db) {
+  if (!db || db.__provider !== "supabase") return;
+  const { results } = await db.prepare(
+    `SELECT column_name, data_type
+     FROM information_schema.columns
+     WHERE table_schema = 'public'
+       AND table_name = 'purchase_requests'
+       AND column_name IN ('fulfilled_at', 'created_at', 'updated_at')`
+  ).all();
+  const needsMigration = (results || []).some((row) =>
+    String(row.data_type || "").toLowerCase() === "integer"
+  );
+  if (!needsMigration) return;
+
+  // Supabase/Postgres INTEGER is 32-bit, but the app stores Date.now() milliseconds.
+  // Keep this migration here so older auto-created tables stop throwing "integer out of range".
+  await db.prepare(
+    `ALTER TABLE purchase_requests
+       ALTER COLUMN fulfilled_at TYPE BIGINT USING fulfilled_at::BIGINT,
+       ALTER COLUMN created_at TYPE BIGINT USING created_at::BIGINT,
+       ALTER COLUMN updated_at TYPE BIGINT USING updated_at::BIGINT`
   ).run();
 }
 

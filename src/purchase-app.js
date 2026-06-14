@@ -243,14 +243,26 @@
       qtyInput.parentNode.firstChild.nodeValue = options.qtyLabel + " ";
       qtyInput.value = line.qty;
       costInput.value = line.unitCost;
-      node.querySelector(".line-subtotal").textContent = money(numberValue(line.qty) * numberValue(line.unitCost));
+      updateLineSubtotal(node, line);
       qtyInput.addEventListener("input", function () {
-        line.qty = Math.max(0, numberValue(qtyInput.value));
-        render();
+        line.qty = qtyInput.value;
+        updateLineSubtotal(node, line);
+        updateLineTotals(options.boxId);
       });
       costInput.addEventListener("input", function () {
-        line.unitCost = Math.max(0, Math.round(numberValue(costInput.value)));
-        render();
+        line.unitCost = costInput.value;
+        updateLineSubtotal(node, line);
+        updateLineTotals(options.boxId);
+      });
+      qtyInput.addEventListener("blur", function () {
+        normalizeNumberInput(qtyInput, line, "qty", false);
+        updateLineSubtotal(node, line);
+        updateLineTotals(options.boxId);
+      });
+      costInput.addEventListener("blur", function () {
+        normalizeNumberInput(costInput, line, "unitCost", true);
+        updateLineSubtotal(node, line);
+        updateLineTotals(options.boxId);
       });
       var removeBtn = node.querySelector(".line-remove");
       if (options.lockRemove) {
@@ -263,6 +275,45 @@
     });
   }
 
+  function updateLineSubtotal(node, line) {
+    node.querySelector(".line-subtotal").textContent = money(numberValue(line.qty) * numberValue(line.unitCost));
+  }
+
+  function normalizeNumberInput(input, line, field, roundValue) {
+    if (input.value.trim() === "") {
+      line[field] = "";
+      return;
+    }
+    var value = Math.max(0, numberValue(input.value));
+    if (roundValue) value = Math.round(value);
+    line[field] = value;
+    input.value = String(value);
+  }
+
+  function updateLineTotals(boxId) {
+    if (boxId === "receiveLines") {
+      updateReceiveTotals();
+    } else if (boxId === "requestDraftLines") {
+      updateRequestTotals();
+    }
+  }
+
+  function updateRequestTotals() {
+    var total = totals(state.requestLines);
+    $("requestLineCount").textContent = String(state.requestLines.length);
+    $("requestQtyTotal").textContent = formatter.format(total.qty);
+  }
+
+  function updateReceiveTotals() {
+    var total = totals(state.receiveLines.filter(function (line) { return numberValue(line.qty) > 0; }));
+    $("lineCount").textContent = String(state.receiveLines.length);
+    $("qtyTotal").textContent = formatter.format(total.qty);
+    $("amountTotal").textContent = money(total.amount);
+    $("savePurchaseBtn").disabled = state.saving || !state.receiveLines.some(function (line) {
+      return numberValue(line.qty) > 0;
+    });
+  }
+
   function renderRequestDraft() {
     renderLineList({
       boxId: "requestDraftLines",
@@ -271,9 +322,7 @@
       emptyText: "Tìm hàng ở bên trái để tạo list yêu cầu mua hàng.",
       lockRemove: false,
     });
-    var total = totals(state.requestLines);
-    $("requestLineCount").textContent = String(state.requestLines.length);
-    $("requestQtyTotal").textContent = formatter.format(total.qty);
+    updateRequestTotals();
   }
 
   function renderReceiveLines() {
@@ -284,13 +333,7 @@
       emptyText: "Chưa có sản phẩm nào đang được yêu cầu.",
       lockRemove: true,
     });
-    var total = totals(state.receiveLines.filter(function (line) { return numberValue(line.qty) > 0; }));
-    $("lineCount").textContent = String(state.receiveLines.length);
-    $("qtyTotal").textContent = formatter.format(total.qty);
-    $("amountTotal").textContent = money(total.amount);
-    $("savePurchaseBtn").disabled = state.saving || !state.receiveLines.some(function (line) {
-      return numberValue(line.qty) > 0;
-    });
+    updateReceiveTotals();
   }
 
   function renderRequestSummary() {

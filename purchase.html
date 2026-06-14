@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OriaFarm - Phiếu nhập hàng</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="src/purchase-styles.css?v=2" />
+  </head>
+  <body>
+    <main class="purchase-shell">
+      <header class="purchase-topbar">
+        <div>
+          <p class="eyebrow">OriaFarm Inventory</p>
+          <h1>Phiếu nhập hàng</h1>
+          <p class="topbar-note">Nhập hàng bán lẻ hoặc thành phần, dữ liệu tự cập nhật về kho POS chính.</p>
+        </div>
+        <div class="topbar-actions">
+          <span id="syncStatus" class="status-pill">Đang tải...</span>
+          <a class="ghost-link" href="/">Mở POS chính</a>
+        </div>
+      </header>
+
+      <section class="request-board">
+        <article class="panel request-card">
+          <div class="section-heading">
+            <p class="eyebrow">Nhân viên kho</p>
+            <h2>Tạo yêu cầu mua hàng</h2>
+          </div>
+          <p class="soft-note">Thêm hàng ở phần phiếu bên dưới, nhập số lượng cần mua, rồi lưu thành yêu cầu để người mua hàng thấy.</p>
+          <div class="field-grid">
+            <label>
+              Người yêu cầu
+              <input id="requesterName" type="text" placeholder="Tên nhân viên kho" />
+            </label>
+            <label>
+              Ghi chú yêu cầu
+              <input id="requestNote" type="text" placeholder="Ví dụ: cần trước 10h sáng" />
+            </label>
+          </div>
+          <button id="createRequestBtn" class="secondary-button" type="button">Lưu thành yêu cầu</button>
+          <p id="requestMessage" class="save-message" role="status"></p>
+        </article>
+
+        <article class="panel request-card">
+          <div class="request-list-head">
+            <div class="section-heading">
+              <p class="eyebrow">Người mua hàng / nhập kho</p>
+              <h2>Yêu cầu đang mở</h2>
+            </div>
+            <button id="refreshRequestsBtn" class="ghost-button" type="button">Tải lại</button>
+          </div>
+          <div id="requestList" class="request-list empty">Chưa có yêu cầu đang mở.</div>
+        </article>
+      </section>
+
+      <section class="purchase-layout">
+        <form id="purchaseForm" class="panel purchase-form">
+          <div class="section-heading">
+            <p class="eyebrow">Thông tin phiếu</p>
+            <h2>Nhà cung cấp & thanh toán</h2>
+          </div>
+
+          <div id="selectedRequestBox" class="selected-request is-hidden"></div>
+
+          <label>
+            Nhà cung cấp
+            <select id="supplierSelect">
+              <option value="">Chọn nhà cung cấp hoặc nhập mới</option>
+            </select>
+          </label>
+
+          <label>
+            Tên nhà cung cấp mới
+            <input id="supplierName" type="text" placeholder="Ví dụ: Chợ đầu mối, Oria supplier..." />
+          </label>
+
+          <div class="field-grid">
+            <label>
+              Thanh toán
+              <select id="paymentMethod" required>
+                <option value="">Chọn</option>
+                <option value="cash">Tiền mặt</option>
+                <option value="bank_transfer">Chuyển khoản</option>
+                <option value="card">Thẻ</option>
+                <option value="e_wallet">Ví điện tử</option>
+              </select>
+            </label>
+            <label>
+              Đã thanh toán
+              <input id="paidAmount" type="number" min="0" step="1000" placeholder="Tự bằng tổng tiền" />
+            </label>
+          </div>
+
+          <label>
+            Ghi chú
+            <textarea id="purchaseNote" rows="3" placeholder="Ghi chú lô hàng, người giao, số hóa đơn..."></textarea>
+          </label>
+
+          <div class="divider"></div>
+
+          <div class="section-heading compact">
+            <p class="eyebrow">Tìm & thêm</p>
+            <h2>Chọn hàng nhập</h2>
+          </div>
+
+          <div class="type-tabs" role="tablist" aria-label="Loại hàng nhập">
+            <button class="type-tab is-active" type="button" data-type="product">Hàng bán lẻ</button>
+            <button class="type-tab" type="button" data-type="component">Thành phần</button>
+          </div>
+
+          <label>
+            Tìm theo tên, mã vạch, SKU
+            <input id="itemSearch" type="search" placeholder="Gõ tên hàng hoặc quét barcode..." autocomplete="off" />
+          </label>
+
+          <div id="itemResults" class="item-results" aria-live="polite"></div>
+        </form>
+
+        <aside class="panel receipt-panel">
+          <div class="receipt-header">
+            <div>
+              <p class="eyebrow">Phiếu đang nhập</p>
+              <h2 id="draftTitle">Chưa có dòng hàng</h2>
+            </div>
+            <button id="clearDraftBtn" class="ghost-button" type="button">Xóa nháp</button>
+          </div>
+
+          <div id="draftLines" class="draft-lines empty">
+            Chọn hàng ở bên trái để tạo phiếu nhập.
+          </div>
+
+          <div class="totals-card">
+            <div><span>Số dòng</span><strong id="lineCount">0</strong></div>
+            <div><span>Tổng số lượng</span><strong id="qtyTotal">0</strong></div>
+            <div class="grand-total"><span>Tổng tiền</span><strong id="amountTotal">0 đ</strong></div>
+          </div>
+
+          <button id="savePurchaseBtn" class="primary-button" type="button">Lưu phiếu nhập</button>
+          <p id="saveMessage" class="save-message" role="status"></p>
+        </aside>
+      </section>
+    </main>
+
+    <template id="resultTemplate">
+      <button class="result-card" type="button">
+        <span class="result-icon"></span>
+        <span>
+          <strong class="result-name"></strong>
+          <small class="result-meta"></small>
+        </span>
+        <span class="result-stock"></span>
+      </button>
+    </template>
+
+    <template id="lineTemplate">
+      <article class="draft-line">
+        <div class="line-main">
+          <strong class="line-name"></strong>
+          <small class="line-meta"></small>
+        </div>
+        <label>
+          SL
+          <input class="line-qty" type="number" min="0.001" step="0.001" />
+        </label>
+        <label>
+          Giá nhập
+          <input class="line-cost" type="number" min="0" step="1000" />
+        </label>
+        <strong class="line-subtotal"></strong>
+        <button class="line-remove" type="button">Xóa</button>
+      </article>
+    </template>
+
+    <script src="src/sync.js?v=9"></script>
+    <script src="src/purchase-app.js?v=2"></script>
+  </body>
+</html>

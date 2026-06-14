@@ -17,6 +17,7 @@
 - **Quầy POS**: nhiều bill đang mở, quét barcode bằng máy scan hoặc camera, add-ons, thanh toán, in lại hóa đơn.
 - **Kiểm soát lưu đơn**: đơn chỉ ghi nhận doanh thu khi API lưu thành công; đơn lỗi giữ lại ở màn hình bán hàng để xử lý.
 - **Kho hàng**: kiểm hàng tồn kho, phiếu nhập/xuất chung, kiểm kê, sổ cái/chuyển động kho.
+- **Phiếu nhập riêng**: mở `/purchase.html` để nhân viên kho tạo yêu cầu mua hàng, người nhập kho chọn yêu cầu và lưu phiếu nhập qua cùng API `/api/purchases`.
 - **Thành phần**: thêm/sửa nguyên liệu, chuyển thành phần, hỗ trợ sản phẩm bán lẻ và sản phẩm pha chế/recipe.
 - **Sản phẩm**: thêm/sửa sản phẩm, barcode EAN-13, phân loại retail/recipe, giá, tồn kho, active/inactive.
 - **Danh mục và add-ons**: quản lý danh mục, add-ons và lựa chọn custom cho sản phẩm.

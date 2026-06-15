@@ -3097,6 +3097,10 @@
     }
     // Auto refresh when relevant views open.
     useEffect(function () {
+      if (activeView === "dashboard") {
+        refreshPurchases();
+        return;
+      }
       if (activeView !== "inventory") return;
       if (inventorySection === "stock_ops") {
         refreshSuppliers();
@@ -3539,6 +3543,12 @@
         });
       });
       var topProducts = Object.values(byProduct).sort(function (a, b) { return b.qty - a.qty; }).slice(0, 5);
+      var pendingPurchases = (purchases || []).filter(function (po) {
+        return (po.verification_status || po.verificationStatus) === "pending_verification";
+      });
+      var pendingPurchaseTotal = pendingPurchases.reduce(function (sum, po) {
+        return sum + (Number(po.total_amount || po.totalAmount) || 0);
+      }, 0);
 
       return {
         range: range,
@@ -3549,9 +3559,11 @@
         daySeries: daySeries,
         paymentBreakdown: paymentBreakdown,
         topProducts: topProducts,
+        pendingPurchases: pendingPurchases,
+        pendingPurchaseTotal: pendingPurchaseTotal,
         recentSales: clone(paidSalesInRange).sort(function (a, b) { return b.createdAt - a.createdAt; })
       };
-    }, [products, sales, dashboardRange, dashboardCustomFrom, dashboardCustomTo, lowStockAlerts]);
+    }, [products, sales, purchases, dashboardRange, dashboardCustomFrom, dashboardCustomTo, lowStockAlerts]);
 
     var inventoryTabs = [
       { id: "stock", label: "Kiểm hàng tồn kho / Stock Check" },
@@ -7803,6 +7815,26 @@
             </article>
           </div>
 
+          ${dashboardMetrics.pendingPurchases.length ? html`
+            <section className="surface section-card" style=${{ borderColor: "rgba(222, 99, 29, 0.28)", background: "linear-gradient(135deg, rgba(255,244,229,0.95), rgba(255,255,255,0.96))" }}>
+              <div className="section-top" style=${{ gap: 12, flexWrap: "wrap" }}>
+                <div>
+                  <p className="eyebrow">${L("Cần xác thực / Needs Verification")}</p>
+                  <h2 className="section-title">${dashboardMetrics.pendingPurchases.length} ${L("phiếu nhập kho chờ xác nhận / stock-in documents pending")}</h2>
+                  <p style=${{ margin: "6px 0 0", color: "#7b6b5d", fontWeight: 700 }}>
+                    ${L("Tổng giá trị chờ nhập / Pending value")}: ${formatCurrency(dashboardMetrics.pendingPurchaseTotal)}
+                  </p>
+                </div>
+                <button className="primary-btn" onClick=${function () {
+                  setActiveView("inventory");
+                  setInventorySection("stock_ops");
+                  setStockOpsMode("in");
+                  refreshPurchases();
+                }}>${L("Xem & xác nhận / Review & Verify")}</button>
+              </div>
+            </section>
+          ` : null}
+
           ${dashboardMetrics.daySeries.length > 1 ? html`
             <section className="surface section-card">
               <h2 className="section-title">${L("Doanh thu theo ngày / Revenue by Day")}</h2>
@@ -9280,6 +9312,48 @@
     function resetPurchaseDraft() {
       setPurchaseDraft({ supplierId: "", supplierName: "", paymentMethod: "cash", note: "", items: [] });
     }
+    function isPurchasePendingVerification(po) {
+      return po && (po.verification_status || po.verificationStatus) === "pending_verification";
+    }
+    function isPurchaseNeedsRevision(po) {
+      return po && (po.verification_status || po.verificationStatus) === "needs_revision";
+    }
+    function purchaseStatusLabel(po) {
+      if (isPurchasePendingVerification(po)) return "Chờ xác nhận / Pending Verification";
+      if (isPurchaseNeedsRevision(po)) return "Cần sửa / Needs Revision";
+      if ((po.verification_status || po.verificationStatus) === "rejected") return "Đã từ chối / Rejected";
+      if ((po.status || "") === "completed") return "Đã nhập kho / Verified";
+      return "Nháp / Draft";
+    }
+    function refreshAfterPurchaseVerification() {
+      refreshPurchases();
+      if (window.ShopFlowSync && typeof window.ShopFlowSync.pull === "function") {
+        window.ShopFlowSync.pull(0).catch(function () {});
+      }
+    }
+    function verifyPurchase(po, action) {
+      if (!po || !po.id) return;
+      var labels = {
+        verify: L("Xác nhận nhập kho phiếu này? Sau khi xác nhận, tồn kho sẽ được cộng. / Verify this stock-in? Inventory will be added."),
+        needs_revision: L("Trả phiếu này về để người mua hàng sửa? / Send this purchase back for revision?"),
+        reject: L("Từ chối phiếu nhập này? Tồn kho sẽ không thay đổi. / Reject this purchase? Inventory will not change.")
+      };
+      if (!window.confirm(labels[action] || labels.verify)) return;
+      syncApi("/purchases/" + encodeURIComponent(po.id), {
+        method: "POST",
+        body: {
+          action: action || "verify",
+          verifiedBy: "POS",
+        }
+      }).then(function () {
+        window.alert(action === "verify"
+          ? L("Đã xác nhận nhập kho. / Stock-in verified.")
+          : L("Đã cập nhật trạng thái phiếu. / Purchase status updated."));
+        refreshAfterPurchaseVerification();
+      }).catch(function (err) {
+        window.alert(L("Không xử lý được phiếu nhập. / Could not update purchase.") + "\n" + ((err && err.message) || ""));
+      });
+    }
     function submitPurchase() {
       if (!purchaseDraft.items.length) {
         window.alert(L("Chưa có dòng hàng nào. / Add at least one line first."));
@@ -9848,13 +9922,28 @@
               ${purchases.length === 0
                 ? html`<p style=${{ color: "#7b6b5d" }}>${L("Chưa có phiếu nhập. / No purchases yet.")}</p>`
                 : purchases.map(function (po) {
+                    var pendingVerify = isPurchasePendingVerification(po);
+                    var statusLabel = purchaseStatusLabel(po);
                     return html`
                       <article key=${po.id} className="list-row list-row-actions">
                         <div>
                           <strong>${po.id}</strong>
                           <p>${po.supplier_name || L("Không rõ NCC / Unknown supplier")} · ${po.item_count} ${L("dòng / lines")} · ${formatDateTime(po.created_at)}</p>
+                          <p>
+                            <span className="stock-badge" style=${{
+                              background: pendingVerify ? "#fff3d8" : "#e6f7ea",
+                              color: pendingVerify ? "#a86a18" : "#1f8a3a"
+                            }}>${L(statusLabel)}</span>
+                          </p>
                         </div>
-                        <strong>${formatCurrency(po.total_amount)}</strong>
+                        <div className="row-actions">
+                          <strong>${formatCurrency(po.total_amount)}</strong>
+                          ${pendingVerify ? html`
+                            <button className="primary-btn" onClick=${function () { verifyPurchase(po, "verify"); }}>${L("Xác nhận / Verify")}</button>
+                            <button className="ghost-btn" onClick=${function () { verifyPurchase(po, "needs_revision"); }}>${L("Yêu cầu sửa / Revise")}</button>
+                            <button className="ghost-btn danger-text" onClick=${function () { verifyPurchase(po, "reject"); }}>${L("Từ chối / Reject")}</button>
+                          ` : null}
+                        </div>
                       </article>
                     `;
                   })}

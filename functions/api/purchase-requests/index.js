@@ -142,6 +142,16 @@ export const onRequestPost = async ({ env, request }) => {
     return json({ ok: true, id: body.id });
   }
 
+  if (action === "pending_verification") {
+    if (!body.id) return badRequest("id required");
+    await env.DB.prepare(
+      `UPDATE purchase_requests
+       SET status = 'pending_verification', purchase_id = ?, updated_at = ?
+       WHERE id = ?`
+    ).bind(body.purchaseId || null, ts, body.id).run();
+    return json({ ok: true, id: body.id });
+  }
+
   const items = normalizeItems(body.items);
   if (!items.length) return badRequest("items required");
   const id = body.id || uid("req");

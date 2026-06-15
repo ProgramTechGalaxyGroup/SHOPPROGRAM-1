@@ -24,6 +24,52 @@
     return Number.isFinite(num) ? num : 0;
   }
 
+  function unitKey(value) {
+    var unit = String(value || "").trim().toLowerCase();
+    if (unit === "g" || unit === "gram" || unit === "grams") return "gram";
+    if (unit === "kg" || unit === "kilogram" || unit === "kilograms") return "kg";
+    if (unit === "ml" || unit === "milliliter" || unit === "millilitre") return "ml";
+    if (unit === "l" || unit === "lit" || unit === "liter" || unit === "litre") return "l";
+    if (unit === "cái" || unit === "cai" || unit === "piece" || unit === "pcs") return "piece";
+    if (unit === "hộp" || unit === "hop" || unit === "box") return "box";
+    if (unit === "chai" || unit === "bottle") return "bottle";
+    return unit || "piece";
+  }
+
+  function preferredPurchaseUnit(baseUnit) {
+    var unit = unitKey(baseUnit);
+    if (unit === "gram") return "kg";
+    if (unit === "ml") return "l";
+    return unit || "piece";
+  }
+
+  function unitOptions(baseUnit) {
+    var unit = unitKey(baseUnit);
+    if (unit === "gram" || unit === "kg") return ["kg", "gram"];
+    if (unit === "ml" || unit === "l") return ["l", "ml"];
+    if (unit === "box") return ["box"];
+    if (unit === "bottle") return ["bottle"];
+    return ["piece"];
+  }
+
+  function convertQty(qty, fromUnit, toUnit) {
+    var value = numberValue(qty);
+    var from = unitKey(fromUnit);
+    var to = unitKey(toUnit);
+    if (!from || !to || from === to) return value;
+    if (from === "gram" && to === "kg") return value / 1000;
+    if (from === "kg" && to === "gram") return value * 1000;
+    if (from === "ml" && to === "l") return value / 1000;
+    if (from === "l" && to === "ml") return value * 1000;
+    return value;
+  }
+
+  function formatQtyInput(value) {
+    var rounded = Math.round(numberValue(value) * 1000) / 1000;
+    if (rounded === 0) return "0";
+    return String(rounded).replace(/\.?0+$/, "");
+  }
+
   function genClientOpId() {
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
     return "purchase-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 9);
@@ -239,10 +285,34 @@
       node.querySelector(".line-name").textContent = line.name;
       node.querySelector(".line-meta").textContent = line.meta + (line.unit ? " · " + line.unit : "");
       var qtyInput = node.querySelector(".line-qty");
+      var unitField = node.querySelector(".line-unit-field");
+      var unitSelect = node.querySelector(".line-unit");
       var costInput = node.querySelector(".line-cost");
       qtyInput.parentNode.firstChild.nodeValue = options.qtyLabel + " ";
       qtyInput.value = line.qty;
       costInput.value = line.unitCost;
+      if (options.allowPurchaseUnit && unitField && unitSelect) {
+        line.purchaseUnit = line.purchaseUnit || preferredPurchaseUnit(line.unit);
+        unitSelect.innerHTML = "";
+        unitOptions(line.unit).forEach(function (unit) {
+          var option = document.createElement("option");
+          option.value = unit;
+          option.textContent = unit;
+          unitSelect.appendChild(option);
+        });
+        unitSelect.value = line.purchaseUnit;
+        unitSelect.addEventListener("change", function () {
+          var oldUnit = line.purchaseUnit || line.unit;
+          var nextUnit = unitSelect.value;
+          line.qty = formatQtyInput(convertQty(line.qty, oldUnit, nextUnit));
+          line.purchaseUnit = nextUnit;
+          qtyInput.value = line.qty;
+          updateLineSubtotal(node, line);
+          updateLineTotals(options.boxId);
+        });
+      } else if (unitField) {
+        unitField.style.display = "none";
+      }
       updateLineSubtotal(node, line);
       qtyInput.addEventListener("input", function () {
         line.qty = qtyInput.value;
@@ -332,6 +402,7 @@
       qtyLabel: "SL nhận",
       emptyText: "Chưa có sản phẩm nào đang được yêu cầu.",
       lockRemove: true,
+      allowPurchaseUnit: true,
     });
     updateReceiveTotals();
   }
@@ -376,15 +447,18 @@
         var catalogItem = findCatalogItem(itemType, itemId) || {};
         if (!grouped.has(key)) {
           var old = previous.get(key);
+          var baseUnit = requestItem.unit || catalogItem.unit || "";
+          var purchaseUnit = old ? old.purchaseUnit : preferredPurchaseUnit(baseUnit);
           grouped.set(key, {
             key: key,
             itemType: itemType,
             itemId: itemId,
             name: requestItem.name || catalogItem.name || itemId,
-            unit: requestItem.unit || catalogItem.unit || "",
+            unit: baseUnit,
             requestedQty: 0,
             qty: old ? old.qty : 0,
             unitCost: old ? old.unitCost : numberValue(catalogItem.unitCost),
+            purchaseUnit: purchaseUnit,
             sourceRequestIds: [],
             meta: "",
           });
@@ -394,7 +468,7 @@
         if (line.sourceRequestIds.indexOf(request.id) === -1) {
           line.sourceRequestIds.push(request.id);
         }
-        if (!previous.has(key)) line.qty = line.requestedQty;
+        if (!previous.has(key)) line.qty = formatQtyInput(convertQty(line.requestedQty, line.unit, line.purchaseUnit));
       });
     });
     state.receiveLines = Array.from(grouped.values()).map(function (line) {
@@ -466,6 +540,8 @@
       paymentMethod: $("paymentMethod").value,
       paidAmount: $("paidAmount").value === "" ? Math.round(total.amount) : Math.round(numberValue($("paidAmount").value)),
       note: $("purchaseNote").value.trim(),
+      status: "pending_verification",
+      requiresVerification: true,
       sourceRequestIds: unique(lines.flatMap(function (line) { return line.sourceRequestIds || []; })),
       items: lines.map(function (line) {
         if (line.itemType === "component") {
@@ -474,7 +550,11 @@
             componentId: line.itemId,
             componentName: line.name,
             qty: numberValue(line.qty),
-            unit: line.unit,
+            unit: line.purchaseUnit || line.unit,
+            baseUnit: line.unit,
+            purchaseQty: numberValue(line.qty),
+            purchaseUnit: line.purchaseUnit || line.unit,
+            purchaseUnitCost: Math.round(numberValue(line.unitCost)),
             unitCost: Math.round(numberValue(line.unitCost)),
           };
         }
@@ -483,6 +563,9 @@
           productId: line.itemId,
           productName: line.name,
           qty: Math.floor(numberValue(line.qty)),
+          purchaseQty: Math.floor(numberValue(line.qty)),
+          purchaseUnit: line.purchaseUnit || "piece",
+          purchaseUnitCost: Math.round(numberValue(line.unitCost)),
           unitCost: Math.round(numberValue(line.unitCost)),
         };
       }),
@@ -503,13 +586,13 @@
     return "";
   }
 
-  function fulfillRequestIds(requestIds, purchaseId) {
+  function markRequestIdsPending(requestIds, purchaseId) {
     var ids = unique(requestIds);
     return Promise.all(ids.map(function (id) {
       return api("/purchase-requests", {
         method: "POST",
         body: {
-          action: "fulfill",
+          action: "pending_verification",
           id: id,
           purchaseId: purchaseId,
           fulfilledBy: selectedSupplier().name || "purchase-user",
@@ -532,8 +615,8 @@
 
     api("/purchases", { method: "POST", body: payload })
       .then(function (data) {
-        setMessage("saveMessage", "Đã lưu phiếu nhập " + (data.id || "") + ". Kho chính đã cập nhật.", "success");
-        return fulfillRequestIds(payload.sourceRequestIds, data.id);
+        setMessage("saveMessage", "Đã gửi phiếu nhập " + (data.id || "") + ". POS chính cần xác nhận trước khi cộng kho.", "success");
+        return markRequestIdsPending(payload.sourceRequestIds, data.id);
       })
       .then(function () {
         $("paidAmount").value = "";

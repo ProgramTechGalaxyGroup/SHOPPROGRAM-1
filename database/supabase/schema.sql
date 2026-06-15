@@ -101,6 +101,10 @@ create table if not exists purchase_orders (
   paid_amount integer not null default 0,
   payment_method text,
   status text not null default 'completed' check (status in ('draft','completed','cancelled')),
+  verification_status text not null default 'verified',
+  source_request_ids text,
+  verified_at bigint,
+  verified_by text,
   note text,
   created_at bigint not null
 );
@@ -113,7 +117,10 @@ create table if not exists purchase_order_items (
   product_name text,
   qty integer not null,
   unit_cost integer not null,
-  subtotal integer not null
+  subtotal integer not null,
+  purchase_qty numeric,
+  purchase_unit text,
+  purchase_unit_cost integer
 );
 create index if not exists idx_po_items_purchase on purchase_order_items(purchase_id);
 create index if not exists idx_po_items_product on purchase_order_items(product_id);
@@ -126,7 +133,10 @@ create table if not exists purchase_component_items (
   qty numeric not null,
   unit text,
   unit_cost integer not null,
-  subtotal integer not null
+  subtotal integer not null,
+  purchase_qty numeric,
+  purchase_unit text,
+  purchase_unit_cost integer
 );
 create index if not exists idx_po_component_items_purchase on purchase_component_items(purchase_id);
 create index if not exists idx_po_component_items_component on purchase_component_items(component_id);

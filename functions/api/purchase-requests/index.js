@@ -98,6 +98,25 @@ function parseRequest(row) {
   };
 }
 
+function itemKey(item) {
+  const itemType = item && item.itemType === "component" ? "component" : "product";
+  const itemId = String((item && (item.itemId || item.productId || item.componentId)) || "").trim();
+  return `${itemType}:${itemId}`;
+}
+
+function normalizeReceiptItems(items) {
+  const byKey = new Map();
+  (items || []).forEach((raw) => {
+    const itemType = raw.itemType === "component" || raw.item_type === "component" ? "component" : "product";
+    const itemId = String(raw.itemId || raw.item_id || raw.productId || raw.product_id || raw.componentId || raw.component_id || "").trim();
+    const receivedQty = Number(raw.receivedQty != null ? raw.receivedQty : raw.qty) || 0;
+    if (!itemId || receivedQty <= 0) return;
+    const key = `${itemType}:${itemId}`;
+    byKey.set(key, (byKey.get(key) || 0) + receivedQty);
+  });
+  return byKey;
+}
+
 export const onRequestGet = async ({ env, request }) => {
   await ensurePurchaseRequestTables(env.DB);
   const url = new URL(request.url);
@@ -150,6 +169,57 @@ export const onRequestPost = async ({ env, request }) => {
        WHERE id = ?`
     ).bind(body.purchaseId || null, ts, body.id).run();
     return json({ ok: true, id: body.id });
+  }
+
+  if (action === "apply_receipt") {
+    if (!body.id) return badRequest("id required");
+    const row = await env.DB.prepare(
+      `SELECT id, items_json FROM purchase_requests WHERE id = ?`
+    ).bind(body.id).first();
+    if (!row) return badRequest("request not found");
+
+    let currentItems = [];
+    try {
+      currentItems = JSON.parse(row.items_json || "[]");
+    } catch (_) {
+      currentItems = [];
+    }
+    const receivedByKey = normalizeReceiptItems(body.receivedItems || body.items);
+    if (!receivedByKey.size) return badRequest("received items required");
+
+    const remainingItems = currentItems.map((item) => {
+      const key = itemKey(item);
+      const receivedQty = receivedByKey.get(key) || 0;
+      const remainingQty = Math.max(0, (Number(item.requestedQty) || 0) - receivedQty);
+      return { ...item, requestedQty: remainingQty };
+    }).filter((item) => (Number(item.requestedQty) || 0) > 0.000001);
+
+    const fullyReceived = remainingItems.length === 0;
+    await env.DB.prepare(
+      `UPDATE purchase_requests
+       SET items_json = ?,
+           status = ?,
+           fulfilled_by = ?,
+           fulfilled_at = ?,
+           purchase_id = ?,
+           updated_at = ?
+       WHERE id = ?`
+    ).bind(
+      JSON.stringify(remainingItems),
+      fullyReceived ? "pending_verification" : "open",
+      fullyReceived ? (body.fulfilledBy || body.receiverName || null) : null,
+      fullyReceived ? ts : null,
+      fullyReceived ? (body.purchaseId || null) : null,
+      ts,
+      body.id
+    ).run();
+
+    return json({
+      ok: true,
+      id: body.id,
+      status: fullyReceived ? "pending_verification" : "open",
+      remainingItems,
+    });
   }
 
   const items = normalizeItems(body.items);

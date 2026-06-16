@@ -5,6 +5,7 @@
     components: [],
     suppliers: [],
     requests: [],
+    selectedRequestId: "",
     requestLines: [],
     receiveLines: [],
     itemType: "product",
@@ -210,6 +211,10 @@
       id: supplier ? supplier.id : "",
       name: typedName || (supplier ? supplier.name : ""),
     };
+  }
+
+  function selectedRequest() {
+    return state.requests.find(function (request) { return request.id === state.selectedRequestId; }) || null;
   }
 
   function renderSuppliers() {
@@ -421,8 +426,9 @@
       var qty = (request.items || []).reduce(function (sum, item) {
         return sum + numberValue(item.requestedQty);
       }, 0);
-      var card = document.createElement("article");
-      card.className = "request-item";
+      var card = document.createElement("button");
+      card.type = "button";
+      card.className = "request-item" + (request.id === state.selectedRequestId ? " is-active" : "");
       card.innerHTML = '<div class="request-item-main"><strong></strong><small></small></div>';
       card.querySelector("strong").textContent = (request.requestTitle || request.id) + " · " + itemCount + " dòng";
       card.querySelector("small").textContent = [
@@ -431,6 +437,11 @@
         "SL yêu cầu " + formatter.format(qty),
         request.note || "",
       ].filter(Boolean).join(" · ");
+      card.addEventListener("click", function () {
+        state.selectedRequestId = request.id;
+        syncReceiveLines();
+        render();
+      });
       box.appendChild(card);
     });
   }
@@ -438,41 +449,48 @@
   function syncReceiveLines() {
     var previous = new Map(state.receiveLines.map(function (line) { return [line.key, line]; }));
     var grouped = new Map();
-    state.requests.forEach(function (request) {
-      (request.items || []).forEach(function (requestItem) {
-        var itemType = requestItem.itemType === "component" ? "component" : "product";
-        var itemId = requestItem.itemId || requestItem.productId || requestItem.componentId;
-        if (!itemId) return;
-        var key = lineKey(itemType, itemId);
-        var catalogItem = findCatalogItem(itemType, itemId) || {};
-        if (!grouped.has(key)) {
-          var old = previous.get(key);
-          var baseUnit = requestItem.unit || catalogItem.unit || "";
-          var purchaseUnit = old ? old.purchaseUnit : preferredPurchaseUnit(baseUnit);
-          grouped.set(key, {
-            key: key,
-            itemType: itemType,
-            itemId: itemId,
-            name: requestItem.name || catalogItem.name || itemId,
-            unit: baseUnit,
-            requestedQty: 0,
-            qty: old ? old.qty : 0,
-            unitCost: old ? old.unitCost : numberValue(catalogItem.unitCost),
-            purchaseUnit: purchaseUnit,
-            sourceRequestIds: [],
-            meta: "",
-          });
-        }
-        var line = grouped.get(key);
-        line.requestedQty += numberValue(requestItem.requestedQty);
-        if (line.sourceRequestIds.indexOf(request.id) === -1) {
-          line.sourceRequestIds.push(request.id);
-        }
-        if (!previous.has(key)) line.qty = formatQtyInput(convertQty(line.requestedQty, line.unit, line.purchaseUnit));
-      });
+    var request = selectedRequest();
+    if (!request && state.requests.length) {
+      state.selectedRequestId = state.requests[0].id;
+      request = selectedRequest();
+    }
+    if (!request) {
+      state.selectedRequestId = "";
+      state.receiveLines = [];
+      return;
+    }
+
+    (request.items || []).forEach(function (requestItem) {
+      var itemType = requestItem.itemType === "component" ? "component" : "product";
+      var itemId = requestItem.itemId || requestItem.productId || requestItem.componentId;
+      if (!itemId) return;
+      var key = lineKey(itemType, itemId);
+      var catalogItem = findCatalogItem(itemType, itemId) || {};
+      if (!grouped.has(key)) {
+        var old = previous.get(key);
+        var baseUnit = requestItem.unit || catalogItem.unit || "";
+        var purchaseUnit = old ? old.purchaseUnit : preferredPurchaseUnit(baseUnit);
+        grouped.set(key, {
+          key: key,
+          itemType: itemType,
+          itemId: itemId,
+          name: requestItem.name || catalogItem.name || itemId,
+          unit: baseUnit,
+          requestedQty: 0,
+          qty: old ? old.qty : 0,
+          unitCost: old ? old.unitCost : numberValue(catalogItem.unitCost),
+          purchaseUnit: purchaseUnit,
+          sourceRequestIds: [],
+          meta: "",
+        });
+      }
+      var line = grouped.get(key);
+      line.requestedQty += numberValue(requestItem.requestedQty);
+      line.sourceRequestIds = [request.id];
+      if (!previous.has(key)) line.qty = 0;
     });
     state.receiveLines = Array.from(grouped.values()).map(function (line) {
-      line.meta = "Đang yêu cầu " + formatter.format(line.requestedQty) + " " + line.unit + " · " + line.sourceRequestIds.length + " phiếu";
+      line.meta = "Còn yêu cầu " + formatter.format(line.requestedQty) + " " + line.unit + " · " + (request.requestTitle || request.id);
       return line;
     });
   }
@@ -533,6 +551,17 @@
     var supplier = selectedSupplier();
     var lines = state.receiveLines.filter(function (line) { return numberValue(line.qty) > 0; });
     var total = totals(lines);
+    var request = selectedRequest();
+    var receiptItems = lines.map(function (line) {
+      return {
+        itemType: line.itemType,
+        itemId: line.itemId,
+        productId: line.itemType === "product" ? line.itemId : undefined,
+        componentId: line.itemType === "component" ? line.itemId : undefined,
+        receivedQty: convertQty(numberValue(line.qty), line.purchaseUnit || line.unit, line.unit),
+      };
+    });
+    var fullyReceived = isRequestFullyReceived(request, receiptItems);
     return {
       clientOpId: genClientOpId(),
       supplierId: supplier.id || undefined,
@@ -542,7 +571,10 @@
       note: $("purchaseNote").value.trim(),
       status: "pending_verification",
       requiresVerification: true,
-      sourceRequestIds: unique(lines.flatMap(function (line) { return line.sourceRequestIds || []; })),
+      selectedRequestId: request ? request.id : "",
+      requestFullyReceived: fullyReceived,
+      requestReceiptItems: receiptItems,
+      sourceRequestIds: fullyReceived && request ? [request.id] : [],
       items: lines.map(function (line) {
         if (line.itemType === "component") {
           return {
@@ -572,33 +604,51 @@
     };
   }
 
-  function unique(list) {
-    return Array.from(new Set((list || []).filter(Boolean)));
+  function isRequestFullyReceived(request, receiptItems) {
+    if (!request) return false;
+    var received = new Map();
+    (receiptItems || []).forEach(function (item) {
+      var key = lineKey(item.itemType, item.itemId || item.productId || item.componentId);
+      received.set(key, (received.get(key) || 0) + numberValue(item.receivedQty));
+    });
+    return (request.items || []).every(function (item) {
+      var itemType = item.itemType === "component" ? "component" : "product";
+      var itemId = item.itemId || item.productId || item.componentId;
+      var need = numberValue(item.requestedQty);
+      var got = received.get(lineKey(itemType, itemId)) || 0;
+      return got + 0.000001 >= need;
+    });
   }
 
   function validatePurchasePayload(payload) {
     if (!payload.paymentMethod) return "Vui lòng chọn phương thức thanh toán.";
+    if (!payload.selectedRequestId) return "Vui lòng chọn một đơn yêu cầu trước khi nhập hàng.";
     if (!payload.items.length) return "Chưa có dòng hàng nào có số lượng nhận.";
     var invalidQty = payload.items.find(function (item) { return numberValue(item.qty) <= 0; });
     if (invalidQty) return "Số lượng nhận phải lớn hơn 0.";
     var invalidCost = payload.items.find(function (item) { return numberValue(item.unitCost) <= 0; });
     if (invalidCost) return "Vui lòng nhập giá tiền cho từng sản phẩm được nhận.";
+    var overQty = payload.requestReceiptItems.find(function (item) {
+      var line = state.receiveLines.find(function (current) {
+        return current.itemType === item.itemType && current.itemId === item.itemId;
+      });
+      return line && numberValue(item.receivedQty) > numberValue(line.requestedQty) + 0.000001;
+    });
+    if (overQty) return "Số lượng nhận không được vượt số lượng còn yêu cầu.";
     return "";
   }
 
-  function markRequestIdsPending(requestIds, purchaseId) {
-    var ids = unique(requestIds);
-    return Promise.all(ids.map(function (id) {
-      return api("/purchase-requests", {
-        method: "POST",
-        body: {
-          action: "pending_verification",
-          id: id,
-          purchaseId: purchaseId,
-          fulfilledBy: selectedSupplier().name || "purchase-user",
-        },
-      });
-    })).then(loadRequests);
+  function applySelectedRequestReceipt(payload, purchaseId) {
+    return api("/purchase-requests", {
+      method: "POST",
+      body: {
+        action: "apply_receipt",
+        id: payload.selectedRequestId,
+        purchaseId: purchaseId,
+        fulfilledBy: selectedSupplier().name || "purchase-user",
+        receivedItems: payload.requestReceiptItems,
+      },
+    }).then(loadRequests);
   }
 
   function savePurchase() {
@@ -616,7 +666,7 @@
     api("/purchases", { method: "POST", body: payload })
       .then(function (data) {
         setMessage("saveMessage", "Đã gửi phiếu nhập " + (data.id || "") + ". POS chính cần xác nhận trước khi cộng kho.", "success");
-        return markRequestIdsPending(payload.sourceRequestIds, data.id);
+        return applySelectedRequestReceipt(payload, data.id);
       })
       .then(function () {
         $("paidAmount").value = "";
@@ -641,6 +691,7 @@
     document.querySelectorAll(".workflow-tab").forEach(function (button) {
       button.addEventListener("click", function () {
         state.activeTab = button.dataset.workflow;
+        if (state.activeTab === "receive") syncReceiveLines();
         render();
       });
     });

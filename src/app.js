@@ -4312,10 +4312,6 @@
       if (checkoutSaving) {
         return;
       }
-      if (activeOrder.status === "needs_action") {
-        window.alert(L("Đơn này cần xử lí trước khi hoàn tất. Hãy kiểm tra lỗi, sửa đơn rồi thử lại. / This order needs action before checkout. Review the error, edit the order, then try again."));
-        return;
-      }
       if (!activeOrder.items.length) {
         window.alert(L("Đơn hiện tại chưa có món. / This order is empty."));
         return;
@@ -4671,6 +4667,58 @@
           window.alert(L("Không tải được hóa đơn / Failed to load sale") +
             (err && err.message ? " (" + err.message + ")" : ""));
         });
+    }
+
+    function retrySaleFromHistory(sale) {
+      if (!sale) return;
+      var saleRecord = normalizeSaleRecord(sale);
+      var retryItems = (saleRecord.items || []).map(function (it) {
+        var addonIds = [];
+        try {
+          var addons = it.addons_json ? JSON.parse(it.addons_json) : (it.addons || it.addOns || []);
+          addonIds = (Array.isArray(addons) ? addons : []).map(function (addon) {
+            return addon && typeof addon === "object" ? (addon.id || addon.addOnId || "") : addon;
+          }).filter(Boolean);
+        } catch (_) {}
+        var addonTotal = Number(it.addons_total || it.addonsTotal) || 0;
+        return {
+          id: it.id || uid("retry-item"),
+          productId: it.productId || it.product_id || "",
+          name: it.name || it.productName || it.product_name || "",
+          price: Math.max(0, Number(it.price || it.unitPrice || it.unit_price) - addonTotal),
+          qty: Number(it.qty) || 1,
+          addOnIds: addonIds
+        };
+      }).filter(function (item) {
+        return item.productId || item.name;
+      });
+
+      if (!retryItems.length) {
+        window.alert(L("Không có món để thử lại đơn này. / This sale has no items to retry."));
+        return;
+      }
+
+      var retryOrder = normalizeOrder({
+        id: saleRecord.orderId || saleRecord.id,
+        createdAt: saleRecord.createdAt || Date.now(),
+        items: retryItems,
+        customerName: saleRecord.customerName || "Khách lẻ / Walk-in",
+        paymentMethod: normalizePaymentMethod(saleRecord.paymentMethod),
+        cashReceived: Number(saleRecord.cashReceived || saleRecord.paid) || 0,
+        discountAmount: Number(saleRecord.discount) || 0,
+        status: "needs_action",
+        syncError: saleRecord.syncError || L("Đơn cần xử lí. Kiểm tra lại rồi bấm Thử lại. / Needs action. Review then retry.")
+      });
+
+      setOrders(function (currentOrders) {
+        var others = currentOrders.filter(function (order) {
+          return order.id !== retryOrder.id;
+        });
+        return [retryOrder].concat(others);
+      });
+      setActiveOrderId(retryOrder.id);
+      setActiveView("pos");
+      pushToast("info", L("Đã đưa đơn về POS để thử lại / Moved sale back to POS for retry"));
     }
 
     function getProductCategoryLabel(product) {
@@ -7193,9 +7241,9 @@
       var quickCashOptions = [50000, 100000, 200000, 500000];
       var orderNeedsAction = activeOrder.status === "needs_action";
       var orderSaving = activeOrder.status === "saving" || checkoutSaving;
-      var checkoutDisabled = orderNeedsAction || orderSaving;
+      var checkoutDisabled = orderSaving;
       function getOpenOrderStatusLabel(order) {
-        if (order.status === "needs_action") return L("CẦN XỬ LÍ / NEEDS ACTION");
+        if (order.status === "needs_action") return L("Cần xử lí / Needs Action");
         if (order.status === "saving") return L("Đang lưu / Saving");
         if (order.status === "held") return L("Tạm giữ / Held");
         return L("Đang mở / Open");
@@ -7402,9 +7450,9 @@
                       }}
                     >
                       <span>${order.id}</span>
-                      <small style=${order.status === "needs_action" ? { color: "#c0392b", fontWeight: 900 } : null}>
-                        ${getOpenOrderStatusLabel(order)}
-                      </small>
+                      ${order.status === "needs_action"
+                        ? html`<small className="needs-action-chip">${getOpenOrderStatusLabel(order)}</small>`
+                        : html`<small>${getOpenOrderStatusLabel(order)}</small>`}
                     </button>
                   `;
                 })}
@@ -7517,8 +7565,8 @@
                   <p className="eyebrow">${L("Đơn hiện tại / Current Order")}</p>
                   <h2 className="section-title">${activeOrder.id}</h2>
                   ${orderNeedsAction ? html`
-                    <div className="status-pill status-danger" style=${{ marginTop: 8 }}>
-                      ${L("CẦN XỬ LÍ / NEEDS ACTION")}
+                    <div className="status-pill status-danger needs-action-pill" style=${{ marginTop: 8 }}>
+                      ${L("Cần xử lí / Needs Action")}
                     </div>
                   ` : null}
                   ${orderSaving ? html`
@@ -7752,11 +7800,11 @@
                 className="primary-btn checkout-btn"
                 disabled=${checkoutDisabled}
                 onClick=${payNow}
-                title=${orderNeedsAction ? L("Đơn cần xử lí trước. / This order needs action first.") : ""}
+                title=${orderNeedsAction ? L("Thử lưu lại đơn này sau khi đã chỉnh sửa. / Retry saving this order after edits.") : ""}
               >
                 ${orderSaving
                   ? L("Đang lưu... / Saving...")
-                  : (orderNeedsAction ? L("CẦN XỬ LÍ / NEEDS ACTION") : L("Hoàn tất bán hàng / Complete Sale"))}
+                  : (orderNeedsAction ? L("Thử lại / Retry") : L("Hoàn tất bán hàng / Complete Sale"))}
               </button>
             </div>
 
@@ -7976,7 +8024,7 @@
                             <strong>${sale.orderId || sale.id}</strong>
                             <p>${formatDateTime(sale.createdAt)} · ${formatCurrency(sale.total)} · ${L(getPaymentMethodLabel(sale.paymentMethod || sale.payment_method))}</p>
                             <p>
-                              <span className="stock-badge" style=${{ background: statusBg, color: statusColor }}>
+                              <span className=${"stock-badge" + (saleStatus.tone === "danger" ? " needs-action-chip" : "")} style=${{ background: statusBg, color: statusColor }}>
                                 ${L(saleStatus.label)}
                               </span>
                               ${sale.syncError ? html`<small style=${{ color: "#bf4f39", marginLeft: 8 }}>${sale.syncError}</small>` : null}
@@ -7986,9 +8034,17 @@
                             <button className="ghost-btn" onClick=${function () { reprintSale(sale, false); }}>
                               ${L("Xem / Preview")}
                             </button>
-                            <button className="primary-btn" onClick=${function () { reprintSale(sale, true); }}>
-                              🖨 ${L("In lại / Reprint")}
-                            </button>
+                            ${saleStatus.tone === "danger"
+                              ? html`
+                                <button className="primary-btn" onClick=${function () { retrySaleFromHistory(sale); }}>
+                                  ${L("Thử lại / Retry")}
+                                </button>
+                              `
+                              : html`
+                                <button className="primary-btn" onClick=${function () { reprintSale(sale, true); }}>
+                                  🖨 ${L("In lại / Reprint")}
+                                </button>
+                              `}
                           </div>
                         </article>
                       `;

@@ -584,6 +584,22 @@ textarea:focus {
   background: linear-gradient(135deg, #ffe2bf 0%, #ffd3a0 100%);
 }
 
+.needs-action-chip {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border: 1px solid #ef9c7d;
+  background: linear-gradient(135deg, #fff0e9 0%, #ffd7c7 100%) !important;
+  color: #9f3518 !important;
+  box-shadow: 0 8px 18px rgba(191, 79, 57, 0.12);
+  font-weight: 900 !important;
+}
+
+.order-chip .needs-action-chip {
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
 .order-chip-create {
   justify-content: center;
 }
@@ -841,6 +857,13 @@ textarea:focus {
 
 .checkout-btn {
   box-shadow: 0 18px 34px rgba(205, 100, 35, 0.18);
+}
+
+.needs-action-pill {
+  text-transform: none;
+  font-size: 0.94rem;
+  letter-spacing: 0.01em;
+  box-shadow: 0 10px 22px rgba(191, 79, 57, 0.14);
 }
 
 .button-row-secondary > * {

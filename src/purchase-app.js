@@ -628,13 +628,6 @@
     if (invalidQty) return "Số lượng nhận phải lớn hơn 0.";
     var invalidCost = payload.items.find(function (item) { return numberValue(item.unitCost) <= 0; });
     if (invalidCost) return "Vui lòng nhập giá tiền cho từng sản phẩm được nhận.";
-    var overQty = payload.requestReceiptItems.find(function (item) {
-      var line = state.receiveLines.find(function (current) {
-        return current.itemType === item.itemType && current.itemId === item.itemId;
-      });
-      return line && numberValue(item.receivedQty) > numberValue(line.requestedQty) + 0.000001;
-    });
-    if (overQty) return "Số lượng nhận không được vượt số lượng còn yêu cầu.";
     return "";
   }
 

@@ -2328,6 +2328,7 @@
     var [sales, setSales] = useState(initialState.sales);
     var [orders, setOrders] = useState(initialState.orders);
     var [activeOrderId, setActiveOrderId] = useState(initialState.activeOrderId || initialState.orders[0].id);
+    var [completedSaleDetail, setCompletedSaleDetail] = useState(null);
     var [language, setLanguage] = useState(initialState.language || "vi");
     var [orderSequenceByDate, setOrderSequenceByDate] = useState(initialState.orderSequenceByDate || {});
     var [settings, setSettings] = useState(initialState.settings);
@@ -4846,6 +4847,139 @@
           window.alert(L("Không tải được hóa đơn / Failed to load sale") +
             (err && err.message ? " (" + err.message + ")" : ""));
         });
+    }
+
+    function openCompletedSaleDetail(sale) {
+      if (!sale) return;
+      var normalized = normalizeSaleRecord(sale);
+      var localItems = Array.isArray(normalized.items) ? normalized.items : [];
+      setCompletedSaleDetail({
+        loading: localItems.length === 0,
+        sale: normalized,
+        items: localItems,
+        error: ""
+      });
+      if (localItems.length) return;
+
+      var saleId = normalized.serverId || normalized.id;
+      if (!saleId) {
+        setCompletedSaleDetail({
+          loading: false,
+          sale: normalized,
+          items: [],
+          error: L("Không tìm thấy mã hóa đơn. / Sale ID is missing.")
+        });
+        return;
+      }
+
+      syncApi("/sales/" + encodeURIComponent(saleId))
+        .then(function (data) {
+          if (!data || !data.sale) throw new Error(L("Không tìm thấy hóa đơn. / Sale not found."));
+          setCompletedSaleDetail({
+            loading: false,
+            sale: normalizeSaleRecord(data.sale),
+            items: Array.isArray(data.items) ? data.items : [],
+            error: ""
+          });
+        })
+        .catch(function (error) {
+          setCompletedSaleDetail({
+            loading: false,
+            sale: normalized,
+            items: [],
+            error: (error && error.message) || L("Không tải được chi tiết hóa đơn. / Failed to load sale detail.")
+          });
+        });
+    }
+
+    function getCompletedSaleItemAddons(item) {
+      var rawAddons = item && (item.addons_json || item.addons || item.addOns);
+      var parsed = [];
+      try {
+        parsed = typeof rawAddons === "string" ? JSON.parse(rawAddons) : (Array.isArray(rawAddons) ? rawAddons : []);
+      } catch (_) {
+        parsed = [];
+      }
+      if (!parsed.length && item && Array.isArray(item.addOnIds)) {
+        parsed = item.addOnIds.map(function (id) {
+          var addOn = getAddonById(id, addOns);
+          return addOn || { id: id, label: id, price: 0 };
+        });
+      }
+      return parsed.map(function (addOn) {
+        if (typeof addOn === "string") {
+          var matched = getAddonById(addOn, addOns);
+          return matched || { id: addOn, label: addOn, price: 0 };
+        }
+        return addOn || {};
+      });
+    }
+
+    function renderCompletedSaleDetailModal() {
+      if (!completedSaleDetail) return null;
+      var sale = completedSaleDetail.sale || {};
+      var items = completedSaleDetail.items || [];
+      return html`
+        <div className="detail-modal-backdrop" role="presentation" onClick=${function () { setCompletedSaleDetail(null); }}>
+          <section className="detail-modal surface completed-sale-modal" role="dialog" aria-modal="true" onClick=${function (event) { event.stopPropagation(); }}>
+            <div className="detail-modal-head">
+              <div>
+                <p className="eyebrow">${L("Chi tiết đơn hoàn thành / Completed Order Detail")}</p>
+                <h3 className="section-title">${sale.orderId || sale.order_id || sale.id}</h3>
+                <small>${formatDateTime(sale.createdAt || sale.created_at)}</small>
+              </div>
+              <div className="row-actions">
+                <button className="ghost-btn" onClick=${function () { reprintSale(sale, false); }}>${L("Xem hóa đơn / Preview Receipt")}</button>
+                <button className="ghost-btn" onClick=${function () { setCompletedSaleDetail(null); }}>${L("Đóng / Close")}</button>
+              </div>
+            </div>
+
+            ${completedSaleDetail.loading ? html`<div className="empty-state align-left">${L("Đang tải chi tiết... / Loading detail...")}</div>` : null}
+            ${completedSaleDetail.error ? html`<div className="empty-state align-left danger-text">${completedSaleDetail.error}</div>` : null}
+
+            ${!completedSaleDetail.loading ? html`
+              <div className="detail-summary-grid completed-sale-summary">
+                <div><span>${L("Khách hàng / Customer")}</span><strong>${sale.customerName || sale.customer_name || L("Khách lẻ / Walk-in")}</strong></div>
+                <div><span>${L("Thanh toán / Payment")}</span><strong>${L(getPaymentMethodLabel(sale.paymentMethod || sale.payment_method))}</strong></div>
+                <div><span>${L("Đã nhận / Paid")}</span><strong>${formatCurrency(sale.paid || sale.cashReceived || 0)}</strong></div>
+                <div><span>${L("Tiền thừa / Change")}</span><strong>${formatCurrency(sale.changeAmount || sale.change_amount || 0)}</strong></div>
+                <div><span>${L("Tạm tính / Subtotal")}</span><strong>${formatCurrency(sale.subtotal || 0)}</strong></div>
+                <div><span>${L("Giảm giá / Discount")}</span><strong>${formatCurrency(sale.discount || 0)}</strong></div>
+                <div><span>${L("VAT")}</span><strong>${formatCurrency(sale.vatAmount || sale.vat_amount || sale.vat || 0)}</strong></div>
+                <div><span>${L("Tổng cộng / Total")}</span><strong>${formatCurrency(sale.total || 0)}</strong></div>
+              </div>
+              <div className="completed-sale-items">
+                ${items.length ? items.map(function (item, index) {
+                  var qty = Number(item.qty) || 0;
+                  var addons = getCompletedSaleItemAddons(item);
+                  var addonsTotal = Number(item.addons_total || item.addonsTotal) || addons.reduce(function (sum, addOn) {
+                    return sum + (Number(addOn.price) || 0);
+                  }, 0);
+                  var unitPrice = item.unit_price != null
+                    ? Number(item.unit_price) || 0
+                    : item.unitPrice != null
+                      ? Number(item.unitPrice) || 0
+                      : (Number(item.price) || 0) + addonsTotal;
+                  var lineTotal = Number(item.line_total || item.lineTotal) || (qty * unitPrice);
+                  return html`
+                    <article key=${item.id || index} className="completed-sale-item">
+                      <div>
+                        <strong>${index + 1}. ${item.product_name || item.productName || item.name || L("Không rõ món / Unknown item")}</strong>
+                        <small>${addons.length ? addons.map(function (addOn) {
+                          return (addOn.label || addOn.name || addOn.id || "") + (Number(addOn.price) ? " +" + formatCurrency(addOn.price) : "");
+                        }).join(" · ") : L("Không có add-ons / No add-ons")}</small>
+                      </div>
+                      <div className="completed-sale-item-metric"><span>${L("SL / Qty")}</span><strong>${formatQuantity(qty, 3)}</strong></div>
+                      <div className="completed-sale-item-metric"><span>${L("Đơn giá / Unit Price")}</span><strong>${formatCurrency(unitPrice)}</strong></div>
+                      <div className="completed-sale-item-metric"><span>${L("Thành tiền / Amount")}</span><strong>${formatCurrency(lineTotal)}</strong></div>
+                    </article>
+                  `;
+                }) : html`<div className="empty-state align-left">${L("Hóa đơn chưa có chi tiết món. / No item detail is available.")}</div>`}
+              </div>
+            ` : null}
+          </section>
+        </div>
+      `;
     }
 
     function retrySaleFromHistory(sale) {
@@ -7593,43 +7727,8 @@
         }, 0);
       }
       return html`
-        <section className="pos-layout">
-          ${lowStockCount > 0 ? html`
-            <aside
-              className="surface"
-              style=${{
-                gridColumn: "1 / -1",
-                padding: "12px 18px",
-                background: "linear-gradient(90deg, #fff1eb 0%, #fff8f1 100%)",
-                border: "1px solid #f5b893",
-                borderLeft: "4px solid #c0392b",
-                display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap"
-              }}>
-              <span style=${{ fontSize: 22 }}>⚠</span>
-              <div style=${{ flex: 1, minWidth: 200 }}>
-                <strong style=${{ color: "#a4451a" }}>
-                  ${L("Cảnh báo tồn kho / Low Stock Alert")}: ${lowStockCount} ${L("mục / items")}
-                </strong>
-                <p style=${{ color: "#7b6b5d", margin: "4px 0 0", fontSize: 13 }}>
-                  ${lowStockAlerts.slice(0, 3).map(function (item) {
-                    return (item.type === "component" ? L("NL / Ingredient") : L("SP / Product")) +
-                      ": " + item.label + " (" + formatQuantity(item.qty, 2) + "/" + formatQuantity(item.min, 2) + (item.unit ? " " + item.unit : "") + ")";
-                  }).join(" · ")}
-                  ${lowStockCount > 3 ? " · +" + (lowStockCount - 3) + " " + L("khác / more") : ""}
-                </p>
-              </div>
-              <button
-                className="ghost-btn"
-                onClick=${function () {
-                  setActiveView("inventory");
-                  setInventorySection("stock");
-                  setStockCheckTab("check");
-                }}
-              >${L("Xem chi tiết / View Details")}</button>
-            </aside>
-          ` : null}
-
-          <aside className="pos-category-toolbar surface">
+        <section className=${"pos-layout" + (activeOrderPicked ? "" : " is-order-overview")}>
+          ${activeOrderPicked ? html`<aside className="pos-category-toolbar surface">
             <div>
               <p className="eyebrow">${L("Danh mục / Categories")}</p>
               <h2 className="section-title">${L("Loại đồ uống / Product Groups")}</h2>
@@ -7772,7 +7871,19 @@
                 </form>
               ` : null}
             </div>
-          </aside>
+            <button
+              type="button"
+              className="primary-btn pos-left-complete-btn"
+              disabled=${checkoutDisabled}
+              onClick=${payNow}
+            >
+              ${orderSaving
+                ? L("Đang lưu... / Saving...")
+                : orderNeedsAction
+                  ? L("Thử lại / Retry")
+                  : L("Hoàn thành đơn / Complete Order")}
+            </button>
+          </aside>` : null}
 
           <div className="pos-main-stack">
             <section className="surface section-card pos-bill-board">
@@ -7781,6 +7892,13 @@
                   <p className="eyebrow">${L("Đơn đang mở / Open Orders")}</p>
                   <h2 className="section-title">${L("Chọn bill đang thao tác / Pick Active Bill")}</h2>
                 </div>
+                ${activeOrderPicked ? html`
+                  <button className="ghost-btn" onClick=${function () {
+                    setPosOrderPicked(false);
+                    setPaymentMenuOpen(false);
+                    stopCameraScan();
+                  }}>${L("← Danh sách đơn / Orders")}</button>
+                ` : null}
               </div>
 
               <div className="pos-status-filter">
@@ -7821,15 +7939,17 @@
                 ${completedSaleCards.map(function (sale) {
                   var saleId = sale.serverId || sale.id || sale.orderId || "";
                   return html`
-                    <article
+                    <button
+                      type="button"
                       key=${"completed-" + saleId}
-                      className="order-chip order-chip-board order-chip-status-completed order-chip-readonly"
+                      className="order-chip order-chip-board order-chip-status-completed"
                       title=${L("Hóa đơn đã hoàn thành trong ngày / Completed sale today")}
+                      onClick=${function () { openCompletedSaleDetail(sale); }}
                     >
                       <span className="order-chip-id">${sale.orderId || saleId}</span>
                       <small>${L("Hoàn thành / Completed")}</small>
                       <small>${formatCurrency(sale.total)} · ${formatQuantity(getCompletedSaleItemCount(sale), 2)} ${L("món / items")}</small>
-                    </article>
+                    </button>
                   `;
                 })}
                 ${(!filteredOrders.length && !completedSaleCards.length) ? html`
@@ -7936,18 +8056,10 @@
                   `;
                 })}
               </div>
-            </section>` : html`
-              <section className="catalog-panel surface scanner-panel pos-pick-order-prompt">
-                <p className="eyebrow">${L("Chọn đơn / Pick Order")}</p>
-                <h2 className="section-title">${L("Bấm vào một ô bill để thêm sản phẩm / Tap an order card to add products")}</h2>
-                <div className="empty-state align-left">
-                  ${L("Khu quét barcode và thêm sản phẩm sẽ chỉ mở sau khi bạn chọn một đơn đang thao tác. / Barcode scan and product adding will open after you pick an active order.")}
-                </div>
-              </section>
-            `}
+            </section>` : null}
           </div>
 
-          <aside className="order-panel surface">
+          ${activeOrderPicked ? html`<aside className="order-panel surface">
             <div className="order-panel-top">
               <div className="order-hero">
                 <div>
@@ -8230,7 +8342,8 @@
               <button className="ghost-btn" onClick=${function () { printWithTemplate("In hóa đơn / Print Bill"); }}>${L("In hóa đơn / Print Bill")}</button>
               <button className="ghost-btn" onClick=${function () { printWithTemplate("Xuất hóa đơn VAT / Issue VAT Invoice"); }}>${L("Xuất hóa đơn VAT / Issue VAT Invoice")}</button>
             </div>
-          </aside>
+          </aside>` : null}
+          ${renderCompletedSaleDetailModal()}
         </section>
       `;
     }

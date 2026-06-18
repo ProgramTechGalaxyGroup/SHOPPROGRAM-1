@@ -244,6 +244,19 @@ textarea:focus {
   align-items: start;
 }
 
+.pos-layout.is-order-overview {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.pos-layout.is-order-overview .pos-main-stack {
+  grid-column: 1 / -1;
+}
+
+.pos-layout.is-order-overview .pos-bill-board {
+  min-height: min(72vh, 760px);
+  align-content: start;
+}
+
 .pos-category-toolbar,
 .catalog-panel,
 .order-panel,
@@ -263,6 +276,13 @@ textarea:focus {
   top: 140px;
   display: grid;
   gap: 18px;
+}
+
+.pos-left-complete-btn {
+  width: 100%;
+  min-height: 54px;
+  background: linear-gradient(135deg, #2a9b4b 0%, #177b35 100%);
+  box-shadow: 0 14px 26px rgba(31, 135, 58, 0.2);
 }
 
 .pos-category-list,
@@ -628,10 +648,6 @@ textarea:focus {
   background: linear-gradient(135deg, #effaf1 0%, #dff5e4 100%);
 }
 
-.order-chip-readonly {
-  cursor: default;
-}
-
 .pos-status-filter {
   display: flex;
   flex-wrap: wrap;
@@ -696,11 +712,6 @@ textarea:focus {
   border-color: #72bf83;
   background: linear-gradient(135deg, #effaf1 0%, #d8f3df 100%);
   color: #176f2e;
-}
-
-.pos-pick-order-prompt {
-  min-height: 240px;
-  align-content: center;
 }
 
 .needs-action-chip {
@@ -1589,6 +1600,46 @@ textarea:focus {
   white-space: nowrap;
 }
 
+.completed-sale-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.completed-sale-items {
+  display: grid;
+  gap: 12px;
+}
+
+.completed-sale-item {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(110px, auto));
+  gap: 14px;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid rgba(111, 84, 41, 0.1);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.completed-sale-item > div:first-child {
+  display: grid;
+  gap: 6px;
+}
+
+.completed-sale-item small,
+.completed-sale-item-metric span {
+  color: var(--muted);
+}
+
+.completed-sale-item-metric {
+  display: grid;
+  gap: 4px;
+  text-align: right;
+}
+
+.completed-sale-item-metric strong {
+  white-space: nowrap;
+}
+
 .drawer-backdrop {
   position: fixed;
   inset: 0;
@@ -2089,12 +2140,22 @@ textarea:focus {
   }
 
   .detail-summary-grid,
-  .stock-detail-line {
+  .stock-detail-line,
+  .completed-sale-item {
     grid-template-columns: 1fr;
   }
 
-  .stock-detail-money {
+  .stock-detail-money,
+  .completed-sale-item-metric {
     text-align: left;
+  }
+
+  .detail-modal-head .row-actions {
+    width: 100%;
+  }
+
+  .detail-modal-head .row-actions > * {
+    flex: 1 1 100%;
   }
 
   .item-badge {

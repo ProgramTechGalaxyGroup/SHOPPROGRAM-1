@@ -2347,9 +2347,11 @@
     var [purchaseDraft, setPurchaseDraft] = useState({ supplierId: "", supplierName: "", paymentMethod: "cash", note: "", items: [] });
     var [purchaseItemType, setPurchaseItemType] = useState("product");
     var [purchaseProductSearch, setPurchaseProductSearch] = useState("");
+    var [purchaseDetail, setPurchaseDetail] = useState(null);
     var [issueDraft, setIssueDraft] = useState({ reason: "damaged", note: "", items: [] });
     var [issueItemType, setIssueItemType] = useState("product");
     var [issueItemSearch, setIssueItemSearch] = useState("");
+    var [issueDetail, setIssueDetail] = useState(null);
     var [supplierDraft, setSupplierDraft] = useState({ id: null, name: "", phone: "", address: "", note: "" });
     var [warehouseTab, setWarehouseTab] = useState("stock"); // stock | ledger | stocktake
     var [stockOpsMode, setStockOpsMode] = useState("in"); // in | out
@@ -6189,37 +6191,53 @@
         return;
       }
 
+      var nextId = addOnDraft.id;
+      if (!nextId) {
+        var baseId = slugify(addOnDraft.labelEn || addOnDraft.labelVi || uid("addon"));
+        nextId = baseId;
+        while (addOns.some(function (addOn) { return addOn.id === nextId; })) {
+          nextId = baseId + "-" + Math.random().toString(36).slice(2, 5);
+        }
+      }
+      var payload = {
+        id: nextId,
+        label: label,
+        price: Number(addOnDraft.price) || 0,
+        group: addOnDraft.group || "extras"
+      };
+
+      syncApi("/addons", {
+        method: "POST",
+        body: payload
+      }).catch(function () {
+        syncEnqueue({
+          endpoint: "/addons",
+          method: "POST",
+          opType: "addon",
+          body: payload
+        });
+      });
+
       if (addOnDraft.id) {
         setAddOns(function (currentAddOns) {
           return currentAddOns.map(function (addOn) {
             return addOn.id === addOnDraft.id
               ? Object.assign({}, addOn, {
-                  label: label,
-                  price: Number(addOnDraft.price) || 0,
-                  group: addOnDraft.group || "extras"
+                  label: payload.label,
+                  price: payload.price,
+                  group: payload.group
                 })
               : addOn;
           });
         });
       } else {
-        var baseId = slugify(addOnDraft.labelEn || addOnDraft.labelVi || uid("addon"));
-        var nextId = baseId;
-
-        while (addOns.some(function (addOn) { return addOn.id === nextId; })) {
-          nextId = baseId + "-" + Math.random().toString(36).slice(2, 5);
-        }
-
         setAddOns(function (currentAddOns) {
-          return currentAddOns.concat({
-            id: nextId,
-            label: label,
-            price: Number(addOnDraft.price) || 0,
-            group: addOnDraft.group || "extras"
-          });
+          return currentAddOns.concat(payload);
         });
       }
 
       resetAddOnDraft();
+      pushToast("success", L("Đã lưu add-on. / Add-on saved."));
     }
 
     function removeAddOn(addOnId) {
@@ -9648,6 +9666,28 @@
       if ((po.status || "") === "completed") return "Đã nhập kho / Verified";
       return "Nháp / Draft";
     }
+    function viewPurchaseDetail(po) {
+      if (!po || !po.id) return;
+      setPurchaseDetail({ loading: true, id: po.id, purchase: po, items: [] });
+      syncApi("/purchases/" + encodeURIComponent(po.id))
+        .then(function (data) {
+          setPurchaseDetail({
+            loading: false,
+            id: po.id,
+            purchase: data.purchase || po,
+            items: Array.isArray(data.items) ? data.items : []
+          });
+        })
+        .catch(function (err) {
+          setPurchaseDetail({
+            loading: false,
+            id: po.id,
+            purchase: po,
+            items: [],
+            error: (err && err.message) || L("Không tải được chi tiết phiếu nhập. / Could not load purchase detail.")
+          });
+        });
+    }
     function refreshAfterPurchaseVerification() {
       refreshPurchases();
       if (window.ShopFlowSync && typeof window.ShopFlowSync.pull === "function") {
@@ -9780,6 +9820,28 @@
       { value: "transfer", label: "Chuyển kho / Transfer" },
       { value: "other",    label: "Khác / Other" }
     ];
+    function viewIssueDetail(px) {
+      if (!px || !px.id) return;
+      setIssueDetail({ loading: true, id: px.id, issue: px, items: [] });
+      syncApi("/issues/" + encodeURIComponent(px.id))
+        .then(function (data) {
+          setIssueDetail({
+            loading: false,
+            id: px.id,
+            issue: data.issue || px,
+            items: Array.isArray(data.items) ? data.items : []
+          });
+        })
+        .catch(function (err) {
+          setIssueDetail({
+            loading: false,
+            id: px.id,
+            issue: px,
+            items: [],
+            error: (err && err.message) || L("Không tải được chi tiết phiếu xuất. / Could not load issue detail.")
+          });
+        });
+    }
     function issueLineKey(itemType, itemId) {
       return (itemType === "component" ? "component:" : "product:") + itemId;
     }
@@ -10266,6 +10328,7 @@
                         </div>
                         <div className="row-actions">
                           <strong>${formatCurrency(po.total_amount)}</strong>
+                          <button className="ghost-btn" onClick=${function () { viewPurchaseDetail(po); }}>${L("Xem chi tiết / Details")}</button>
                           ${pendingVerify ? html`
                             <button className="primary-btn" onClick=${function () { verifyPurchase(po, "verify"); }}>${L("Xác nhận / Verify")}</button>
                             <button className="ghost-btn" onClick=${function () { verifyPurchase(po, "needs_revision"); }}>${L("Yêu cầu sửa / Revise")}</button>
@@ -10276,6 +10339,44 @@
                     `;
                   })}
             </div>
+            ${purchaseDetail ? html`
+              <div className="surface section-card form-card" style=${{ marginTop: 16, boxShadow: "none" }}>
+                <div className="section-top">
+                  <div>
+                    <p className="eyebrow">${L("Chi tiết phiếu nhập / Purchase Detail")}</p>
+                    <h3 className="template-preview-title">${purchaseDetail.id}</h3>
+                  </div>
+                  <button className="ghost-btn" onClick=${function () { setPurchaseDetail(null); }}>${L("Đóng / Close")}</button>
+                </div>
+                ${purchaseDetail.loading ? html`<div className="empty-state align-left">${L("Đang tải chi tiết... / Loading detail...")}</div>` : null}
+                ${purchaseDetail.error ? html`<div className="empty-state align-left" style=${{ color: "#c0392b" }}>${purchaseDetail.error}</div>` : null}
+                ${purchaseDetail.purchase && !purchaseDetail.loading ? html`
+                  <div className="field-grid">
+                    <div className="empty-state align-left"><strong>${L("Nhà cung cấp / Supplier")}:</strong> ${purchaseDetail.purchase.supplier_name || L("Không rõ / Unknown")}</div>
+                    <div className="empty-state align-left"><strong>${L("Thanh toán / Payment")}:</strong> ${L(getPaymentMethodLabel(purchaseDetail.purchase.payment_method))}</div>
+                    <div className="empty-state align-left"><strong>${L("Trạng thái / Status")}:</strong> ${L(purchaseStatusLabel(purchaseDetail.purchase))}</div>
+                    <div className="empty-state align-left"><strong>${L("Tổng / Total")}:</strong> ${formatCurrency(purchaseDetail.purchase.total_amount || 0)}</div>
+                  </div>
+                ` : null}
+                <div className="management-list" style=${{ marginTop: 12 }}>
+                  ${(purchaseDetail.items || []).length ? purchaseDetail.items.map(function (item, index) {
+                    var itemType = item.item_type === "component" ? L("Thành phần / Component") : L("Sản phẩm / Product");
+                    var purchaseQty = Number(item.purchase_qty != null ? item.purchase_qty : item.qty) || 0;
+                    var purchaseUnit = item.purchase_unit || item.unit || "";
+                    var baseQty = Number(item.qty) || 0;
+                    return html`
+                      <article key=${item.id || index} className="list-row list-row-actions">
+                        <div>
+                          <strong>${item.product_name || item.component_name || item.product_id || item.component_id}</strong>
+                          <p>${itemType} · ${L("Nhập / Purchased")}: ${purchaseQty} ${purchaseUnit} · ${L("Quy đổi tồn / Stock qty")}: ${baseQty} ${item.unit || ""}</p>
+                        </div>
+                        <strong>${formatCurrency(item.subtotal || (purchaseQty * (Number(item.purchase_unit_cost != null ? item.purchase_unit_cost : item.unit_cost) || 0)))}</strong>
+                      </article>
+                    `;
+                  }) : (!purchaseDetail.loading ? html`<div className="empty-state align-left">${L("Phiếu chưa có dòng hàng. / No line items.")}</div>` : null)}
+                </div>
+              </div>
+            ` : null}
           </section>
         </section>
       `;
@@ -10463,10 +10564,48 @@
                           <strong>${px.id}</strong>
                           <p>${L("Lý do")}: ${px.reason} · ${px.item_count} ${L("dòng / lines")} · ${px.total_qty || 0} ${L("món / items")} · ${formatDateTime(px.created_at)}</p>
                         </div>
+                        <div className="row-actions">
+                          <button className="ghost-btn" onClick=${function () { viewIssueDetail(px); }}>${L("Xem chi tiết / Details")}</button>
+                        </div>
                       </article>
                     `;
                   })}
             </div>
+            ${issueDetail ? html`
+              <div className="surface section-card form-card" style=${{ marginTop: 16, boxShadow: "none" }}>
+                <div className="section-top">
+                  <div>
+                    <p className="eyebrow">${L("Chi tiết phiếu xuất / Issue Detail")}</p>
+                    <h3 className="template-preview-title">${issueDetail.id}</h3>
+                  </div>
+                  <button className="ghost-btn" onClick=${function () { setIssueDetail(null); }}>${L("Đóng / Close")}</button>
+                </div>
+                ${issueDetail.loading ? html`<div className="empty-state align-left">${L("Đang tải chi tiết... / Loading detail...")}</div>` : null}
+                ${issueDetail.error ? html`<div className="empty-state align-left" style=${{ color: "#c0392b" }}>${issueDetail.error}</div>` : null}
+                ${issueDetail.issue && !issueDetail.loading ? html`
+                  <div className="field-grid">
+                    <div className="empty-state align-left"><strong>${L("Lý do / Reason")}:</strong> ${issueDetail.issue.reason || ""}</div>
+                    <div className="empty-state align-left"><strong>${L("Trạng thái / Status")}:</strong> ${issueDetail.issue.status || ""}</div>
+                    <div className="empty-state align-left"><strong>${L("Ngày tạo / Created")}:</strong> ${formatDateTime(issueDetail.issue.created_at)}</div>
+                    <div className="empty-state align-left"><strong>${L("Ghi chú / Note")}:</strong> ${issueDetail.issue.note || L("Không có / None")}</div>
+                  </div>
+                ` : null}
+                <div className="management-list" style=${{ marginTop: 12 }}>
+                  ${(issueDetail.items || []).length ? issueDetail.items.map(function (item, index) {
+                    var itemType = item.item_type === "component" ? L("Thành phần / Component") : L("Sản phẩm / Product");
+                    return html`
+                      <article key=${item.id || index} className="list-row list-row-actions">
+                        <div>
+                          <strong>${item.product_name || item.component_id || item.product_id}</strong>
+                          <p>${itemType} · ${L("Số lượng / Qty")}: ${Number(item.qty) || 0}</p>
+                        </div>
+                        <strong>${formatCurrency((Number(item.qty) || 0) * (Number(item.unit_cost) || 0))}</strong>
+                      </article>
+                    `;
+                  }) : (!issueDetail.loading ? html`<div className="empty-state align-left">${L("Phiếu chưa có dòng hàng. / No line items.")}</div>` : null)}
+                </div>
+              </div>
+            ` : null}
           </section>
         </section>
       `;

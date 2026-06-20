@@ -825,6 +825,17 @@ textarea:focus {
   border-color: rgba(37, 166, 72, 0.22);
 }
 
+.order-board-more-btn {
+  flex: 0 0 170px;
+  min-height: 118px;
+  border-radius: 18px;
+  border: 1px dashed rgba(222, 99, 29, 0.32);
+  background: rgba(255, 248, 240, 0.9);
+  color: var(--brand);
+  font-weight: 900;
+  scroll-snap-align: start;
+}
+
 .order-chip small {
   color: var(--muted);
 }
@@ -1423,6 +1434,35 @@ textarea:focus {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+}
+
+.product-image-preview {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  min-height: 140px;
+  padding: 12px;
+  border-radius: 20px;
+  border: 1px dashed rgba(222, 99, 29, 0.24);
+  background:
+    radial-gradient(circle at 26% 18%, rgba(255, 255, 255, 0.88), transparent 32%),
+    linear-gradient(135deg, #fff7ec 0%, #eef9dc 100%);
+}
+
+.product-image-preview img {
+  width: min(180px, 100%);
+  aspect-ratio: 1 / 0.78;
+  object-fit: cover;
+  border-radius: 16px;
+}
+
+.product-image-preview span {
+  font-size: clamp(2.5rem, 6vw, 4rem);
+}
+
+.product-image-preview small {
+  color: var(--muted);
+  font-weight: 800;
 }
 
 .toggle-grid {

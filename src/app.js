@@ -151,6 +151,23 @@
     { id: "needs_action", label: "Cần xử lí / Needs Action" },
     { id: "completed", label: "Hoàn thành / Completed" }
   ];
+  var ORDER_BOARD_COLLAPSED_LIMIT = 6;
+  var CATEGORY_ICON_OPTIONS = [
+    { value: "🛒", label: "Tất cả / All" },
+    { value: "🍎", label: "Trái cây / Fruits" },
+    { value: "🍊", label: "Nước ép / Juices" },
+    { value: "🥤", label: "Sinh tố / Smoothies" },
+    { value: "🧃", label: "Đồ uống / Beverages" },
+    { value: "💪", label: "Dinh dưỡng / Nutritious" },
+    { value: "🥛", label: "Sữa & ngũ cốc / Milk & Cereals" },
+    { value: "🍿", label: "Đồ ăn vặt / Snacks" },
+    { value: "🥫", label: "Nguyên liệu khô / Pantry" },
+    { value: "📦", label: "Hộp & combo / Boxes" },
+    { value: "🥡", label: "Bao bì / Packaging" },
+    { value: "🧴", label: "Chăm sóc / Personal Care" },
+    { value: "🧹", label: "Gia dụng / Household" },
+    { value: "✨", label: "Khác / Other" }
+  ];
   var COMPONENT_ITEM_TYPE_OPTIONS = [
     { value: "raw_material", label: "Nguyên liệu thô / Raw Material" },
     { value: "semi_finished", label: "Bán thành phẩm / Semi-finished" },
@@ -2433,6 +2450,7 @@
     // Quick-add category form toggle on POS sidebar
     var [showQuickCategoryForm, setShowQuickCategoryForm] = useState(false);
     var [orderStatusFilter, setOrderStatusFilter] = useState("all");
+    var [orderBoardExpanded, setOrderBoardExpanded] = useState(false);
     var [posOrderPicked, setPosOrderPicked] = useState(false);
     var [checkoutPanelOpen, setCheckoutPanelOpen] = useState(false);
     var [productCustomizer, setProductCustomizer] = useState(null);
@@ -7350,6 +7368,10 @@
         window.alert(L("Chọn loại hàng trước khi lưu: Hàng bán lẻ hoặc Đồ pha chế. / Choose a product type before saving: Direct Stock or Recipe."));
         return;
       }
+      var draftCategory = categories.find(function (category) {
+        return category.id === productDraft.category;
+      });
+      var productImageValue = String(productDraft.image || "").trim() || (draftCategory && draftCategory.icon) || "🛒";
 
       // Validate any user-typed ID — both for new products AND when
       // editing existing (rename).
@@ -7427,7 +7449,7 @@
                     productDraft.barcode || product.barcode,
                     [effectiveId, productDraft.name, productDraft.category].join("|")
                   ),
-                  image: productDraft.image || "🍊",
+                  image: productImageValue,
                   description: productDraft.description,
                   componentIds: productDraft.componentIds || [],
                   minStock: Math.max(0, Number(productDraft.minStock) || 0),
@@ -7468,7 +7490,7 @@
             productDraft.barcode,
             [newId, productDraft.name, productDraft.category, productDraft.price, productDraft.stock, Date.now()].join("|")
           ),
-          image: productDraft.image || "🍊",
+          image: productImageValue,
           description: productDraft.description,
           componentIds: productDraft.componentIds || [],
           minStock: Math.max(0, Number(productDraft.minStock) || 0),
@@ -7502,7 +7524,7 @@
         inventoryMode: selectedInventoryMode,
         price: Number(productDraft.price) || 0,
         barcode: productDraft.barcode || "",
-        image: productDraft.image || "🍊",
+        image: productImageValue,
         description: productDraft.description || "",
         componentIds: productDraft.componentIds || [],
         minStock: Math.max(0, Number(productDraft.minStock) || 0),
@@ -7930,8 +7952,8 @@
     }
 
     function renderProductMedia(product) {
-      var icon = (product && (product.imageIcon || product.image)) || "🍊";
       var imageUrl = product && product.imageUrl;
+      var icon = imageUrl ? "" : ((product && (product.imageIcon || product.image)) || "🍊");
       return html`
         <div className="pos-product-media">
           ${imageUrl ? html`
@@ -7944,7 +7966,7 @@
               }}
             />
           ` : null}
-          <span>${icon}</span>
+          ${icon ? html`<span>${icon}</span>` : null}
         </div>
       `;
     }
@@ -8094,15 +8116,23 @@
         var workflowStatus = getOrderWorkflowStatus(order);
         return orderStatusFilter === "all" || (orderStatusFilter !== "completed" && workflowStatus === orderStatusFilter);
       });
-      var completedSaleCards = orderStatusFilter === "completed"
+      var completedSaleCards = (orderStatusFilter === "all" || orderStatusFilter === "completed")
         ? completedSalesToday
         : [];
+      var collapseOrderBoard = orderStatusFilter === "all" && !orderBoardExpanded;
+      var visibleOrderLimit = collapseOrderBoard ? ORDER_BOARD_COLLAPSED_LIMIT : Infinity;
+      var displayedOrders = collapseOrderBoard ? filteredOrders.slice(0, visibleOrderLimit) : filteredOrders;
+      var remainingSaleSlots = collapseOrderBoard ? Math.max(0, visibleOrderLimit - displayedOrders.length) : Infinity;
+      var displayedCompletedSaleCards = collapseOrderBoard ? completedSaleCards.slice(0, remainingSaleSlots) : completedSaleCards;
+      var totalBoardCards = filteredOrders.length + completedSaleCards.length;
+      var displayedBoardCards = displayedOrders.length + displayedCompletedSaleCards.length;
+      var hiddenBoardCards = Math.max(0, totalBoardCards - displayedBoardCards);
       var statusCounts = orders.reduce(function (counts, order) {
         var status = getOrderWorkflowStatus(order);
         counts[status] = (counts[status] || 0) + 1;
         counts.all += 1;
         return counts;
-      }, { all: 0, new: 0, preparing: 0, held: 0, needs_action: 0, completed: completedSalesToday.length });
+      }, { all: completedSalesToday.length, new: 0, preparing: 0, held: 0, needs_action: 0, completed: completedSalesToday.length });
       function getOpenOrderStatusLabel(order) {
         if (order.status === "needs_action") return L("Cần xử lí / Needs Action");
         if (order.status === "saving") return L("Đang lưu / Saving");
@@ -8227,7 +8257,10 @@
                     <button
                       key=${filter.id}
                       className=${"status-filter-btn status-filter-" + filter.id + (active ? " is-active" : "")}
-                      onClick=${function () { setOrderStatusFilter(filter.id); }}
+                      onClick=${function () {
+                        setOrderStatusFilter(filter.id);
+                        setOrderBoardExpanded(false);
+                      }}
                     >
                       ${L(filter.label)}
                       <span className="status-filter-count">${statusCounts[filter.id] || 0}</span>
@@ -8237,7 +8270,7 @@
               </div>
 
               <div className="order-switcher order-switcher-board">
-                ${filteredOrders.length ? filteredOrders.map(function (order) {
+                ${displayedOrders.length ? displayedOrders.map(function (order) {
                   var itemCount = (order.items || []).reduce(function (sum, item) {
                     return sum + (Number(item.qty) || 0);
                   }, 0);
@@ -8258,7 +8291,7 @@
                     </button>
                   `;
                 }) : null}
-                ${completedSaleCards.map(function (sale) {
+                ${displayedCompletedSaleCards.map(function (sale) {
                   var saleId = sale.serverId || sale.id || sale.orderId || "";
                   return html`
                     <button
@@ -8275,10 +8308,17 @@
                     </button>
                   `;
                 })}
-                ${(!filteredOrders.length && !completedSaleCards.length) ? html`
+                ${(!displayedOrders.length && !displayedCompletedSaleCards.length) ? html`
                   <div className="empty-state align-left">
                     ${L("Không có đơn trong trạng thái này. / No orders in this status.")}
                   </div>
+                ` : null}
+                ${orderStatusFilter === "all" && totalBoardCards > ORDER_BOARD_COLLAPSED_LIMIT ? html`
+                  <button type="button" className="order-board-more-btn" onClick=${function () { setOrderBoardExpanded(!orderBoardExpanded); }}>
+                    ${orderBoardExpanded
+                      ? L("Thu gọn / Collapse")
+                      : L("Xem thêm / Show More") + " +" + hiddenBoardCards}
+                  </button>
                 ` : null}
                 <button className="order-chip order-chip-create order-chip-board" onClick=${createNewOrder}>
                   <span>${L("+ Đơn mới / + New Order")}</span>
@@ -9844,18 +9884,37 @@
                         </select>
                       </label>
                       <label className="field">
-                        <span>${L("Ảnh hoặc icon / Image URL or Icon")}</span>
+                        <span>${L("URL ảnh sản phẩm / Product Image URL")}</span>
                         <input
                           value=${productDraft.image}
-                          placeholder=${L("Dán URL ảnh hoặc nhập emoji / Paste image URL or enter emoji")}
+                          placeholder=${L("Dán URL ảnh để hiện trong Bán hàng / Paste image URL for POS")}
                           onInput=${function (event) { updateProductDraft("image", event.target.value); }}
                         />
                         <small>
-                          ${selectedProductCategory
-                            ? L("Nếu chưa có ảnh, dùng icon danh mục / If no image, use category icon") + ": " + (selectedProductCategory.icon || "🛒")
-                            : L("URL ảnh sẽ hiện thành ô vuông trong POS. / Image URLs appear as square POS cards.")}
+                          ${L("Nếu để trống URL, hệ thống sẽ dùng icon danh mục. / Leave blank to use a category icon instead.")}
                         </small>
                       </label>
+                      <label className="field">
+                        <span>${L("Icon thay thế / Fallback Icon")}</span>
+                        <select
+                          value=${isProductImageUrl(productDraft.image) ? (selectedProductCategory ? selectedProductCategory.icon || "🛒" : "🛒") : (productDraft.image || (selectedProductCategory ? selectedProductCategory.icon || "🛒" : "🛒"))}
+                          onChange=${function (event) { updateProductDraft("image", event.target.value); }}
+                        >
+                          ${productDraft.image && !isProductImageUrl(productDraft.image) && !CATEGORY_ICON_OPTIONS.some(function (item) { return item.value === productDraft.image; })
+                            ? html`<option value=${productDraft.image}>${productDraft.image} ${L("Icon hiện tại / Current Icon")}</option>`
+                            : null}
+                          ${CATEGORY_ICON_OPTIONS.map(function (item) {
+                            return html`<option key=${item.value} value=${item.value}>${item.value} ${L(item.label)}</option>`;
+                          })}
+                        </select>
+                        <small>${L("Dùng khi sản phẩm chưa có URL ảnh. / Used when the product has no image URL.")}</small>
+                      </label>
+                      <div className="product-image-preview">
+                        ${isProductImageUrl(productDraft.image)
+                          ? html`<img src=${productDraft.image} alt=${productDraft.name || ""} />`
+                          : html`<span>${productDraft.image || (selectedProductCategory && selectedProductCategory.icon) || "🛒"}</span>`}
+                        <small>${L("Preview POS / POS Preview")}</small>
+                      </div>
                       <div className="row-actions" style=${{ alignSelf: "end", flexWrap: "wrap" }}>
                         <button
                           type="button"
@@ -9867,19 +9926,6 @@
                         >
                           ${L("Dùng icon danh mục / Use Category Icon")}
                         </button>
-                        ${categories.slice(0, 8).map(function (category) {
-                          return html`
-                            <button
-                              key=${category.id}
-                              type="button"
-                              className=${"addon-chip" + (productDraft.image === category.icon ? " is-active" : "")}
-                              onClick=${function () { updateProductDraft("image", category.icon || "🛒"); }}
-                              title=${L(category.label)}
-                            >
-                              ${category.icon || "🛒"}
-                            </button>
-                          `;
-                        })}
                       </div>
                     </div>
                   </fieldset>
@@ -10096,7 +10142,17 @@
                         <label className="field"><span>${L("Mã danh mục / Category Code")}</span><input placeholder="VD: ORIA7000" value=${categoryDraft.code} onInput=${function (event) { updateCategoryDraft("code", event.target.value); }} /></label>
                         <label className="field"><span>${L("Tên tiếng Việt / Vietnamese Name")}</span><input value=${categoryDraft.labelVi} onInput=${function (event) { updateCategoryDraft("labelVi", event.target.value); }} /></label>
                         <label className="field"><span>${L("Tên tiếng Anh / English Name")}</span><input value=${categoryDraft.labelEn} onInput=${function (event) { updateCategoryDraft("labelEn", event.target.value); }} /></label>
-                        <label className="field"><span>${L("Icon / Icon")}</span><input value=${categoryDraft.icon} onInput=${function (event) { updateCategoryDraft("icon", event.target.value); }} /></label>
+                        <label className="field">
+                          <span>${L("Icon / Icon")}</span>
+                          <select value=${categoryDraft.icon || "🛒"} onChange=${function (event) { updateCategoryDraft("icon", event.target.value); }}>
+                            ${categoryDraft.icon && !CATEGORY_ICON_OPTIONS.some(function (item) { return item.value === categoryDraft.icon; })
+                              ? html`<option value=${categoryDraft.icon}>${categoryDraft.icon} ${L("Icon hiện tại / Current Icon")}</option>`
+                              : null}
+                            ${CATEGORY_ICON_OPTIONS.map(function (item) {
+                              return html`<option key=${item.value} value=${item.value}>${item.value} ${L(item.label)}</option>`;
+                            })}
+                          </select>
+                        </label>
                       </div>
                       <button type="submit" className="primary-btn">${categoryDraft.id ? L("Lưu danh mục / Save Category") : L("Thêm danh mục / Add Category")}</button>
                     </form>
@@ -11903,7 +11959,17 @@
                         <label className="field"><span>${L("Mã danh mục / Category Code")}</span><input placeholder="VD: ORIA7000" value=${categoryDraft.code} onInput=${function (event) { updateCategoryDraft("code", event.target.value); }} /></label>
                         <label className="field"><span>${L("Tên tiếng Việt / Vietnamese Name")}</span><input value=${categoryDraft.labelVi} onInput=${function (event) { updateCategoryDraft("labelVi", event.target.value); }} /></label>
                         <label className="field"><span>${L("Tên tiếng Anh / English Name")}</span><input value=${categoryDraft.labelEn} onInput=${function (event) { updateCategoryDraft("labelEn", event.target.value); }} /></label>
-                        <label className="field"><span>${L("Icon / Icon")}</span><input value=${categoryDraft.icon} onInput=${function (event) { updateCategoryDraft("icon", event.target.value); }} /></label>
+                        <label className="field">
+                          <span>${L("Icon / Icon")}</span>
+                          <select value=${categoryDraft.icon || "🛒"} onChange=${function (event) { updateCategoryDraft("icon", event.target.value); }}>
+                            ${categoryDraft.icon && !CATEGORY_ICON_OPTIONS.some(function (item) { return item.value === categoryDraft.icon; })
+                              ? html`<option value=${categoryDraft.icon}>${categoryDraft.icon} ${L("Icon hiện tại / Current Icon")}</option>`
+                              : null}
+                            ${CATEGORY_ICON_OPTIONS.map(function (item) {
+                              return html`<option key=${item.value} value=${item.value}>${item.value} ${L(item.label)}</option>`;
+                            })}
+                          </select>
+                        </label>
                       </div>
                       <button type="submit" className="primary-btn">${categoryDraft.id ? L("Lưu danh mục / Save Category") : L("Thêm danh mục / Add Category")}</button>
                     </form>

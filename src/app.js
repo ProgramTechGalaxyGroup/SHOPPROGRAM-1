@@ -8094,7 +8094,7 @@
         var workflowStatus = getOrderWorkflowStatus(order);
         return orderStatusFilter === "all" || (orderStatusFilter !== "completed" && workflowStatus === orderStatusFilter);
       });
-      var completedSaleCards = (orderStatusFilter === "all" || orderStatusFilter === "completed")
+      var completedSaleCards = orderStatusFilter === "completed"
         ? completedSalesToday
         : [];
       var statusCounts = orders.reduce(function (counts, order) {
@@ -8102,7 +8102,7 @@
         counts[status] = (counts[status] || 0) + 1;
         counts.all += 1;
         return counts;
-      }, { all: completedSalesToday.length, new: 0, preparing: 0, held: 0, needs_action: 0, completed: completedSalesToday.length });
+      }, { all: 0, new: 0, preparing: 0, held: 0, needs_action: 0, completed: completedSalesToday.length });
       function getOpenOrderStatusLabel(order) {
         if (order.status === "needs_action") return L("Cần xử lí / Needs Action");
         if (order.status === "saving") return L("Đang lưu / Saving");
@@ -8976,84 +8976,11 @@
                 <button className="primary-btn" onClick=${function () {
                   exportDatabaseBackup(null);
                 }} disabled=${exportBusy}>${exportBusy ? L("Đang export... / Exporting...") : L("Export Full Database Backup")}</button>
-                <button className="ghost-btn" onClick=${function () {
-                  exportDatabaseBackup(selectedExportTables);
-                }} disabled=${exportBusy}>${L("Export Selected Tables")}</button>
-                <button className="ghost-btn" onClick=${function () {
-                  exportFirebaseSeed(selectedExportTables);
-                }} disabled=${exportBusy}>${L("Export Firebase Seed JSON")}</button>
               </div>
             </div>
 
-            <div className="split-grid">
-              <div className="form-card">
-                <div className="field-grid">
-                  <label className="field">
-                    <span>${L("Phạm vi dữ liệu / Data Scope")}</span>
-                    <select value=${exportFilterMode} onChange=${function (event) { setExportFilterMode(event.target.value); }}>
-                      <option value="all">${L("Export all data")}</option>
-                      <option value="date_range">${L("Export by date range")}</option>
-                    </select>
-                  </label>
-                  ${exportFilterMode === "date_range" ? html`
-                    <label className="field">
-                      <span>${L("Từ ngày / Start Date")}</span>
-                      <input type="date" value=${exportStartDate} onInput=${function (event) { setExportStartDate(event.target.value); }} />
-                    </label>
-                  ` : html`<div></div>`}
-                  ${exportFilterMode === "date_range" ? html`
-                    <label className="field">
-                      <span>${L("Đến ngày / End Date")}</span>
-                      <input type="date" value=${exportEndDate} onInput=${function (event) { setExportEndDate(event.target.value); }} />
-                    </label>
-                  ` : null}
-                </div>
-
-                <div className="toggle-grid">
-                  <label className="toggle-card">
-                    <input type="checkbox" checked=${exportActiveOnly} onChange=${function (event) { setExportActiveOnly(event.target.checked); }} />
-                    <span>${L("Export only active products and ingredients")}</span>
-                  </label>
-                  <label className="toggle-card">
-                    <input type="checkbox" checked=${exportCompletedOrdersOnly} onChange=${function (event) { setExportCompletedOrdersOnly(event.target.checked); }} />
-                    <span>${L("Export only completed orders")}</span>
-                  </label>
-                </div>
-
-                <div className="empty-state align-left">
-                  ${L("ZIP backup sẽ chứa toàn bộ CSV, schema.json và export_log.json theo cấu trúc chuẩn để dùng cho Google Sheets hoặc migrate sang database sau này. / The ZIP backup will contain all CSVs, schema.json, and export_log.json so you can use it in Google Sheets now and migrate to a database later.")}
-                </div>
-                <div className="empty-state align-left">
-                  ${L("Firebase Seed JSON sẽ xuất dữ liệu hiện tại theo dạng collections để bạn dễ nhập vào Firestore hoặc Realtime Database, đồng thời vẫn kèm relational tables để migrate tiếp sang database thật sau này. / Firebase Seed JSON exports your current data as collections for Firestore or Realtime Database, while still keeping relational tables for a later move to a full database.")}
-                </div>
-              </div>
-
-              <div className="form-card">
-                <div className="section-top">
-                  <div>
-                    <p className="eyebrow">${L("Bảng dữ liệu / Tables")}</p>
-                    <h3 className="template-preview-title">${selectedExportTables.length}/${EXPORT_TABLE_SCHEMAS.length} ${L("bảng được chọn / tables selected")}</h3>
-                  </div>
-                  <button className="ghost-btn" onClick=${toggleAllExportTables}>
-                    ${selectedExportTables.length === EXPORT_TABLE_SCHEMAS.length ? L("Bỏ chọn tất cả / Clear All") : L("Chọn tất cả / Select All")}
-                  </button>
-                </div>
-                <div className="export-table-grid">
-                  ${EXPORT_TABLE_SCHEMAS.map(function (tableSchema) {
-                    var checked = selectedExportTables.indexOf(tableSchema.tableName) !== -1;
-                    return html`
-                      <label key=${tableSchema.tableName} className=${"toggle-card export-table-card" + (checked ? " is-active" : "")}>
-                        <input
-                          type="checkbox"
-                          checked=${checked}
-                          onChange=${function () { toggleExportTable(tableSchema.tableName); }}
-                        />
-                        <span>${tableSchema.tableName}.csv</span>
-                      </label>
-                    `;
-                  })}
-                </div>
-              </div>
+            <div className="empty-state align-left">
+              ${L("Nút này xuất một file ZIP sao lưu đầy đủ gồm CSV, schema.json và export_log.json. / This exports one full backup ZIP with CSV files, schema.json, and export_log.json.")}
             </div>
           </section>
         </section>

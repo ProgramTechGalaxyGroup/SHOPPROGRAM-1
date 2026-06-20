@@ -2444,6 +2444,7 @@
     var [dashboardRange, setDashboardRange] = useState("today"); // today|week|month|year|custom
     var [dashboardCustomFrom, setDashboardCustomFrom] = useState("");
     var [dashboardCustomTo, setDashboardCustomTo] = useState("");
+    var [dashboardRevenueMode, setDashboardRevenueMode] = useState("chart");
     // POS category sidebar: which parent categories are currently expanded.
     // Object map { [parentId]: true }. Starts empty (all collapsed).
     var [expandedCategories, setExpandedCategories] = useState({});
@@ -3715,21 +3716,49 @@
         return t >= range.from && t <= range.to;
       });
       var paidSalesInRange = revenueSalesInRange.filter(isSaleRevenueEligible);
+      var rangeDuration = Math.max(1, (Number(range.to) || Date.now()) - (Number(range.from) || 0) + 1);
+      var previousRange = {
+        from: Math.max(0, (Number(range.from) || 0) - rangeDuration),
+        to: Math.max(0, (Number(range.from) || 0) - 1)
+      };
+      var previousPaidSales = revenueSales.filter(function (sale) {
+        var t = Number(sale.createdAt) || 0;
+        return t >= previousRange.from && t <= previousRange.to && isSaleRevenueEligible(sale);
+      });
       var revenue = paidSalesInRange.reduce(function (sum, sale) { return sum + (Number(sale.total) || 0); }, 0);
+      var previousRevenue = previousPaidSales.reduce(function (sum, sale) { return sum + (Number(sale.total) || 0); }, 0);
       var ordersCount = paidSalesInRange.length;
+      var previousOrdersCount = previousPaidSales.length;
       // Average ticket
       var avgTicket = ordersCount > 0 ? Math.round(revenue / ordersCount) : 0;
+      var previousAvgTicket = previousOrdersCount > 0 ? Math.round(previousRevenue / previousOrdersCount) : 0;
       var lowStock = lowStockAlerts;
+      function getDelta(current, previous) {
+        if (!previous && !current) return 0;
+        if (!previous) return current > 0 ? 100 : 0;
+        return Math.round(((current - previous) / previous) * 1000) / 10;
+      }
+      function getSeriesKey(timestamp) {
+        var date = new Date(timestamp);
+        if (dashboardRange === "year") {
+          return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0");
+        }
+        if (dashboardRange === "month") {
+          return String(date.getDate()).padStart(2, "0") + "/" + String(date.getMonth() + 1).padStart(2, "0");
+        }
+        return String(date.getDate()).padStart(2, "0") + "/" + String(date.getMonth() + 1).padStart(2, "0");
+      }
       // Group by day for chart
       var byDay = {};
       paidSalesInRange.forEach(function (s) {
-        var d = new Date(s.createdAt);
-        var key = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-        if (!byDay[key]) byDay[key] = { day: key, revenue: 0, orders: 0 };
+        var key = getSeriesKey(s.createdAt);
+        if (!byDay[key]) byDay[key] = { day: key, revenue: 0, orders: 0, sort: Number(s.createdAt) || 0 };
         byDay[key].revenue += Number(s.total) || 0;
         byDay[key].orders += 1;
       });
-      var daySeries = Object.keys(byDay).sort().map(function (k) { return byDay[k]; });
+      var daySeries = Object.keys(byDay).map(function (k) { return byDay[k]; }).sort(function (a, b) {
+        return a.sort - b.sort;
+      });
       var byPaymentMethod = {};
       paidSalesInRange.forEach(function (sale) {
         var method = normalizePaymentMethod(sale.paymentMethod || sale.payment_method);
@@ -3746,18 +3775,92 @@
       });
       var paymentBreakdown = Object.values(byPaymentMethod).sort(function (a, b) {
         return b.revenue - a.revenue;
+      }).map(function (item) {
+        return Object.assign({}, item, {
+          percent: revenue > 0 ? Math.round(item.revenue / revenue * 1000) / 10 : 0
+        });
       });
       // Top selling products in range
       var byProduct = {};
       paidSalesInRange.forEach(function (s) {
         (s.items || []).forEach(function (it) {
           var key = it.productId || it.name;
-          if (!byProduct[key]) byProduct[key] = { name: it.name, qty: 0, revenue: 0 };
+          var product = products.find(function (p) { return p.id === it.productId; });
+          if (!byProduct[key]) byProduct[key] = { name: it.name, qty: 0, revenue: 0, image: product && (product.imageIcon || product.image || product.imageUrl) };
           byProduct[key].qty += Number(it.qty) || 0;
           byProduct[key].revenue += (Number(it.qty) || 0) * (Number(it.price) || 0);
         });
       });
-      var topProducts = Object.values(byProduct).sort(function (a, b) { return b.qty - a.qty; }).slice(0, 5);
+      var topProducts = Object.values(byProduct).sort(function (a, b) { return b.qty - a.qty; }).slice(0, 6);
+      var statusMap = {};
+      function addStatus(id, label, tone, amount) {
+        if (!statusMap[id]) {
+          statusMap[id] = { id: id, label: label, tone: tone, orders: 0, revenue: 0 };
+        }
+        statusMap[id].orders += 1;
+        statusMap[id].revenue += Number(amount) || 0;
+      }
+      paidSalesInRange.forEach(function (sale) {
+        addStatus("completed", "Hoàn thành / Completed", "success", sale.total);
+      });
+      (orders || []).forEach(function (order) {
+        var t = Number(order.createdAt) || Date.now();
+        if (t < range.from || t > range.to) return;
+        var status = getOrderWorkflowStatus(order);
+        if (status === "completed") return;
+        var label = status === "needs_action"
+          ? "Cần xử lí / Needs Action"
+          : status === "preparing"
+            ? "Đang chuẩn bị / Preparing"
+            : status === "held"
+              ? "Tạm giữ / Held"
+              : "Mới / New";
+        var tone = status === "needs_action" ? "danger" : (status === "preparing" ? "warning" : "info");
+        addStatus(status, label, tone, calculateOrder(order, addOns).total);
+      });
+      var statusBreakdown = Object.values(statusMap).sort(function (a, b) { return b.orders - a.orders; });
+      var recentOrders = paidSalesInRange.map(function (sale) {
+        return {
+          id: sale.id,
+          orderId: sale.orderId || sale.id,
+          customerName: sale.customerName || sale.customer_name || L("Khách lẻ / Walk-in"),
+          total: Number(sale.total) || 0,
+          createdAt: Number(sale.createdAt) || 0,
+          paymentMethod: normalizePaymentMethod(sale.paymentMethod || sale.payment_method),
+          statusLabel: "Hoàn thành / Completed",
+          statusTone: "success",
+          sale: sale
+        };
+      }).concat((orders || []).filter(function (order) {
+        var t = Number(order.createdAt) || Date.now();
+        return t >= range.from && t <= range.to;
+      }).map(function (order) {
+        var status = getOrderWorkflowStatus(order);
+        return {
+          id: order.id,
+          orderId: order.id,
+          customerName: order.customerName || L("Khách lẻ / Walk-in"),
+          total: calculateOrder(order, addOns).total,
+          createdAt: Number(order.createdAt) || Date.now(),
+          paymentMethod: normalizePaymentMethod(order.paymentMethod),
+          statusLabel: "",
+          statusTone: status === "needs_action" ? "danger" : (status === "preparing" || status === "held" ? "warning" : "info"),
+          orderStatus: status,
+          order: order
+        };
+      })).sort(function (a, b) { return b.createdAt - a.createdAt; }).slice(0, 8);
+      recentOrders = recentOrders.map(function (entry) {
+        if (entry.statusLabel) return entry;
+        var status = entry.orderStatus || "new";
+        var label = status === "needs_action"
+          ? "Cần xử lí / Needs Action"
+          : status === "preparing"
+            ? "Đang chuẩn bị / Preparing"
+            : status === "held"
+              ? "Tạm giữ / Held"
+              : "Mới / New";
+        return Object.assign({}, entry, { statusLabel: label });
+      });
       var pendingPurchases = (purchases || []).filter(function (po) {
         return (po.verification_status || po.verificationStatus) === "pending_verification";
       });
@@ -3769,16 +3872,22 @@
         range: range,
         revenue: revenue,
         ordersCount: ordersCount,
+        ordersDelta: getDelta(ordersCount, previousOrdersCount),
         avgTicket: avgTicket,
+        avgTicketDelta: getDelta(avgTicket, previousAvgTicket),
+        revenueDelta: getDelta(revenue, previousRevenue),
         lowStock: lowStock,
+        bestSellerCount: topProducts.length,
+        statusBreakdown: statusBreakdown,
         daySeries: daySeries,
         paymentBreakdown: paymentBreakdown,
         topProducts: topProducts,
         pendingPurchases: pendingPurchases,
         pendingPurchaseTotal: pendingPurchaseTotal,
+        recentOrders: recentOrders,
         recentSales: clone(salesInRange).sort(function (a, b) { return b.createdAt - a.createdAt; })
       };
-    }, [products, sales, purchases, dashboardRange, dashboardCustomFrom, dashboardCustomTo, lowStockAlerts]);
+    }, [products, sales, orders, purchases, addOns, dashboardRange, dashboardCustomFrom, dashboardCustomTo, lowStockAlerts]);
 
     var inventoryTabs = [
       { id: "stock", label: "Kiểm hàng tồn kho / Stock Check" },
@@ -8084,6 +8193,10 @@
           setCheckoutPanelOpen(false);
           return;
         }
+        if (!activeOrderHasRecipeItems) {
+          payNow();
+          return;
+        }
         if (checkoutPanelOpen) {
           payNow();
           return;
@@ -8270,6 +8383,12 @@
               </div>
 
               <div className="order-switcher order-switcher-board">
+                ${(orderStatusFilter === "all" || orderStatusFilter === "new") ? html`
+                  <button className="order-chip order-chip-create order-chip-board" onClick=${createNewOrder}>
+                    <span>${L("+ Đơn mới / + New Order")}</span>
+                    <small>${L("Tạo giỏ khác / Create another cart")}</small>
+                  </button>
+                ` : null}
                 ${displayedOrders.length ? displayedOrders.map(function (order) {
                   var itemCount = (order.items || []).reduce(function (sum, item) {
                     return sum + (Number(item.qty) || 0);
@@ -8320,10 +8439,6 @@
                       : L("Xem thêm / Show More") + " +" + hiddenBoardCards}
                   </button>
                 ` : null}
-                <button className="order-chip order-chip-create order-chip-board" onClick=${createNewOrder}>
-                  <span>${L("+ Đơn mới / + New Order")}</span>
-                  <small>${L("Tạo giỏ khác / Create another cart")}</small>
-                </button>
               </div>
             </section>
 
@@ -8464,8 +8579,8 @@
                     ${activeOrder.status === "preparing" ? html`
                       <button className="primary-btn" onClick=${finishPreparingOrder}>${L("Hoàn tất chuẩn bị / Mark Ready")}</button>
                     ` : (activeOrder.status !== "needs_action" && activeOrder.status !== "saving" && activeOrder.status !== "ready" ? html`
-                      <button className="primary-btn" onClick=${receiveActiveOrder}>
-                        ${activeOrderHasRecipeItems ? L("Nhận đơn / Accept Order") : L("Thanh toán retail / Retail Checkout")}
+                      <button className="primary-btn" disabled=${checkoutDisabled} onClick=${handleCheckoutPrimaryAction}>
+                        ${getCheckoutPrimaryLabel()}
                       </button>
                     ` : null)}
                     <button className="ghost-btn" onClick=${cancelOrder}>${L("Xóa món / Clear Items")}</button>
@@ -8748,37 +8863,40 @@
 
     function renderDashboardView() {
       var rangeOptions = [
-        { id: "today",  label: "Hôm nay / Today" },
-        { id: "week",   label: "7 ngày / 7 days" },
-        { id: "month",  label: "Tháng này / This Month" },
-        { id: "year",   label: "Năm nay / This Year" },
+        { id: "today",  label: "Theo ngày / Daily" },
+        { id: "month",  label: "Theo tháng / Monthly" },
+        { id: "year",   label: "Theo năm / Yearly" },
         { id: "custom", label: "Tùy chọn / Custom" }
       ];
+      function renderDelta(value) {
+        var positive = Number(value) >= 0;
+        return html`<span className=${"dashboard-delta " + (positive ? "is-up" : "is-down")}>
+          ${positive ? "↑" : "↓"} ${Math.abs(Number(value) || 0)}%
+        </span>`;
+      }
+      function statusStyle(tone) {
+        if (tone === "success") return { background: "#e6f7ea", color: "#168034" };
+        if (tone === "danger") return { background: "#ffe8e1", color: "#bf4f39" };
+        if (tone === "warning") return { background: "#fff3d8", color: "#a86a18" };
+        return { background: "#eaf2ff", color: "#2d68d8" };
+      }
       return html`
-        <section className="stack-view">
-          <!-- Date range filter -->
-          <section className="surface section-card" style=${{ padding: "16px 18px" }}>
-            <div className="section-top" style=${{ flexWrap: "wrap", gap: 12 }}>
-              <div>
-                <p className="eyebrow">${L("Báo cáo / Report")}</p>
-                <h2 className="section-title" style=${{ marginTop: 2 }}>${L(dashboardMetrics.range.label)}</h2>
-              </div>
-              <div className="row-actions" style=${{ flexWrap: "wrap", gap: 8 }}>
-                ${rangeOptions.map(function (opt) {
-                  var active = dashboardRange === opt.id;
-                  return html`
-                    <button
-                      key=${opt.id}
-                      className=${"ghost-btn" + (active ? " is-active" : "")}
-                      onClick=${function () { setDashboardRange(opt.id); }}
-                      style=${active ? { background: "linear-gradient(135deg, #ffe2bf, #ffc47f)", color: "#5b3a20", fontWeight: 700 } : {}}
-                    >${L(opt.label)}</button>
-                  `;
-                })}
-              </div>
+        <section className="stack-view dashboard-shell">
+          <section className="surface section-card dashboard-control-card">
+            <div className="dashboard-range-tabs">
+              ${rangeOptions.map(function (opt) {
+                var active = dashboardRange === opt.id;
+                return html`
+                  <button
+                    key=${opt.id}
+                    className=${"dashboard-range-btn" + (active ? " is-active" : "")}
+                    onClick=${function () { setDashboardRange(opt.id); }}
+                  >${L(opt.label)}</button>
+                `;
+              })}
             </div>
             ${dashboardRange === "custom" ? html`
-              <div className="field-grid" style=${{ marginTop: 12 }}>
+              <div className="field-grid dashboard-custom-range">
                 <label className="field">
                   <span>${L("Từ ngày / From")}</span>
                   <input type="date" value=${dashboardCustomFrom} onInput=${function (e) { setDashboardCustomFrom(e.target.value); }} />
@@ -8789,198 +8907,228 @@
                 </label>
               </div>
             ` : null}
+
+            <div className="dashboard-kpi-grid">
+              <article className="dashboard-kpi-card">
+                <span className="dashboard-kpi-icon">◎</span>
+                <div>
+                  <p>${L("Doanh thu / Revenue")}</p>
+                  <strong>${formatCurrency(dashboardMetrics.revenue)}</strong>
+                  <small>${renderDelta(dashboardMetrics.revenueDelta)} ${L("so với kỳ trước / vs previous")}</small>
+                </div>
+              </article>
+              <article className="dashboard-kpi-card">
+                <span className="dashboard-kpi-icon">▣</span>
+                <div>
+                  <p>${L("Đơn hàng / Orders")}</p>
+                  <strong>${dashboardMetrics.ordersCount}</strong>
+                  <small>${renderDelta(dashboardMetrics.ordersDelta)} ${L("so với kỳ trước / vs previous")}</small>
+                </div>
+              </article>
+              <article className="dashboard-kpi-card">
+                <span className="dashboard-kpi-icon">▤</span>
+                <div>
+                  <p>${L("Trung bình giá đơn / Avg Ticket")}</p>
+                  <strong>${formatCurrency(dashboardMetrics.avgTicket)}</strong>
+                  <small>${renderDelta(dashboardMetrics.avgTicketDelta)} ${L("so với kỳ trước / vs previous")}</small>
+                </div>
+              </article>
+              <article className="dashboard-kpi-card">
+                <span className="dashboard-kpi-icon">□</span>
+                <div>
+                  <p>${L("Sản phẩm bán chạy / Best Sellers")}</p>
+                  <strong>${dashboardMetrics.bestSellerCount}</strong>
+                  <small>${L("trong khoảng lọc / in selected range")}</small>
+                </div>
+              </article>
+              <article className="dashboard-kpi-card">
+                <span className="dashboard-kpi-icon dashboard-warn">△</span>
+                <div>
+                  <p>${L("Sản phẩm sắp hết / Low Stock")}</p>
+                  <strong>${dashboardMetrics.lowStock.length}</strong>
+                  <small>${L("cần nhập thêm / needs restock")}</small>
+                </div>
+              </article>
+            </div>
           </section>
 
-          <div className="card-grid card-grid-4">
-            <article className="metric-card surface">
-              <span className="metric-label">${L("Doanh thu / Revenue")}</span>
-              <strong>${formatCurrency(dashboardMetrics.revenue)}</strong>
-            </article>
-            <article className="metric-card surface">
-              <span className="metric-label">${L("Số đơn / Orders")}</span>
-              <strong>${dashboardMetrics.ordersCount}</strong>
-            </article>
-            <article className="metric-card surface">
-              <span className="metric-label">${L("TB / đơn / Avg Ticket")}</span>
-              <strong>${formatCurrency(dashboardMetrics.avgTicket)}</strong>
-            </article>
-            <article className="metric-card surface">
-              <span className="metric-label">${L("Sắp hết hàng / Low Stock")}</span>
-              <strong>${dashboardMetrics.lowStock.length}</strong>
-            </article>
-          </div>
-
           ${dashboardMetrics.pendingPurchases.length ? html`
-            <section className="surface section-card" style=${{ borderColor: "rgba(222, 99, 29, 0.28)", background: "linear-gradient(135deg, rgba(255,244,229,0.95), rgba(255,255,255,0.96))" }}>
-              <div className="section-top" style=${{ gap: 12, flexWrap: "wrap" }}>
-                <div>
-                  <p className="eyebrow">${L("Cần xác thực / Needs Verification")}</p>
-                  <h2 className="section-title">${dashboardMetrics.pendingPurchases.length} ${L("phiếu nhập kho chờ xác nhận / stock-in documents pending")}</h2>
-                  <p style=${{ margin: "6px 0 0", color: "#7b6b5d", fontWeight: 700 }}>
-                    ${L("Tổng giá trị chờ nhập / Pending value")}: ${formatCurrency(dashboardMetrics.pendingPurchaseTotal)}
-                  </p>
-                </div>
-                <button className="primary-btn" onClick=${function () {
-                  setActiveView("inventory");
-                  setInventorySection("stock_ops");
-                  setStockOpsMode("in");
-                  refreshPurchases();
-                }}>${L("Xem & xác nhận / Review & Verify")}</button>
+            <section className="surface section-card dashboard-alert-card">
+              <div>
+                <p className="eyebrow">${L("Cần xác thực / Needs Verification")}</p>
+                <h2 className="section-title">${dashboardMetrics.pendingPurchases.length} ${L("phiếu nhập kho chờ xác nhận / stock-in documents pending")}</h2>
+                <p>${L("Tổng giá trị chờ nhập / Pending value")}: ${formatCurrency(dashboardMetrics.pendingPurchaseTotal)}</p>
               </div>
+              <button className="primary-btn" onClick=${function () {
+                setActiveView("inventory");
+                setInventorySection("stock_ops");
+                setStockOpsMode("in");
+                refreshPurchases();
+              }}>${L("Xem & xác nhận / Review & Verify")}</button>
             </section>
           ` : null}
 
-          ${dashboardMetrics.daySeries.length > 1 ? html`
-            <section className="surface section-card">
-              <h2 className="section-title">${L("Doanh thu theo ngày / Revenue by Day")}</h2>
-              <div className="list-stack" style=${{ marginTop: 8 }}>
-                ${(function () {
-                  var max = Math.max.apply(null, dashboardMetrics.daySeries.map(function (d) { return d.revenue; }));
-                  return dashboardMetrics.daySeries.map(function (d) {
-                    var pct = max > 0 ? Math.round(d.revenue / max * 100) : 0;
-                    return html`
-                      <article key=${d.day} className="list-row" style=${{ alignItems: "center" }}>
-                        <div style=${{ minWidth: 110 }}>
-                          <strong>${d.day}</strong>
-                          <p>${d.orders} ${L("đơn / orders")}</p>
-                        </div>
-                        <div style=${{ flex: 1, margin: "0 12px" }}>
-                          <div style=${{
-                            height: 10, background: "#fff3e6", borderRadius: 999, overflow: "hidden"
-                          }}>
-                            <div style=${{
-                              width: pct + "%", height: "100%",
-                              background: "linear-gradient(90deg, #ffb66b, #f08821)"
-                            }}></div>
-                          </div>
-                        </div>
-                        <strong style=${{ minWidth: 100, textAlign: "right" }}>${formatCurrency(d.revenue)}</strong>
-                      </article>
-                    `;
-                  });
-                })()}
-              </div>
-            </section>
-          ` : null}
-
-          ${dashboardMetrics.paymentBreakdown.length ? html`
-            <section className="surface section-card">
+          <section className="dashboard-grid-main">
+            <article className="surface section-card dashboard-revenue-card">
               <div className="section-top">
                 <div>
-                  <p className="eyebrow">${L("Thanh toán / Payment")}</p>
-                  <h2 className="section-title">${L("Doanh thu theo phương thức thanh toán / Revenue by Payment Method")}</h2>
+                  <h2 className="section-title">${L("Doanh thu theo thời gian / Revenue Trend")}</h2>
+                  <p className="muted-copy">${L(dashboardMetrics.range.label)}</p>
+                </div>
+                <div className="dashboard-segment">
+                  <button className=${dashboardRevenueMode === "chart" ? "is-active" : ""} onClick=${function () { setDashboardRevenueMode("chart"); }}>${L("Biểu đồ / Chart")}</button>
+                  <button className=${dashboardRevenueMode === "table" ? "is-active" : ""} onClick=${function () { setDashboardRevenueMode("table"); }}>${L("Bảng / Table")}</button>
                 </div>
               </div>
-              <div className="list-stack" style=${{ marginTop: 8 }}>
-                ${(function () {
-                  var maxPaymentRevenue = Math.max.apply(null, dashboardMetrics.paymentBreakdown.map(function (item) { return item.revenue; }));
-                  return dashboardMetrics.paymentBreakdown.map(function (item) {
-                    var pct = maxPaymentRevenue > 0 ? Math.round(item.revenue / maxPaymentRevenue * 100) : 0;
-                    return html`
-                      <article key=${item.method} className="list-row" style=${{ alignItems: "center" }}>
-                        <div style=${{ minWidth: 180 }}>
-                          <strong>${L(item.label)}</strong>
-                          <p><code>${item.method}</code> · ${item.orders} ${L("đơn / orders")}</p>
-                        </div>
-                        <div style=${{ flex: 1, margin: "0 12px" }}>
-                          <div style=${{ height: 10, background: "#fff3e6", borderRadius: 999, overflow: "hidden" }}>
-                            <div style=${{
-                              width: pct + "%",
-                              height: "100%",
-                              background: "linear-gradient(90deg, #ffd49d, #db5d17)"
-                            }}></div>
+              ${dashboardMetrics.daySeries.length ? html`
+                ${dashboardRevenueMode === "chart" ? html`
+                  <div className="dashboard-line-chart">
+                    ${(function () {
+                      var max = Math.max.apply(null, dashboardMetrics.daySeries.map(function (d) { return d.revenue; }));
+                      return dashboardMetrics.daySeries.map(function (d) {
+                        var height = max > 0 ? Math.max(8, Math.round(d.revenue / max * 100)) : 8;
+                        return html`
+                          <div className="dashboard-chart-column" key=${d.day}>
+                            <div className="dashboard-chart-bar" style=${{ height: height + "%" }} title=${formatCurrency(d.revenue)}></div>
+                            <small>${d.day}</small>
                           </div>
-                        </div>
-                        <strong style=${{ minWidth: 120, textAlign: "right" }}>${formatCurrency(item.revenue)}</strong>
-                      </article>
-                    `;
-                  });
-                })()}
-              </div>
-            </section>
-          ` : null}
-
-          <div className="split-grid">
-            <section className="surface section-card">
-              <div className="section-top">
-                <div>
-                  <p className="eyebrow">${L("Top bán chạy / Best Sellers")}</p>
-                  <h2 className="section-title">${L("SP bán chạy nhất / Top Products")}</h2>
-                </div>
-              </div>
-              <div className="list-stack sales-history-scroll">
-                ${dashboardMetrics.topProducts.length
-                  ? dashboardMetrics.topProducts.map(function (p, i) {
+                        `;
+                      });
+                    })()}
+                  </div>
+                ` : html`
+                  <div className="list-stack">
+                    ${dashboardMetrics.daySeries.map(function (d) {
                       return html`
-                        <article key=${p.name + i} className="list-row">
-                          <div>
-                            <strong>#${i + 1} ${p.name}</strong>
-                            <p>${p.qty} ${L("đã bán / sold")}</p>
-                          </div>
-                          <strong>${formatCurrency(p.revenue)}</strong>
+                        <article className="list-row" key=${d.day}>
+                          <div><strong>${d.day}</strong><p>${d.orders} ${L("đơn / orders")}</p></div>
+                          <strong>${formatCurrency(d.revenue)}</strong>
                         </article>
                       `;
-                    })
-                  : html`<div className="empty-state">${L("Chưa có dữ liệu bán hàng. / No sales data yet.")}</div>`}
-              </div>
-            </section>
+                    })}
+                  </div>
+                `}
+              ` : html`<div className="empty-state">${L("Chưa có doanh thu trong khoảng này. / No revenue in this range.")}</div>`}
+            </article>
 
-            <section className="surface section-card">
+            <article className="surface section-card dashboard-top-products">
               <div className="section-top">
                 <div>
-                  <p className="eyebrow">${L("Giao dịch gần đây / Recent Sales")}</p>
-                  <h2 className="section-title">${L("Lịch sử thanh toán / Sales History")}</h2>
+                  <h2 className="section-title">${L("Sản phẩm bán chạy / Best Sellers")}</h2>
                 </div>
               </div>
-              <div className="list-stack">
-                ${dashboardMetrics.recentSales.length
-                  ? dashboardMetrics.recentSales.map(function (sale) {
-                      var saleStatus = getSaleStatusMeta(sale);
-                      var statusColor = saleStatus.tone === "success"
-                        ? "#1f8a3a"
-                        : saleStatus.tone === "danger"
-                          ? "#bf4f39"
-                          : "#a86a18";
-                      var statusBg = saleStatus.tone === "success"
-                        ? "#e6f7ea"
-                        : saleStatus.tone === "danger"
-                          ? "#ffe8e1"
-                          : "#fff3d8";
+              ${dashboardMetrics.topProducts.length ? html`
+                <div className="dashboard-product-podium">
+                  ${dashboardMetrics.topProducts.slice(0, 3).map(function (p, i) {
+                    return html`
+                      <article className="dashboard-product-tile" key=${p.name + i}>
+                        <span className="dashboard-rank">${i + 1}</span>
+                        <div className="dashboard-product-image">
+                          ${isProductImageUrl(p.image) ? html`<img src=${p.image} alt=${p.name} />` : html`<span>${p.image || "🛒"}</span>`}
+                        </div>
+                        <strong>${p.name}</strong>
+                        <small>${L("Đã bán / Sold")} ${formatQuantity(p.qty, 2)}</small>
+                      </article>
+                    `;
+                  })}
+                </div>
+                <div className="list-stack compact-list">
+                  ${dashboardMetrics.topProducts.slice(3).map(function (p, i) {
+                    return html`
+                      <article className="list-row" key=${p.name + i}>
+                        <div><strong>#${i + 4} ${p.name}</strong><p>${formatQuantity(p.qty, 2)} ${L("đã bán / sold")}</p></div>
+                        <strong>${formatCurrency(p.revenue)}</strong>
+                      </article>
+                    `;
+                  })}
+                </div>
+              ` : html`<div className="empty-state">${L("Chưa có sản phẩm bán chạy trong khoảng này. / No best sellers in this range.")}</div>`}
+            </article>
+
+            <article className="surface section-card dashboard-order-history">
+              <div className="section-top">
+                <div>
+                  <h2 className="section-title">${L("Lịch sử đơn hàng / Order History")}</h2>
+                </div>
+              </div>
+              <div className="dashboard-timeline">
+                ${dashboardMetrics.recentOrders.length ? dashboardMetrics.recentOrders.map(function (entry) {
+                  return html`
+                    <article className="dashboard-order-line" key=${entry.id + entry.orderId}>
+                      <time>${formatDateTime(entry.createdAt).split(" ")[0]}</time>
+                      <div>
+                        <strong>${entry.orderId}</strong>
+                        <p>${entry.customerName}</p>
+                      </div>
+                      <strong>${formatCurrency(entry.total)}</strong>
+                      <span className="dashboard-status-chip" style=${statusStyle(entry.statusTone)}>${L(entry.statusLabel)}</span>
+                      ${entry.sale ? html`
+                        <button className="ghost-btn" onClick=${function () { reprintSale(entry.sale, false); }}>${L("Xem / View")}</button>
+                      ` : html`
+                        <button className="ghost-btn" onClick=${function () {
+                          setActiveView("pos");
+                          setActiveOrderId(entry.orderId);
+                          setPosOrderPicked(true);
+                        }}>${L("Mở / Open")}</button>
+                      `}
+                    </article>
+                  `;
+                }) : html`<div className="empty-state">${L("Chưa có đơn trong khoảng này. / No orders in this range.")}</div>`}
+              </div>
+            </article>
+          </section>
+
+          <section className="dashboard-grid-secondary">
+            <article className="surface section-card">
+              <h2 className="section-title">${L("Phương thức thanh toán / Payment Methods")}</h2>
+              ${dashboardMetrics.paymentBreakdown.length ? html`
+                <div className="dashboard-breakdown">
+                  <div className="dashboard-donut" style=${{
+                    background: "conic-gradient(#f05a16 0 54%, #ff9c45 54% 78%, #7acb91 78% 92%, #6686ff 92% 100%)"
+                  }}>
+                    <strong>${dashboardMetrics.ordersCount}</strong>
+                    <small>${L("Tổng đơn / Orders")}</small>
+                  </div>
+                  <div className="list-stack compact-list">
+                    ${dashboardMetrics.paymentBreakdown.map(function (item) {
                       return html`
-                        <article key=${sale.id} className="list-row list-row-actions">
-                          <div>
-                            <strong>${sale.orderId || sale.id}</strong>
-                            <p>${formatDateTime(sale.createdAt)} · ${formatCurrency(sale.total)} · ${L(getPaymentMethodLabel(sale.paymentMethod || sale.payment_method))}</p>
-                            <p>
-                              <span className=${"stock-badge" + (saleStatus.tone === "danger" ? " needs-action-chip" : "")} style=${{ background: statusBg, color: statusColor }}>
-                                ${L(saleStatus.label)}
-                              </span>
-                              ${sale.syncError ? html`<small style=${{ color: "#bf4f39", marginLeft: 8 }}>${sale.syncError}</small>` : null}
-                            </p>
-                          </div>
-                          <div className="row-actions">
-                            <button className="ghost-btn" onClick=${function () { reprintSale(sale, false); }}>
-                              ${L("Xem / Preview")}
-                            </button>
-                            ${saleStatus.tone === "danger"
-                              ? html`
-                                <button className="primary-btn" onClick=${function () { retrySaleFromHistory(sale); }}>
-                                  ${L("Thử lại / Retry")}
-                                </button>
-                              `
-                              : html`
-                                <button className="primary-btn" onClick=${function () { reprintSale(sale, true); }}>
-                                  🖨 ${L("In lại / Reprint")}
-                                </button>
-                              `}
-                          </div>
+                        <article className="dashboard-breakdown-row" key=${item.method}>
+                          <span>${L(item.label)}</span>
+                          <strong>${item.percent}%</strong>
+                          <small>${item.orders} ${L("đơn / orders")}</small>
                         </article>
                       `;
-                    })
-                  : html`<div className="empty-state">${L("Chưa có giao dịch trong khoảng này. / No transactions in this range.")}</div>`}
-              </div>
-            </section>
-          </div>
+                    })}
+                  </div>
+                </div>
+              ` : html`<div className="empty-state">${L("Chưa có thanh toán trong khoảng này. / No payments in this range.")}</div>`}
+            </article>
+
+            <article className="surface section-card">
+              <h2 className="section-title">${L("Trạng thái đơn hàng / Order Status")}</h2>
+              ${dashboardMetrics.statusBreakdown.length ? html`
+                <div className="dashboard-breakdown">
+                  <div className="dashboard-donut dashboard-donut-status">
+                    <strong>${dashboardMetrics.statusBreakdown.reduce(function (sum, item) { return sum + item.orders; }, 0)}</strong>
+                    <small>${L("Tổng đơn / Orders")}</small>
+                  </div>
+                  <div className="list-stack compact-list">
+                    ${dashboardMetrics.statusBreakdown.map(function (item) {
+                      var totalStatusOrders = dashboardMetrics.statusBreakdown.reduce(function (sum, current) { return sum + current.orders; }, 0);
+                      var pct = totalStatusOrders ? Math.round(item.orders / totalStatusOrders * 1000) / 10 : 0;
+                      return html`
+                        <article className="dashboard-breakdown-row" key=${item.id}>
+                          <span>${L(item.label)}</span>
+                          <strong>${pct}%</strong>
+                          <small>${item.orders} ${L("đơn / orders")}</small>
+                        </article>
+                      `;
+                    })}
+                  </div>
+                </div>
+              ` : html`<div className="empty-state">${L("Chưa có trạng thái đơn trong khoảng này. / No order statuses in this range.")}</div>`}
+            </article>
+          </section>
 
           ${dashboardMetrics.lowStock.length ? html`
             <section className="surface section-card">

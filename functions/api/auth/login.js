@@ -34,7 +34,29 @@ export const onRequestPost = async ({ request, env }) => {
   const email = String(body.email).trim().toLowerCase();
   const password = String(body.password);
 
-  const account = ACCOUNTS[email];
+  let account = null;
+  if (env && env.DB) {
+    try {
+      const dbUser = await env.DB.prepare(
+        "SELECT role, password_hash FROM users WHERE email = ? AND is_active = 1 LIMIT 1"
+      )
+        .bind(email)
+        .first();
+      if (dbUser) {
+        account = {
+          role: dbUser.role,
+          hash: dbUser.password_hash,
+        };
+      }
+    } catch (err) {
+      console.warn("DB user lookup failed, falling back to static config:", err);
+    }
+  }
+
+  if (!account) {
+    account = ACCOUNTS[email];
+  }
+
   if (!account) {
     return badRequest("Invalid credentials");
   }

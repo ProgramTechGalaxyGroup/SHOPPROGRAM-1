@@ -435,3 +435,30 @@ create policy "staff_select_stock_movements"
 on public.stock_movements for select
 to authenticated
 using (true);
+
+-- ===========================================================
+-- Users (RBAC)
+-- ===========================================================
+create table if not exists users (
+  id            text primary key,
+  email         text not null unique,
+  password_hash text not null,
+  role          text not null,
+  full_name     text,
+  is_active     integer not null default 1,
+  created_at    bigint not null,
+  updated_at    bigint not null
+);
+
+create index if not exists idx_users_email on users(email);
+create index if not exists idx_users_role on users(role);
+
+-- RLS policies for users
+alter table users enable row level security;
+
+create policy "admin_all_users"
+on public.users for all
+to authenticated
+using (
+  (select role from public.users where id = auth.uid()::text limit 1) = 'admin'
+);

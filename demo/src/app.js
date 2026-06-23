@@ -2744,6 +2744,10 @@
     }
 
     function handleLogout() {
+      if (currentUser && currentUser.role === "cashier" && activeShift) {
+        window.alert(L("Bạn phải chốt ca và bàn giao két trước khi đăng xuất! / You must close the shift and hand over the register before logging out."));
+        return;
+      }
       fetch("/api/auth/logout", { method: "POST" })
         .then(function () {
           setCurrentUser(null);

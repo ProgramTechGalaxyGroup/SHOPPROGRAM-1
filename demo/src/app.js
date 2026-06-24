@@ -2523,8 +2523,31 @@
           .then(function (data) {
             if (data.ok) {
               const sales = data.recentSales || [];
-              setPreparingOrders(sales.filter(s => s.prep_status === "pending" || s.prep_status === "preparing"));
-              setReadyOrders(sales.filter(s => s.prep_status === "ready"));
+              let prep = sales.filter(s => s.prep_status === "pending" || s.prep_status === "preparing");
+              let ready = sales.filter(s => s.prep_status === "ready");
+
+              // Add draft orders from POS to "Preparing" section
+              try {
+                var rawState = window.localStorage.getItem("fruit-house-pos-suite-v3");
+                if (rawState) {
+                  var state = JSON.parse(rawState);
+                  if (state && Array.isArray(state.orders)) {
+                    var draftOrders = state.orders.filter(function(o) {
+                       return o.status !== "completed" && o.status !== "canceled" && o.orderNumberSource === "server" && o.id;
+                    });
+                    draftOrders.forEach(function(o) {
+                       if (!prep.find(p => p.order_id === o.id) && !ready.find(r => r.order_id === o.id)) {
+                           prep.push({ order_id: o.id, prep_status: "preparing" });
+                       }
+                    });
+                  }
+                }
+              } catch(e) {
+                console.error("Error reading draft orders", e);
+              }
+
+              setPreparingOrders(prep);
+              setReadyOrders(ready);
             }
           });
       }
@@ -12176,7 +12199,6 @@
             <div>
               <p className="eyebrow">${L("Lưu kho / Warehouse")}</p>
               <h1 className="section-title">${L("Quản lý kho hàng / Inventory Management")}</h1>
-              <small style=${{ color: "#7b6b5d" }}>${L("Đồng bộ với Supabase/API. / Synced with Supabase/API.")}</small>
             </div>
             <div className="row-actions">
               ${lowStockCount > 0 ? html`<span className="eyebrow" style=${{ color: "#c0392b" }}>⚠ ${lowStockCount} ${L("mục sắp hết / low-stock items")}</span>` : null}
@@ -12397,7 +12419,7 @@
                 <div className="list-stack">
                   <div className="empty-state align-left">
                     ${syncStatus.online
-                      ? L("Mọi thay đổi tự động lưu lên Supabase/API (1s delay). / Changes auto-save to Supabase/API (1s delay).")
+                      ? L("Mọi thay đổi tự động lưu (1s delay). / Changes auto-save (1s delay).")
                       : L("Đang offline – thay đổi sẽ đồng bộ khi có mạng lại. / Offline – changes will sync when reconnected.")}
                   </div>
                 </div>
@@ -13032,19 +13054,22 @@
                 <label style=${{ display: "block", fontSize: 12, fontWeight: 600, color: "#555", marginBottom: 6 }}>Số tiền mặt đầu ca (VND)</label>
                 <input type="number" id="opening-cash-input" className="form-control" defaultValue="500000" style=${{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #ddd" }} />
               </div>
-              <button className="btn btn-primary" style=${{ width: "100%", padding: 12, background: "#f59e0b", color: "#000", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer" }} onClick=${function () {
-                const openingCash = Number(document.getElementById("opening-cash-input").value) || 0;
-                fetch("/api/shifts/start", {
-                  method: "POST",
-                  body: JSON.stringify({ openingCash: openingCash })
-                }).then(function (res) { return res.json(); })
-                  .then(function (data) {
-                    if (data.ok) {
-                      setActiveShift(data.shift);
-                      pushToast("success", "Đã mở két đầu ca thành công. Ca làm việc bắt đầu.");
-                    }
-                  });
-              }}>Xác nhận Mở Két</button>
+              <div style=${{ display: "flex", gap: 12, marginTop: 12 }}>
+                <button className="btn btn-primary" style=${{ flex: 1, padding: 12, background: "#f59e0b", color: "#000", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer" }} onClick=${function () {
+                  const openingCash = Number(document.getElementById("opening-cash-input").value) || 0;
+                  fetch("/api/shifts/start", {
+                    method: "POST",
+                    body: JSON.stringify({ openingCash: openingCash })
+                  }).then(function (res) { return res.json(); })
+                    .then(function (data) {
+                      if (data.ok) {
+                        setActiveShift(data.shift);
+                        pushToast("success", "Đã mở két đầu ca thành công. Ca làm việc bắt đầu.");
+                      }
+                    });
+                }}>Xác nhận Mở Két</button>
+                <button className="btn btn-secondary" style=${{ padding: "12px 16px", background: "#fde2e0", color: "#c0392b", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer" }} onClick=${handleLogout}>Đăng xuất</button>
+              </div>
             </div>
           </div>
         ` : null}

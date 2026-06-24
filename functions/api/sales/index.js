@@ -3,6 +3,7 @@ import {
   isDuplicateOp, recordOpStmt, runIdempotentBatch, nextDocId,
   inventoryDeltaStmt, movementStmt, getProductCost,
   ensureProductsInventoryModeColumn, ensureComponentsInventoryColumns,
+  ensureSalesStorageCompatibility,
   normalizePaymentMethod, normalizeStockQty,
 } from "../_lib.js";
 
@@ -126,6 +127,7 @@ export const onRequestGet = async ({ env, request }) => {
 export const onRequestPost = async ({ env, request }) => {
   await ensureProductsInventoryModeColumn(env.DB);
   await ensureComponentsInventoryColumns(env.DB);
+  await ensureSalesStorageCompatibility(env.DB);
   const body = await readJson(request);
   if (!body || !Array.isArray(body.items) || !body.items.length) {
     return badRequest("items required");

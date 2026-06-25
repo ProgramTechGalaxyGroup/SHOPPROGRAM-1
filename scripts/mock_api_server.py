@@ -81,6 +81,10 @@ ACCOUNTS = {
         "role": "inventory",
         "hash": hash_password("inventory123", SALT),
     },
+    "barista@shopprogram.local": {
+        "role": "barista",
+        "hash": hash_password("barista123", SALT),
+    },
     "accountant@shopprogram.local": {
         "role": "accountant",
         "hash": hash_password("accountant123", SALT),
@@ -155,6 +159,16 @@ def is_authorized(role, path, method):
             return True
         return False
 
+    # Barista
+    if role == "barista":
+        if path.startswith("/api/kitchen/orders") and method in ("GET", "POST"):
+            return True
+        if path.startswith("/api/sync/pull") and method == "GET":
+            return True
+        if path == "/api/products" and method == "GET":
+            return True
+        return False
+
     # Manager
     if role == "manager":
         if path.startswith("/api/settings") and method != "GET":
@@ -214,6 +228,11 @@ mock_products = [
         "unit": "g",
     },
 ]
+
+# ─── In-Memory State ───
+server_sales = []
+active_shift = {}
+shifts_history = []
 
 CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",
@@ -339,16 +358,45 @@ class MockAPIHandler(http.server.SimpleHTTPRequestHandler):
                     {"id": "combo", "label": "Combo / Packages", "icon": "📦", "sort_order": 1, "is_active": 1},
                     {"id": "beverages", "label": "Đồ uống / Beverages", "icon": "🧃", "sort_order": 2, "is_active": 1},
                 ],
-                "addOns": [],
+                "addOns": [
+                    { "id": "sugar-50", "label": "50% đường", "price": 0, "group_key": "sweetness", "is_active": 1 },
+                    { "id": "sugar-0", "label": "Không đường", "price": 0, "group_key": "sweetness", "is_active": 1 },
+                    { "id": "ice-less", "label": "Ít đá", "price": 0, "group_key": "ice", "is_active": 1 }
+                ],
                 "components": [],
                 "products": mock_products,
-                "inventory": [],
-                "settings": [],
-                "recentSales": [],
+                "inventory": [{"product_id": p["id"], "qty_on_hand": p.get("stock", 0)} for p in mock_products],
+                "settings": {"storeName": "OriaFarm Quầy POS", "phone": "0909 123 456", "brandDisplayName": "OriaFarm"},
+                "recentSales": server_sales[-20:],
                 "productionRecipes": [],
                 "productionBatches": [],
             }
             self._send_json(self._maybe_sanitize(user, data))
+            return
+
+        # GET /api/kitchen/orders
+        if path == "/api/kitchen/orders":
+            kitchen_orders = [s for s in server_sales if s.get("prep_status") in ("pending", "preparing")]
+            self._send_json({"ok": True, "orders": kitchen_orders})
+            return
+
+        # GET /api/pub/orders/status
+        if path.startswith("/api/pub/orders/status"):
+            qs = parse_qs(parsed.query)
+            o_id = qs.get("id", [None])[0]
+            order = next((s for s in server_sales if s["id"] == o_id), None)
+            if order:
+                self._send_json({"ok": True, "id": order["id"], "orderId": order["order_id"], "customerName": order["customer_name"], "prepStatus": order["prep_status"]})
+            else:
+                self._send_json({"ok": False, "error": "Order not found"}, 404)
+            return
+
+        # GET /api/shifts/active
+        if path == "/api/shifts/active":
+            if active_shift.get("shift_id"):
+                self._send_json({"ok": True, "shift": active_shift})
+            else:
+                self._send_json({"ok": True, "shift": None})
             return
 
         # Fallback: not found
@@ -357,6 +405,7 @@ class MockAPIHandler(http.server.SimpleHTTPRequestHandler):
     # ─── POST ───
 
     def do_POST(self):
+        global active_shift
         parsed = urlparse(self.path)
         path = parsed.path
 
@@ -392,17 +441,137 @@ class MockAPIHandler(http.server.SimpleHTTPRequestHandler):
 
         # POST /api/sales
         if path.startswith("/api/sales"):
+            global server_sales
+            global active_shift
             payload = self._read_json_body() or {}
+            
+            # Detect beverage
+            has_recipe_items = False
+            items = payload.get("items", [])
+            for it in items:
+                p_id = it.get("productId")
+                p_info = next((p for p in mock_products if p.get("id") == p_id), None)
+                name = str(it.get("productName", it.get("name", ""))).lower()
+                category_id = str(p_info.get("category_id", "") if p_info else "").lower()
+                
+                is_beverage = (
+                    "beverage" in category_id or
+                    "juice" in category_id or
+                    "tea" in category_id or
+                    "coffee" in category_id or
+                    "fresh" in category_id or
+                    "nước" in name or
+                    "sinh tố" in name or
+                    "trà" in name or
+                    "cà phê" in name or
+                    "milo" in name or
+                    "dasani" in name or
+                    "juice" in name or
+                    "cam" in name or
+                    "bơ" in name or
+                    "dừa" in name or
+                    (p_info and p_info.get("inventory_mode") == "recipe")
+                )
+                if is_beverage:
+                    has_recipe_items = True
+
+            sale_id = payload.get("id") or f"HD-{int(time.time()*1000)}"
+            order_id = payload.get("orderId") or f"{datetime.datetime.now().strftime('%d/%m/%Y')}-{len(server_sales)+1}"
+            
+            new_sale = {
+                "id": sale_id,
+                "order_id": order_id,
+                "customer_name": payload.get("customerName", "Khách lẻ / Walk-in"),
+                "subtotal": payload.get("subtotal", 0),
+                "vat_amount": payload.get("vatAmount", 0),
+                "discount": payload.get("discount", 0),
+                "total": payload.get("total", 0),
+                "paid": payload.get("paid", 0),
+                "change_amount": payload.get("changeAmount", 0),
+                "payment_method": payload.get("paymentMethod", "cash"),
+                "cashier_name": payload.get("cashierName", "Cashier"),
+                "payment_status": payload.get("paymentStatus", "paid"),
+                "order_status": payload.get("orderStatus", "completed"),
+                "prep_status": payload.get("prepStatus", "pending" if has_recipe_items else "served"),
+                "note": payload.get("note"),
+                "created_at": int(time.time() * 1000),
+                "items": items
+            }
+            
+            existing_idx = next((i for i, s in enumerate(server_sales) if s["id"] == sale_id), -1)
+            if existing_idx >= 0:
+                # Update existing
+                server_sales[existing_idx].update(new_sale)
+            else:
+                server_sales.append(new_sale)
+
+            if active_shift.get("shift_id") and new_sale.get("payment_method") == "cash" and new_sale.get("payment_status") == "paid":
+                # Only add to cashSales if it wasn't already paid (simplified for mock)
+                if existing_idx < 0 or server_sales[existing_idx].get("payment_status") != "paid":
+                    active_shift["cashSales"] = active_shift.get("cashSales", 0) + new_sale.get("total", 0)
+
             data = {
                 "ok": True,
-                "id": payload.get("id") or "HD-MOCK-ID",
-                "orderId": payload.get("orderId") or "MOCK-ORDER-ID",
-                "serverTotal": payload.get("total", 0),
-                "serverSubtotal": payload.get("subtotal", 0),
-                "serverVat": payload.get("vatAmount", 0),
-                "change": payload.get("changeAmount", 0),
+                "id": sale_id,
+                "orderId": order_id,
             }
             self._send_json(self._maybe_sanitize(user, data))
+            return
+
+        # POST /api/kitchen/orders/status
+        if path.startswith("/api/kitchen/orders/status"):
+            payload = self._read_json_body() or {}
+            o_id = payload.get("orderId")
+            status = payload.get("status")
+            order = next((s for s in server_sales if s["id"] == o_id), None)
+            if order:
+                order["prep_status"] = status
+                self._send_json({"ok": True, "order": order})
+            else:
+                self._send_json({"ok": False, "error": "Order not found"}, 404)
+            return
+
+        # POST /api/shifts/start
+        if path == "/api/shifts/start":
+            payload = self._read_json_body() or {}
+            opening_cash = float(payload.get("openingCash", 0))
+            email = user.get("email", "unknown") if user else "unknown"
+            active_shift = {
+                "shift_id": f"shf_{int(time.time()*1000)}",
+                "user_id": email,
+                "shift_date": datetime.datetime.now().strftime("%Y-%m-%d"),
+                "start_time": datetime.datetime.now().strftime("%H:%M:%S"),
+                "end_time": None,
+                "opening_cash": opening_cash,
+                "closing_cash": None,
+                "expected_cash": opening_cash,
+                "cash_difference": 0,
+                "status": "active",
+                "created_at": int(time.time() * 1000)
+            }
+            self._send_json({"ok": True, "shift": active_shift})
+            return
+
+        # POST /api/shifts/end
+        if path == "/api/shifts/end":
+            payload = self._read_json_body() or {}
+            closing_cash = float(payload.get("closingCash", 0))
+            note = payload.get("note", "")
+            if not active_shift.get("shift_id"):
+                self._send_json({"ok": False, "error": "No active shift"}, 400)
+                return
+            expected_cash = active_shift.get("opening_cash", 0) + active_shift.get("cashSales", 0)
+            diff = closing_cash - expected_cash
+            active_shift["end_time"] = datetime.datetime.now().strftime("%H:%M:%S")
+            active_shift["closing_cash"] = closing_cash
+            active_shift["expected_cash"] = expected_cash
+            active_shift["cash_difference"] = diff
+            active_shift["status"] = "closed"
+            active_shift["note"] = note
+            shifts_history.append(active_shift.copy())
+            closed_shift = active_shift.copy()
+            active_shift.clear()
+            self._send_json({"ok": True, "shift": closed_shift})
             return
 
         self._send_json({"ok": False, "error": "Not found"}, 404)

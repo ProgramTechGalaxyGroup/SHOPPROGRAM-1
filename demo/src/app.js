@@ -2498,11 +2498,7 @@
                   })}
                 </div>
                 <div style=${{ padding: 12, display: "flex", gap: 8, background: "#f8f9fa" }}>
-                  ${o.prep_status === 'pending' ? html`
-                    <button className="btn btn-primary" style=${{ flex: 1, padding: 10, background: "#f59e0b", border: "none", color: "#000", fontWeight: 700, borderRadius: 6, cursor: "pointer" }} onClick=${function() { changeStatus(o.id, 'preparing'); }}>👨‍🍳 Nhận đơn</button>
-                  ` : html`
-                    <button className="btn btn-success" style=${{ flex: 1, padding: 10, background: "#10b981", border: "none", color: "#fff", fontWeight: 700, borderRadius: 6, cursor: "pointer" }} onClick=${function() { changeStatus(o.id, 'ready'); }}>✅ Đã làm xong</button>
-                  `}
+                  <button className="btn btn-success" style=${{ flex: 1, padding: 10, background: "#10b981", border: "none", color: "#fff", fontWeight: 700, borderRadius: 6, cursor: "pointer" }} onClick=${function() { changeStatus(o.id, 'ready'); }}>✅ Đã làm xong</button>
                 </div>
               </div>
             `;
@@ -2665,6 +2661,7 @@
             return res.json().then(function (data) {
               if (data.ok && data.user) {
                 setCurrentUser(data.user);
+                setActiveView(getFirstAllowedView(data.user.role));
               }
               setAuthLoading(false);
             });
@@ -2766,8 +2763,8 @@
         });
     }
 
-    function handleLogout() {
-      if (currentUser && currentUser.role === "cashier" && activeShift) {
+    function handleLogout(force) {
+      if (force !== true && currentUser && currentUser.role === "cashier" && activeShift) {
         window.alert(L("Bạn phải chốt ca và bàn giao két trước khi đăng xuất! / You must close the shift and hand over the register before logging out."));
         return;
       }
@@ -5303,6 +5300,35 @@
           syncError: ""
         });
       });
+
+      // Send draft to server so Barista can see it before payment
+      if (hasRecipeItems) {
+        var payload = {
+          clientOpId: activeOrder.clientOpId,
+          id: activeOrder.id,
+          orderId: activeOrder.orderId || activeOrder.id,
+          customerName: activeOrder.customerName || "",
+          subtotal: 0,
+          total: 0,
+          paymentMethod: activeOrder.paymentMethod || "cash",
+          cashierName: activeOrder.cashierName || "Cashier",
+          paymentStatus: "unpaid",
+          orderStatus: "open",
+          prepStatus: "preparing",
+          note: activeOrder.note || "",
+          items: activeOrder.items.map(function(it) {
+            return {
+              productId: it.productId,
+              productName: it.productName,
+              qty: it.qty,
+              price: it.price,
+              addonsJson: JSON.stringify(it.addons || [])
+            };
+          })
+        };
+        syncApi("/sales", { method: "POST", body: payload }).catch(function(e){ console.error(e); });
+      }
+
       if (!hasRecipeItems) {
         setCheckoutPanelOpen(true);
       }
@@ -5319,6 +5345,31 @@
       updateActiveOrder(function (order) {
         return Object.assign({}, order, { status: "ready" });
       });
+
+      var payload = {
+        clientOpId: activeOrder.clientOpId,
+        id: activeOrder.id,
+        orderId: activeOrder.orderId || activeOrder.id,
+        customerName: activeOrder.customerName || "",
+        subtotal: 0,
+        total: 0,
+        paymentMethod: activeOrder.paymentMethod || "cash",
+        cashierName: activeOrder.cashierName || "Cashier",
+        paymentStatus: "unpaid",
+        orderStatus: "open",
+        prepStatus: "ready",
+        note: activeOrder.note || "",
+        items: activeOrder.items.map(function(it) {
+          return {
+            productId: it.productId,
+            productName: it.productName,
+            qty: it.qty,
+            price: it.price,
+            addonsJson: JSON.stringify(it.addons || [])
+          };
+        })
+      };
+      syncApi("/sales", { method: "POST", body: payload }).catch(function(e){ console.error(e); });
       pushToast("success", L("Đơn đã chuẩn bị xong. / Order is ready."));
     }
 
@@ -13113,7 +13164,7 @@
                         setActiveShift(null);
                         setCloseShiftModalOpen(false);
                         pushToast("success", "Đã chốt ca thành công. Thu ngân đã bàn giao két.");
-                        handleLogout();
+                        handleLogout(true);
                       }
                     });
                 }}>Xác nhận Chốt ca</button>

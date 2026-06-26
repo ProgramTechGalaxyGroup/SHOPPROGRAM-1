@@ -3576,7 +3576,8 @@
             cashReceived: Number(row.paid) || 0,
             orderNumberSource: "server",
             reservedSaleId: row.id,
-            note: cleanedNote
+            note: cleanedNote,
+            prepStatus: row.prep_status || "pending"
           };
         }
 
@@ -5596,6 +5597,7 @@
         changeAmount: Math.max(0, (Number(orderSnapshot.cashReceived) || 0) - (Number(saleTotals.total) || 0)),
         paymentMethod: normalizePaymentMethod(orderSnapshot.paymentMethod),
         cashierName: settings.cashierName || "",
+        prepStatus: orderSnapshot.prepStatus || "pending",
         items: (orderSnapshot.items || []).map(function (item) {
           var addonTotal = getItemAddonTotal(item, addOns);
           var unitPrice = (Number(item.price) || 0) + addonTotal;

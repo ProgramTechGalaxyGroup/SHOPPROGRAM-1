@@ -406,6 +406,14 @@ export const onRequestPost = async ({ env, request }) => {
     ? requestedSaleId
     : await nextDocId(env.DB, "HD", ts);
   const canonicalOrderId = orderIdFromSaleId(saleId);
+  
+  let finalNote = String(body.note || "");
+  const prepStatus = String(body.prepStatus || body.prep_status || "");
+  if (prepStatus) {
+    finalNote = finalNote.replace(/\[PREP:[^\]]+\]/g, "").trim();
+    finalNote += ` [PREP:${prepStatus}]`;
+    finalNote = finalNote.trim();
+  }
 
   // Snapshot costs for gross-profit reporting.
   const enriched = await Promise.all(body.items.map(async (it) => ({
@@ -453,7 +461,7 @@ export const onRequestPost = async ({ env, request }) => {
       body.cashierName || null,
       paymentStatus,
       orderStatusDb,
-      body.note || null,
+      finalNote || null,
       ts
     )
   );

@@ -25,11 +25,11 @@ const ACCOUNTS = {
   },
   "barista@shopprogram.local": {
     role: "barista",
-    hash: "69eb96b3a2a6b22cd4bd37f9fc81d6de75c60e3a5ec6ef8fb5f0a0bb77732d84",
+    hash: "219841209863555263fb35239282d1aa65309a624082f47234a830f782cc992b",
   },
   "kiosk@shopprogram.local": {
     role: "kiosk",
-    hash: "a4306ce0d84a7a8d54fc741d4090bc1f49615a1eb0d8a43de9f1a2fa8087d3a0",
+    hash: "c7640b333b9eb11c7406289d078330eaa8d15863afe0ce956d89b9a292e3a7e9",
   },
 };
 

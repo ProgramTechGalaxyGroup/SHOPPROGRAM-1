@@ -129,7 +129,18 @@ export const onRequestGet = async ({ env, request }) => {
     products:   products.results || [],
     inventory:  inventory.results || [],
     settings:   settings.results || [],
-    recentSales: recentSales.results || [],
+    recentSales: (recentSales.results || []).map(row => {
+      let prep_status = null;
+      let note = row.note || "";
+      if (note.includes('[PREP:')) {
+        const match = note.match(/\[PREP:([^\]]+)\]/);
+        if (match) {
+          prep_status = match[1];
+          note = note.replace(/\[PREP:[^\]]+\]/, '').trim();
+        }
+      }
+      return { ...row, prep_status, note };
+    }),
     productionRecipes: productionRecipes.results || [],
     productionBatches: productionBatches.results || [],
   });

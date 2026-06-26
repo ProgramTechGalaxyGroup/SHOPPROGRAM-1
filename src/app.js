@@ -2612,13 +2612,19 @@
         .kw-sub { font-size: 1.5rem; color: #888; margin-bottom: 60px; }
         .kw-start-btn { background: #eb5e10; color: white; padding: 24px 64px; font-size: 2rem; font-weight: 800; border-radius: 32px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
         .k-header { display: flex; justify-content: space-between; align-items: center; padding: 24px 40px; }
-        .k-cat-nav { display: flex; padding: 0 40px 24px 40px; gap: 16px; overflow-x: auto; scrollbar-width: none; }
+        .k-cat-nav-wrapper { display: flex; align-items: center; padding: 0 40px 24px 40px; gap: 12px; }
+        .k-cat-nav { display: flex; gap: 16px; overflow-x: auto; scrollbar-width: none; scroll-behavior: smooth; flex: 1; }
         .k-cat-nav::-webkit-scrollbar { display: none; }
-        .k-cat-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 110px; height: 110px; background: #fff; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); gap: 8px; }
+        .k-cat-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 0 0 calc(25% - 12px); min-width: 90px; max-width: 140px; height: 110px; background: #fff; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); gap: 4px; padding: 8px; }
         .k-cat-btn.active { background: #eb5e10; color: #fff; }
         .k-cat-btn.active .kc-sub { color: rgba(255,255,255,0.8); }
+        .k-nav-arrow { width: 44px; height: 44px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; color: #eb5e10; }
+        .k-nav-arrow:active { transform: scale(0.9); }
         .k-main { flex: 1; overflow-y: auto; padding: 0 40px 140px 40px; }
-        .k-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 24px; }
+        .k-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+        @media (min-width: 500px) { .k-grid { grid-template-columns: repeat(3, 1fr); gap: 20px; } }
+        @media (min-width: 768px) { .k-grid { grid-template-columns: repeat(4, 1fr); gap: 24px; } }
+        @media (max-width: 600px) { .k-header { padding: 16px 20px; } .k-cat-nav-wrapper { padding: 0 20px 16px 20px; gap: 8px; } .k-main { padding: 0 20px 140px 20px; } .k-nav-arrow { width: 36px; height: 36px; } }
         .k-prod { background: #fff; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; box-shadow: 0 2px 8px rgba(0,0,0,0.04); position: relative; }
         .kp-img { width: 100%; aspect-ratio: 1; background: #f0ebe1; border-radius: 12px; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; font-size: 4rem; }
         .kp-badge { position: absolute; top: 24px; left: 8px; background: #eb5e10; color: white; padding: 4px 12px; font-size: 0.8rem; font-weight: 800; border-radius: 12px; z-index: 10; }
@@ -2685,22 +2691,26 @@
           <div style=${{ fontWeight: 700, color: "#888", fontSize: "1.1rem" }}><span style=${{ color: "#eb5e10" }}>VI</span> | <span>EN</span></div>
         </div>
 
-        <div className="k-cat-nav" style=${{ display: viewState === "main" ? "flex" : "none" }}>
-          <button className=${"k-btn k-cat-btn " + (selectedCategory === "all" ? "active" : "")} onClick=${function() { setSelectedCategory("all"); }}>
-            <div style=${{ fontSize: "2rem" }}>🍱</div>
-            <div style=${{ fontWeight: 700, fontSize: "1.05rem" }}>Tất cả</div>
-            <div className="kc-sub" style=${{ fontSize: "0.8rem", color: selectedCategory === "all" ? "rgba(255,255,255,0.8)" : "#888", fontWeight: 500 }}>All</div>
-          </button>
-          ${activeCategories.map(function(c) {
-            var isSel = selectedCategory === c.id;
-            return html`
-              <button key=${c.id} className=${"k-btn k-cat-btn " + (isSel ? "active" : "")} onClick=${function() { setSelectedCategory(c.id); }}>
-                <div style=${{ fontSize: "2rem" }}>${c.icon || "🍽️"}</div>
-                <div style=${{ fontWeight: 700, fontSize: "1.05rem" }}>${c.label.split(" / ")[0]}</div>
-                <div className="kc-sub" style=${{ fontSize: "0.8rem", color: isSel ? "rgba(255,255,255,0.8)" : "#888", fontWeight: 500 }}>${c.label.split(" / ")[1] || ""}</div>
-              </button>
-            `;
-          })}
+        <div className="k-cat-nav-wrapper" style=${{ display: viewState === "main" ? "flex" : "none" }}>
+          <button className="k-btn k-nav-arrow" onClick=${function() { document.getElementById("k-cat-scroll").scrollBy({ left: -200, behavior: "smooth" }); }}>&larr;</button>
+          <div id="k-cat-scroll" className="k-cat-nav">
+            <button className=${"k-btn k-cat-btn " + (selectedCategory === "all" ? "active" : "")} onClick=${function() { setSelectedCategory("all"); }}>
+              <div style=${{ fontSize: "1.8rem" }}>🍱</div>
+              <div style=${{ fontWeight: 700, fontSize: "0.95rem", textAlign: "center", lineHeight: "1.2" }}>Tất cả</div>
+              <div className="kc-sub" style=${{ fontSize: "0.75rem", color: selectedCategory === "all" ? "rgba(255,255,255,0.8)" : "#888", fontWeight: 500, textAlign: "center" }}>All</div>
+            </button>
+            ${activeCategories.map(function(c) {
+              var isSel = selectedCategory === c.id;
+              return html`
+                <button key=${c.id} className=${"k-btn k-cat-btn " + (isSel ? "active" : "")} onClick=${function() { setSelectedCategory(c.id); }}>
+                  <div style=${{ fontSize: "1.8rem" }}>${c.icon || "🍽️"}</div>
+                  <div style=${{ fontWeight: 700, fontSize: "0.95rem", textAlign: "center", lineHeight: "1.2" }}>${c.label.split(" / ")[0]}</div>
+                  <div className="kc-sub" style=${{ fontSize: "0.75rem", color: isSel ? "rgba(255,255,255,0.8)" : "#888", fontWeight: 500, textAlign: "center", lineHeight: "1.2" }}>${c.label.split(" / ")[1] || ""}</div>
+                </button>
+              `;
+            })}
+          </div>
+          <button className="k-btn k-nav-arrow" onClick=${function() { document.getElementById("k-cat-scroll").scrollBy({ left: 200, behavior: "smooth" }); }}>&rarr;</button>
         </div>
 
         <div className="k-main" style=${{ display: viewState === "main" ? "block" : "none" }}>

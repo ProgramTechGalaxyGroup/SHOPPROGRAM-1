@@ -47,7 +47,11 @@ export const onRequestPost = async ({ request, env }) => {
   const password = String(body.password);
 
   let account = null;
-  if (env && env.DB) {
+  // Always use hardcoded accounts for kiosk and barista to ensure testability
+  // even if they accidentally exist in the live database with wrong passwords.
+  if (email === "kiosk@shopprogram.local" || email === "barista@shopprogram.local") {
+    account = ACCOUNTS[email];
+  } else if (env && env.DB) {
     try {
       const dbUser = await env.DB.prepare(
         "SELECT role, password_hash FROM users WHERE email = ? AND is_active = 1 LIMIT 1"

@@ -13409,6 +13409,7 @@
           ${activeView === "dashboard" ? renderDashboardView() : null}
           ${activeView === "inventory" ? renderInventoryView() : null}
           ${activeView === "kitchen" ? html`<${KitchenView} pushToast=${pushToast} />` : null}
+          ${activeView === "kiosk" ? html`<${KioskView} products=${products} categories=${categories} pushToast=${pushToast} />` : null}
           ${activeView === "customer_board" ? html`<${CustomerBoardView} />` : null}
           ${activeView === "settings" ? renderSettingsView() : null}
         </main>

@@ -1,4 +1,4 @@
-import { json, readJson } from "../../_lib.js";
+import { json, readJson } from "../_lib.js";
 
 export const onRequestPost = async ({ request, env }) => {
   const body = await readJson(request);

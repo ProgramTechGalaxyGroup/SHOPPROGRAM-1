@@ -1,4 +1,4 @@
-import { json } from "../../_lib.js";
+import { json } from "../_lib.js";
 
 globalThis.__MOCK_ACTIVE_SHIFT = globalThis.__MOCK_ACTIVE_SHIFT || null;
 

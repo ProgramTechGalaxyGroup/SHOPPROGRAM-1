@@ -2509,9 +2509,15 @@
   }
 
   function KioskView(props) {
+    var [viewState, setViewState] = useState("welcome"); // welcome, main, success
     var [cart, setCart] = useState([]);
     var [selectedCategory, setSelectedCategory] = useState("all");
-    
+    var [isModalOpen, setIsModalOpen] = useState(false);
+    var [customerName, setCustomerName] = useState("");
+    var [customerPhone, setCustomerPhone] = useState("");
+    var [paymentMethod, setPaymentMethod] = useState("cash");
+    var [successOrderId, setSuccessOrderId] = useState("");
+
     function addToCart(product) {
       setCart(function(c) {
         var existing = c.find(function(item) { return item.productId === product.id; });
@@ -2528,26 +2534,58 @@
       });
     }
 
+    function updateQty(productId, delta) {
+      setCart(function(c) {
+        return c.map(function(i) {
+          if (i.productId === productId) {
+            return Object.assign({}, i, {qty: i.qty + delta});
+          }
+          return i;
+        }).filter(function(i) { return i.qty > 0; });
+      });
+    }
+
+    // Effect to close modal if cart becomes empty
+    useEffect(function() {
+      if (cart.length === 0 && isModalOpen) {
+        setIsModalOpen(false);
+      }
+    }, [cart.length, isModalOpen]);
+
     function submitOrder() {
       if (cart.length === 0) return;
-      if (!window.confirm("Gửi đơn đặt món của bạn? / Submit your order?")) return;
       var total = cart.reduce(function(sum, item) { return sum + item.price * item.qty; }, 0);
+      var genId = "HD-" + Date.now();
+      
+      var cName = customerName || "Khách lẻ (Kiosk)";
+      var fullCustomerName = cName;
+      if (customerPhone) fullCustomerName += " (" + customerPhone + ")";
+
       var payload = {
         clientOpId: "kiosk-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6),
-        id: "HD-" + Date.now(),
-        customerName: "Khách lẻ / Walk-in (Kiosk)",
+        id: genId,
+        customerName: fullCustomerName,
         subtotal: total,
         total: total,
-        paymentMethod: "cash",
+        paymentMethod: paymentMethod,
         paymentStatus: "unpaid",
-        orderStatus: "open",
-        prepStatus: "pending",
+        orderStatus: "held", // Using held status to allow Kitchen/Barista prep logic based on our recent fix
+        note: JSON.stringify({ prepStatus: "pending" }), // Workaround for Barista screen
         items: cart
       };
       
+      setIsModalOpen(false);
+      
       syncApi("/sales", { method: "POST", body: payload }).then(function(res) {
         setCart([]);
-        window.alert("Đơn của bạn đã được gửi xuống quầy. Vui lòng đến quầy thu ngân để thanh toán!");
+        setCustomerName("");
+        setCustomerPhone("");
+        setSuccessOrderId(genId + " - " + fullCustomerName);
+        setViewState("success");
+        
+        setTimeout(function() {
+          setViewState("welcome");
+        }, 5000);
       }).catch(function(err) {
         props.pushToast("error", "Lỗi gửi đơn: " + err);
       });
@@ -2556,97 +2594,217 @@
     var activeProducts = (props.products || []).filter(function(p) { return p.is_active; });
     var displayProducts = selectedCategory === "all" ? activeProducts : activeProducts.filter(function(p) { return p.category_id === selectedCategory; });
 
+    var cartTotalItems = cart.reduce(function(sum, item) { return sum + item.qty; }, 0);
+    var cartTotalPrice = cart.reduce(function(sum, item) { return sum + item.price * item.qty; }, 0);
+
+    var injectedStyles = html`
+      <style>
+        .kiosk-wrapper { font-family: 'Be Vietnam Pro', Arial, sans-serif; background: #f7f3ec; color: #1a1a1a; height: calc(100vh - 64px); display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .kiosk-wrapper * { box-sizing: border-box; }
+        .k-btn { cursor: pointer; transition: all 0.2s; user-select: none; border: none; }
+        .k-btn:active { transform: scale(0.98); }
+        .kiosk-welcome { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; }
+        .kiosk-welcome-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(235,94,16,0.05) 0%, rgba(255,255,255,1) 70%); z-index: 1; }
+        .kiosk-welcome-content { position: relative; z-index: 2; text-align: center; }
+        .kw-logo { font-size: 6rem; margin-bottom: 24px; animation: kfloat 3s ease-in-out infinite; }
+        @keyframes kfloat { 0% { transform: translateY(0px); } 50% { transform: translateY(-15px); } 100% { transform: translateY(0px); } }
+        .kw-title { font-size: 3.5rem; font-weight: 800; margin-bottom: 12px; }
+        .kw-sub { font-size: 1.5rem; color: #888; margin-bottom: 60px; }
+        .kw-start-btn { background: #eb5e10; color: white; padding: 24px 64px; font-size: 2rem; font-weight: 800; border-radius: 32px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+        .k-header { display: flex; justify-content: space-between; align-items: center; padding: 24px 40px; }
+        .k-cat-nav { display: flex; padding: 0 40px 24px 40px; gap: 16px; overflow-x: auto; scrollbar-width: none; }
+        .k-cat-nav::-webkit-scrollbar { display: none; }
+        .k-cat-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 110px; height: 110px; background: #fff; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); gap: 8px; }
+        .k-cat-btn.active { background: #eb5e10; color: #fff; }
+        .k-cat-btn.active .kc-sub { color: rgba(255,255,255,0.8); }
+        .k-main { flex: 1; overflow-y: auto; padding: 0 40px 140px 40px; }
+        .k-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 24px; }
+        .k-prod { background: #fff; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; box-shadow: 0 2px 8px rgba(0,0,0,0.04); position: relative; }
+        .kp-img { width: 100%; aspect-ratio: 1; background: #f0ebe1; border-radius: 12px; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; font-size: 4rem; }
+        .kp-badge { position: absolute; top: 24px; left: 8px; background: #eb5e10; color: white; padding: 4px 12px; font-size: 0.8rem; font-weight: 800; border-radius: 12px; z-index: 10; }
+        .kp-add { background: #eb5e10; color: white; width: 100%; padding: 12px; font-size: 1.1rem; font-weight: 700; border-radius: 12px; margin-top: auto; }
+        .kp-add:disabled { background: #ddd; cursor: not-allowed; }
+        .k-footer { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); width: calc(100% - 80px); background: #fff; border-radius: 32px; padding: 16px 24px; box-shadow: 0 16px 48px rgba(0,0,0,0.12); display: flex; align-items: center; justify-content: space-between; z-index: 100; border: 1px solid #eaeaea; transition: opacity 0.3s; }
+        .kf-view-btn { background: #eb5e10; color: white; padding: 0 40px; height: 64px; font-size: 1.25rem; font-weight: 800; border-radius: 32px; }
+        .k-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+        .k-modal { background: #fff; width: 600px; border-radius: 32px; padding: 32px; box-shadow: 0 16px 48px rgba(0,0,0,0.12); display: flex; flex-direction: column; max-height: 90vh; }
+        .km-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eaeaea; }
+        .km-qty-ctrl { display: flex; align-items: center; gap: 12px; background: #f5f5f5; border-radius: 20px; padding: 4px; }
+        .km-qty-btn { width: 28px; height: 28px; border-radius: 50%; background: #fff; font-size: 1.1rem; font-weight: bold; border: none; cursor: pointer; }
+        .k-form { background: #fdfbf7; padding: 20px; border-radius: 24px; border: 1px solid #eaeaea; margin-bottom: 20px; margin-top: 16px; }
+        .k-input { width: 100%; background: #fff; border: 1px solid #eaeaea; padding: 12px 16px; border-radius: 12px; font-size: 1.05rem; outline: none; }
+        .k-input:focus { border-color: #eb5e10; }
+        .k-pay-btn { flex: 1; padding: 10px 12px; border: 1px solid #eaeaea; border-radius: 12px; background: #fff; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .k-pay-btn.active { border-color: #eb5e10; background: #fff5f0; color: #eb5e10; border-width: 2px; }
+        .k-success { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f7f3ec; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+      </style>
+    `;
+
+    var categories = props.categories || [];
+    var activeCategories = categories.filter(function(c) { return c.is_active; });
+
     return html`
-      <div style=${{ display: "flex", height: "calc(100vh - 64px)", background: "#fffaf4" }}>
-        <!-- Kiosk Left: Menu -->
-        <div style=${{ flex: 2, display: "flex", flexDirection: "column", borderRight: "1px solid #ddd" }}>
-          <div style=${{ padding: 16, display: "flex", gap: 12, overflowX: "auto", borderBottom: "1px solid #ddd", background: "#fff" }}>
-            <button
-              style=${{ padding: "12px 24px", fontSize: "1.1rem", fontWeight: "bold", borderRadius: 8, cursor: "pointer", border: selectedCategory === "all" ? "2px solid #df5d16" : "1px solid #ddd", background: selectedCategory === "all" ? "#fff1eb" : "#f8f9fa", color: selectedCategory === "all" ? "#a4451a" : "#333" }}
-              onClick=${function() { setSelectedCategory("all"); }}
-            >
-              Tất cả
-            </button>
-            ${(props.categories || []).filter(function(c) { return c.is_active; }).map(function(c) {
-              var isSel = selectedCategory === c.id;
-              return html`
-                <button
-                  key=${c.id}
-                  style=${{ padding: "12px 24px", fontSize: "1.1rem", fontWeight: "bold", borderRadius: 8, cursor: "pointer", whiteSpace: "nowrap", border: isSel ? "2px solid #df5d16" : "1px solid #ddd", background: isSel ? "#fff1eb" : "#f8f9fa", color: isSel ? "#a4451a" : "#333" }}
-                  onClick=${function() { setSelectedCategory(c.id); }}
-                >
-                  ${c.icon} ${c.label.split(" / ")[0]}
-                </button>
-              `;
-            })}
+      <div className="kiosk-wrapper">
+        ${injectedStyles}
+        
+        ${viewState === "welcome" ? html`
+          <div className="kiosk-welcome">
+            <div className="kiosk-welcome-bg"></div>
+            <div className="kiosk-welcome-content">
+              <div className="kw-logo">🍋</div>
+              <div className="kw-title">Fruity Corner</div>
+              <div className="kw-sub">Kiosk tự gọi món / Self-Order Kiosk</div>
+              <button className="k-btn kw-start-btn" onClick=${function() { setViewState("main"); }}>
+                Bắt đầu gọi món<br/><span style=${{ fontSize: "1.2rem", fontWeight: 500 }}>Touch to start</span>
+              </button>
+            </div>
           </div>
-          <div style=${{ flex: 1, padding: 24, overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 20, alignContent: "start" }}>
+        ` : null}
+
+        ${viewState === "success" ? html`
+          <div className="k-success">
+            <div style=${{ fontSize: "8rem", marginBottom: 24 }}>🎉</div>
+            <div style=${{ fontSize: "3rem", fontWeight: 800, marginBottom: 16, color: "#1a1a1a" }}>Cảm ơn quý khách đã đặt hàng!</div>
+            <div style=${{ fontSize: "1.5rem", color: "#555", marginBottom: 40 }}>Đơn hàng của bạn đang được chuẩn bị.</div>
+            <div style=${{ fontSize: "1.8rem", fontWeight: 700, color: "#eb5e10", padding: "16px 32px", background: "#fff", borderRadius: 24, boxShadow: "0 2px 8px rgba(0,0,0,0.04)", marginBottom: 32 }}>
+              Mã đơn: ${successOrderId}
+            </div>
+            <div style=${{ color: "#888", marginTop: 20 }}>Sẽ tự động quay lại sau 5 giây...</div>
+          </div>
+        ` : null}
+
+        <!-- Main Screen -->
+        <div className="k-header">
+          <div style=${{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style=${{ width: 48, height: 48, background: "#fff", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, color: "#eb5e10", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>🍋</div>
+            <div>
+              <div style=${{ fontSize: "1.5rem", fontWeight: 800, lineHeight: 1.2 }}>Fruity Corner</div>
+              <div style=${{ fontSize: "0.9rem", color: "#888", fontWeight: 500 }}>Fresh Fruit & Drinks</div>
+            </div>
+          </div>
+          <div style=${{ fontWeight: 700, color: "#888", fontSize: "1.1rem" }}><span style=${{ color: "#eb5e10" }}>VI</span> | <span>EN</span></div>
+        </div>
+
+        <div className="k-cat-nav">
+          <button className=${"k-btn k-cat-btn " + (selectedCategory === "all" ? "active" : "")} onClick=${function() { setSelectedCategory("all"); }}>
+            <div style=${{ fontSize: "2rem" }}>🍱</div>
+            <div style=${{ fontWeight: 700, fontSize: "1.05rem" }}>Tất cả</div>
+            <div className="kc-sub" style=${{ fontSize: "0.8rem", color: selectedCategory === "all" ? "rgba(255,255,255,0.8)" : "#888", fontWeight: 500 }}>All</div>
+          </button>
+          ${activeCategories.map(function(c) {
+            var isSel = selectedCategory === c.id;
+            return html`
+              <button key=${c.id} className=${"k-btn k-cat-btn " + (isSel ? "active" : "")} onClick=${function() { setSelectedCategory(c.id); }}>
+                <div style=${{ fontSize: "2rem" }}>${c.icon || "🍽️"}</div>
+                <div style=${{ fontWeight: 700, fontSize: "1.05rem" }}>${c.label.split(" / ")[0]}</div>
+                <div className="kc-sub" style=${{ fontSize: "0.8rem", color: isSel ? "rgba(255,255,255,0.8)" : "#888", fontWeight: 500 }}>${c.label.split(" / ")[1] || ""}</div>
+              </button>
+            `;
+          })}
+        </div>
+
+        <div className="k-main">
+          <div className="k-grid">
             ${displayProducts.map(function(p) {
               var isSoldOut = p.stock <= 0;
-              var isLastOne = p.stock === 1;
               return html`
-                <button
-                  key=${p.id}
-                  disabled=${isSoldOut}
-                  style=${{ position: "relative", display: "flex", flexDirection: "column", background: isSoldOut ? "#f8f9fa" : "#fff", border: isSoldOut ? "1px solid #ddd" : "1px solid #eee", borderRadius: 12, padding: 20, cursor: isSoldOut ? "not-allowed" : "pointer", boxShadow: isSoldOut ? "none" : "0 4px 12px rgba(0,0,0,0.05)", textAlign: "left", transition: "transform 0.1s", opacity: isSoldOut ? 0.6 : 1 }}
-                  onClick=${function() { if (!isSoldOut) addToCart(p); }}
-                >
-                  <div style=${{ fontSize: "1.2rem", fontWeight: "bold", color: "#333", marginBottom: 8, minHeight: 48, paddingRight: 10 }}>${p.name}</div>
-                  <div style=${{ fontSize: "1.2rem", color: isSoldOut ? "#888" : "#df5d16", fontWeight: "bold" }}>${formatCurrency(p.price)}đ</div>
-                  ${isSoldOut ? html`<div style=${{ position: "absolute", top: 12, right: 12, background: "#ef4444", color: "#fff", padding: "4px 8px", borderRadius: 4, fontSize: "0.8rem", fontWeight: "bold" }}>HẾT HÀNG</div>` : null}
-                  ${isLastOne ? html`<div style=${{ position: "absolute", top: 12, right: 12, background: "#f59e0b", color: "#fff", padding: "4px 8px", borderRadius: 4, fontSize: "0.8rem", fontWeight: "bold" }}>CHỈ CÒN 1</div>` : null}
-                </button>
+                <div key=${p.id} className="k-prod">
+                  ${!isSoldOut && p.stock < 5 ? html`<div className="kp-badge">BEST</div>` : null}
+                  ${isSoldOut ? html`<div className="kp-badge" style=${{ background: "#ef4444" }}>HẾT HÀNG</div>` : null}
+                  <div className="kp-img">${p.icon || "🥤"}</div>
+                  <div style=${{ fontSize: "1.15rem", fontWeight: 700, marginBottom: 4 }}>${p.name.split(" / ")[0]}</div>
+                  <div style=${{ fontSize: "0.85rem", color: "#888", marginBottom: 12 }}>${p.name.split(" / ")[1] || ""}</div>
+                  <div style=${{ fontSize: "1.25rem", fontWeight: 800, color: "#eb5e10", marginBottom: 16 }}>${formatCurrency(p.price)}đ</div>
+                  <button className="k-btn kp-add" disabled=${isSoldOut} onClick=${function() { addToCart(p); }}>+ Thêm / Add</button>
+                </div>
               `;
             })}
           </div>
         </div>
 
-        <!-- Kiosk Right: Cart -->
-        <div style=${{ flex: 1, display: "flex", flexDirection: "column", background: "#fff" }}>
-          <div style=${{ padding: 24, borderBottom: "1px solid #ddd", background: "#f8f9fa" }}>
-            <h2 style=${{ margin: 0, fontSize: "1.5rem", color: "#5b3a20" }}>🛒 Giỏ Hàng Của Bạn</h2>
+        <div className="k-footer" style=${{ opacity: cartTotalItems > 0 ? 1 : 0.5, pointerEvents: cartTotalItems > 0 ? "auto" : "none" }}>
+          <div style=${{ display: "flex", alignItems: "center", gap: 24 }}>
+            <div style=${{ position: "relative" }}>
+              <div style=${{ width: 64, height: 64, background: "#eb5e10", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, color: "#fff" }}>🛒</div>
+              <div style=${{ position: "absolute", top: -4, right: -4, background: "#fff", color: "#eb5e10", width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.9rem", border: "2px solid #eb5e10" }}>${cartTotalItems}</div>
+            </div>
+            <div style=${{ display: "flex", flexDirection: "column" }}>
+              <div style=${{ fontWeight: 700, fontSize: "1.2rem" }}>${cartTotalItems} món / items</div>
+              <div style=${{ fontWeight: 800, fontSize: "1.5rem", color: "#1a1a1a", marginTop: 4 }}>${formatCurrency(cartTotalPrice)}đ</div>
+            </div>
+            <div style=${{ display: "flex", gap: 8, alignItems: "center", paddingLeft: 16, borderLeft: "2px solid #eaeaea", height: 48 }}>
+              ${cart.slice(0, 3).map(function(item) {
+                var p = displayProducts.find(function(dp) { return dp.id === item.productId; });
+                var icon = p ? p.icon : "🥤";
+                return html`<div key=${item.productId} style=${{ width: 40, height: 40, background: "#f0ebe1", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem" }}>${icon}</div>`;
+              })}
+              ${cart.length > 3 ? html`<div style=${{ width: 40, height: 40, background: "#f0ebe1", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem", fontWeight: "bold" }}>+${cart.length - 3}</div>` : null}
+            </div>
           </div>
-          <div style=${{ flex: 1, overflowY: "auto", padding: 24 }}>
-            ${cart.length === 0 ? html`
-              <div style=${{ textAlign: "center", color: "#888", marginTop: 40, fontSize: "1.2rem" }}>Chưa chọn món nào</div>
-            ` : cart.map(function(item) {
-              return html`
-                <div key=${item.productId} style=${{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, paddingBottom: 16, borderBottom: "1px dashed #eee" }}>
-                  <div style=${{ flex: 1 }}>
-                    <div style=${{ fontSize: "1.2rem", fontWeight: "bold", color: "#333" }}>${item.productName}</div>
-                    <div style=${{ color: "#df5d16", fontWeight: "bold" }}>${formatCurrency(item.price)}đ</div>
+          <button className="k-btn kf-view-btn" onClick=${function() { setIsModalOpen(true); }}>
+            Xem giỏ hàng <br/> View Cart &rarr;
+          </button>
+        </div>
+
+        ${isModalOpen ? html`
+          <div className="k-modal-overlay">
+            <div className="k-modal">
+              <div style=${{ fontSize: "1.5rem", fontWeight: 800, marginBottom: 16, textAlign: "center", borderBottom: "1px solid #eaeaea", paddingBottom: 16 }}>
+                Giỏ hàng của bạn / Your Cart
+              </div>
+              <div style=${{ flex: 1, overflowY: "auto", marginBottom: 16 }}>
+                ${cart.map(function(item) {
+                  return html`
+                    <div key=${item.productId} className="km-item">
+                      <div>
+                        <div style=${{ fontWeight: 700, fontSize: "1.1rem" }}>${item.productName}</div>
+                        <div style=${{ color: "#eb5e10", fontWeight: 700 }}>${formatCurrency(item.price)}đ</div>
+                      </div>
+                      <div className="km-qty-ctrl">
+                        <button className="km-qty-btn" onClick=${function() { updateQty(item.productId, -1); }}>-</button>
+                        <div style=${{ fontWeight: 700 }}>${item.qty}</div>
+                        <button className="km-qty-btn" onClick=${function() { updateQty(item.productId, 1); }}>+</button>
+                      </div>
+                    </div>
+                  `;
+                })}
+              </div>
+
+              <div className="k-form">
+                <div style=${{ display: "flex", gap: 16, marginBottom: 12 }}>
+                  <div style=${{ flex: 1, display: "flex", flexDirection: "column" }}>
+                    <label style=${{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 6, color: "#1a1a1a" }}>Tên khách hàng</label>
+                    <input className="k-input" type="text" placeholder="Tên để nhận món..." value=${customerName} onInput=${function(e) { setCustomerName(e.target.value); }} />
                   </div>
-                  <div style=${{ display: "flex", alignItems: "center", gap: 16 }}>
-                    <button style=${{ width: 40, height: 40, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", fontSize: "1.5rem", cursor: "pointer" }} onClick=${function() {
-                      setCart(function(c) {
-                        return c.map(function(i) { return i.productId === item.productId ? Object.assign({}, i, {qty: Math.max(0, i.qty - 1)}) : i; }).filter(function(i) { return i.qty > 0; });
-                      });
-                    }}>-</button>
-                    <span style=${{ fontSize: "1.5rem", fontWeight: "bold", width: 30, textAlign: "center" }}>${item.qty}</span>
-                    <button style=${{ width: 40, height: 40, borderRadius: "50%", border: "1px solid #df5d16", background: "#fff1eb", color: "#df5d16", fontSize: "1.5rem", cursor: "pointer" }} onClick=${function() {
-                      setCart(function(c) {
-                        return c.map(function(i) { return i.productId === item.productId ? Object.assign({}, i, {qty: i.qty + 1}) : i; });
-                      });
-                    }}>+</button>
+                  <div style=${{ flex: 1, display: "flex", flexDirection: "column" }}>
+                    <label style=${{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 6, color: "#1a1a1a" }}>Số điện thoại</label>
+                    <input className="k-input" type="text" placeholder="09xxxx..." value=${customerPhone} onInput=${function(e) { setCustomerPhone(e.target.value); }} />
                   </div>
                 </div>
-              `;
-            })}
-          </div>
-          <div style=${{ padding: 24, borderTop: "1px solid #ddd", background: "#f8f9fa" }}>
-            <div style=${{ display: "flex", justifyContent: "space-between", marginBottom: 20, fontSize: "1.5rem", fontWeight: "bold", color: "#333" }}>
-              <span>Tổng cộng:</span>
-              <span style=${{ color: "#df5d16" }}>${formatCurrency(cart.reduce(function(sum, item) { return sum + item.price * item.qty; }, 0))}đ</span>
+                <div style=${{ display: "flex", flexDirection: "column" }}>
+                  <label style=${{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 6, color: "#1a1a1a" }}>Phương thức thanh toán / Payment</label>
+                  <div style=${{ display: "flex", gap: 12 }}>
+                    <button className=${"k-pay-btn " + (paymentMethod === "cash" ? "active" : "")} onClick=${function() { setPaymentMethod("cash"); }}>
+                      <span style=${{ fontSize: "1.2rem" }}>💵</span> Tiền mặt
+                    </button>
+                    <button className=${"k-pay-btn " + (paymentMethod === "transfer" ? "active" : "")} onClick=${function() { setPaymentMethod("transfer"); }}>
+                      <span style=${{ fontSize: "1.2rem" }}>💳</span> Chuyển khoản
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div style=${{ display: "flex", gap: 16 }}>
+                <button className="k-btn" style=${{ flex: 1, padding: 16, borderRadius: 24, background: "#f5f5f5", fontWeight: 700, fontSize: "1.1rem" }} onClick=${function() { setIsModalOpen(false); }}>
+                  Quay lại / Back
+                </button>
+                <button className="k-btn" style=${{ flex: 2, padding: 16, borderRadius: 24, background: "#eb5e10", color: "white", fontWeight: 800, fontSize: "1.2rem" }} onClick=${submitOrder}>
+                  Hoàn tất đơn hàng &rarr;
+                </button>
+              </div>
             </div>
-            <button
-              style=${{ width: "100%", padding: 20, fontSize: "1.5rem", fontWeight: "bold", borderRadius: 12, background: cart.length > 0 ? "#df5d16" : "#ddd", color: "#fff", border: "none", cursor: cart.length > 0 ? "pointer" : "not-allowed" }}
-              disabled=${cart.length === 0}
-              onClick=${submitOrder}
-            >
-              GỬI ĐƠN ĐẶT MÓN
-            </button>
           </div>
-        </div>
+        ` : null}
       </div>
     `;
   }

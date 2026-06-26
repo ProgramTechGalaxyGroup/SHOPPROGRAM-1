@@ -47,9 +47,8 @@ export const onRequestPost = async ({ request, env }) => {
   const password = String(body.password);
 
   let account = null;
-  // Always use hardcoded accounts for kiosk and barista to ensure testability
-  // even if they accidentally exist in the live database with wrong passwords.
-  if (email === "kiosk@shopprogram.local" || email === "barista@shopprogram.local") {
+  // Always use hardcoded accounts for .local test accounts to ensure testability
+  if (email.endsWith("@shopprogram.local") && ACCOUNTS[email]) {
     account = ACCOUNTS[email];
   } else if (env && env.DB) {
     try {

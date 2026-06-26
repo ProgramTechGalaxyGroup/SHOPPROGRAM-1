@@ -23,6 +23,14 @@ const ACCOUNTS = {
     role: "accountant",
     hash: "004c7ef32e73a8852e845d26b9d6eeebf9f80c5eab1d3dffe6cd6d925aea07c2",
   },
+  "barista@shopprogram.local": {
+    role: "barista",
+    hash: "69eb96b3a2a6b22cd4bd37f9fc81d6de75c60e3a5ec6ef8fb5f0a0bb77732d84",
+  },
+  "kiosk@shopprogram.local": {
+    role: "kiosk",
+    hash: "a4306ce0d84a7a8d54fc741d4090bc1f49615a1eb0d8a43de9f1a2fa8087d3a0",
+  },
 };
 
 export const onRequestPost = async ({ request, env }) => {
@@ -31,7 +39,11 @@ export const onRequestPost = async ({ request, env }) => {
     return badRequest("Email and password are required");
   }
 
-  const email = String(body.email).trim().toLowerCase();
+  let emailStr = String(body.email).trim().toLowerCase();
+  if (!emailStr.includes("@")) {
+    emailStr += "@shopprogram.local";
+  }
+  const email = emailStr;
   const password = String(body.password);
 
   let account = null;

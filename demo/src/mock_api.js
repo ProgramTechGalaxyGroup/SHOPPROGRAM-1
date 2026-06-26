@@ -281,6 +281,7 @@
           const category = String(it.category || (pInfo && pInfo.category) || "").toLowerCase();
           
           const isBeverage = category.includes("beverage") || 
+                             (pInfo && pInfo.category_id && String(pInfo.category_id).toLowerCase().includes("beverage")) ||
                              category.includes("juice") || 
                              category.includes("tea") ||
                              category.includes("coffee") ||

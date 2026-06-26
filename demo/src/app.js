@@ -2498,15 +2498,154 @@
                   })}
                 </div>
                 <div style=${{ padding: 12, display: "flex", gap: 8, background: "#f8f9fa" }}>
-                  ${o.prep_status === 'pending' ? html`
-                    <button className="btn btn-primary" style=${{ flex: 1, padding: 10, background: "#f59e0b", border: "none", color: "#000", fontWeight: 700, borderRadius: 6, cursor: "pointer" }} onClick=${function() { changeStatus(o.id, 'preparing'); }}>👨‍🍳 Nhận đơn</button>
-                  ` : html`
-                    <button className="btn btn-success" style=${{ flex: 1, padding: 10, background: "#10b981", border: "none", color: "#fff", fontWeight: 700, borderRadius: 6, cursor: "pointer" }} onClick=${function() { changeStatus(o.id, 'ready'); }}>✅ Đã làm xong</button>
-                  `}
+                  <button className="btn btn-success" style=${{ flex: 1, padding: 10, background: "#10b981", border: "none", color: "#fff", fontWeight: 700, borderRadius: 6, cursor: "pointer" }} onClick=${function() { changeStatus(o.id, 'ready'); }}>✅ Đã làm xong</button>
                 </div>
               </div>
             `;
           })}
+        </div>
+      </div>
+    `;
+  }
+
+  function KioskView(props) {
+    var [cart, setCart] = useState([]);
+    var [selectedCategory, setSelectedCategory] = useState("all");
+    
+    function addToCart(product) {
+      setCart(function(c) {
+        var existing = c.find(function(item) { return item.productId === product.id; });
+        if (existing) {
+          return c.map(function(item) { return item.productId === product.id ? Object.assign({}, item, {qty: item.qty + 1}) : item; });
+        }
+        return c.concat([{
+          productId: product.id,
+          productName: product.name,
+          price: product.price,
+          qty: 1,
+          addonsJson: "[]"
+        }]);
+      });
+    }
+
+    function submitOrder() {
+      if (cart.length === 0) return;
+      if (!window.confirm("Gửi đơn đặt món của bạn? / Submit your order?")) return;
+      var total = cart.reduce(function(sum, item) { return sum + item.price * item.qty; }, 0);
+      var payload = {
+        clientOpId: "kiosk-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6),
+        id: "HD-" + Date.now(),
+        customerName: "Khách lẻ / Walk-in (Kiosk)",
+        subtotal: total,
+        total: total,
+        paymentMethod: "cash",
+        paymentStatus: "unpaid",
+        orderStatus: "open",
+        prepStatus: "pending",
+        items: cart
+      };
+      
+      syncApi("/sales", { method: "POST", body: payload }).then(function(res) {
+        setCart([]);
+        window.alert("Đơn của bạn đã được gửi xuống quầy. Vui lòng đến quầy thu ngân để thanh toán!");
+      }).catch(function(err) {
+        props.pushToast("error", "Lỗi gửi đơn: " + err);
+      });
+    }
+
+    var activeProducts = (props.products || []).filter(function(p) { return p.is_active; });
+    var displayProducts = selectedCategory === "all" ? activeProducts : activeProducts.filter(function(p) { return p.category_id === selectedCategory; });
+
+    return html`
+      <div style=${{ display: "flex", height: "calc(100vh - 64px)", background: "#fffaf4" }}>
+        <!-- Kiosk Left: Menu -->
+        <div style=${{ flex: 2, display: "flex", flexDirection: "column", borderRight: "1px solid #ddd" }}>
+          <div style=${{ padding: 16, display: "flex", gap: 12, overflowX: "auto", borderBottom: "1px solid #ddd", background: "#fff" }}>
+            <button
+              style=${{ padding: "12px 24px", fontSize: "1.1rem", fontWeight: "bold", borderRadius: 8, cursor: "pointer", border: selectedCategory === "all" ? "2px solid #df5d16" : "1px solid #ddd", background: selectedCategory === "all" ? "#fff1eb" : "#f8f9fa", color: selectedCategory === "all" ? "#a4451a" : "#333" }}
+              onClick=${function() { setSelectedCategory("all"); }}
+            >
+              Tất cả
+            </button>
+            ${(props.categories || []).filter(function(c) { return c.is_active; }).map(function(c) {
+              var isSel = selectedCategory === c.id;
+              return html`
+                <button
+                  key=${c.id}
+                  style=${{ padding: "12px 24px", fontSize: "1.1rem", fontWeight: "bold", borderRadius: 8, cursor: "pointer", whiteSpace: "nowrap", border: isSel ? "2px solid #df5d16" : "1px solid #ddd", background: isSel ? "#fff1eb" : "#f8f9fa", color: isSel ? "#a4451a" : "#333" }}
+                  onClick=${function() { setSelectedCategory(c.id); }}
+                >
+                  ${c.icon} ${c.label.split(" / ")[0]}
+                </button>
+              `;
+            })}
+          </div>
+          <div style=${{ flex: 1, padding: 24, overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 20, alignContent: "start" }}>
+            ${displayProducts.map(function(p) {
+              var isSoldOut = p.stock <= 0;
+              var isLastOne = p.stock === 1;
+              return html`
+                <button
+                  key=${p.id}
+                  disabled=${isSoldOut}
+                  style=${{ position: "relative", display: "flex", flexDirection: "column", background: isSoldOut ? "#f8f9fa" : "#fff", border: isSoldOut ? "1px solid #ddd" : "1px solid #eee", borderRadius: 12, padding: 20, cursor: isSoldOut ? "not-allowed" : "pointer", boxShadow: isSoldOut ? "none" : "0 4px 12px rgba(0,0,0,0.05)", textAlign: "left", transition: "transform 0.1s", opacity: isSoldOut ? 0.6 : 1 }}
+                  onClick=${function() { if (!isSoldOut) addToCart(p); }}
+                >
+                  <div style=${{ fontSize: "1.2rem", fontWeight: "bold", color: "#333", marginBottom: 8, minHeight: 48, paddingRight: 10 }}>${p.name}</div>
+                  <div style=${{ fontSize: "1.2rem", color: isSoldOut ? "#888" : "#df5d16", fontWeight: "bold" }}>${formatCurrency(p.price)}đ</div>
+                  ${isSoldOut ? html`<div style=${{ position: "absolute", top: 12, right: 12, background: "#ef4444", color: "#fff", padding: "4px 8px", borderRadius: 4, fontSize: "0.8rem", fontWeight: "bold" }}>HẾT HÀNG</div>` : null}
+                  ${isLastOne ? html`<div style=${{ position: "absolute", top: 12, right: 12, background: "#f59e0b", color: "#fff", padding: "4px 8px", borderRadius: 4, fontSize: "0.8rem", fontWeight: "bold" }}>CHỈ CÒN 1</div>` : null}
+                </button>
+              `;
+            })}
+          </div>
+        </div>
+
+        <!-- Kiosk Right: Cart -->
+        <div style=${{ flex: 1, display: "flex", flexDirection: "column", background: "#fff" }}>
+          <div style=${{ padding: 24, borderBottom: "1px solid #ddd", background: "#f8f9fa" }}>
+            <h2 style=${{ margin: 0, fontSize: "1.5rem", color: "#5b3a20" }}>🛒 Giỏ Hàng Của Bạn</h2>
+          </div>
+          <div style=${{ flex: 1, overflowY: "auto", padding: 24 }}>
+            ${cart.length === 0 ? html`
+              <div style=${{ textAlign: "center", color: "#888", marginTop: 40, fontSize: "1.2rem" }}>Chưa chọn món nào</div>
+            ` : cart.map(function(item) {
+              return html`
+                <div key=${item.productId} style=${{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, paddingBottom: 16, borderBottom: "1px dashed #eee" }}>
+                  <div style=${{ flex: 1 }}>
+                    <div style=${{ fontSize: "1.2rem", fontWeight: "bold", color: "#333" }}>${item.productName}</div>
+                    <div style=${{ color: "#df5d16", fontWeight: "bold" }}>${formatCurrency(item.price)}đ</div>
+                  </div>
+                  <div style=${{ display: "flex", alignItems: "center", gap: 16 }}>
+                    <button style=${{ width: 40, height: 40, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", fontSize: "1.5rem", cursor: "pointer" }} onClick=${function() {
+                      setCart(function(c) {
+                        return c.map(function(i) { return i.productId === item.productId ? Object.assign({}, i, {qty: Math.max(0, i.qty - 1)}) : i; }).filter(function(i) { return i.qty > 0; });
+                      });
+                    }}>-</button>
+                    <span style=${{ fontSize: "1.5rem", fontWeight: "bold", width: 30, textAlign: "center" }}>${item.qty}</span>
+                    <button style=${{ width: 40, height: 40, borderRadius: "50%", border: "1px solid #df5d16", background: "#fff1eb", color: "#df5d16", fontSize: "1.5rem", cursor: "pointer" }} onClick=${function() {
+                      setCart(function(c) {
+                        return c.map(function(i) { return i.productId === item.productId ? Object.assign({}, i, {qty: i.qty + 1}) : i; });
+                      });
+                    }}>+</button>
+                  </div>
+                </div>
+              `;
+            })}
+          </div>
+          <div style=${{ padding: 24, borderTop: "1px solid #ddd", background: "#f8f9fa" }}>
+            <div style=${{ display: "flex", justifyContent: "space-between", marginBottom: 20, fontSize: "1.5rem", fontWeight: "bold", color: "#333" }}>
+              <span>Tổng cộng:</span>
+              <span style=${{ color: "#df5d16" }}>${formatCurrency(cart.reduce(function(sum, item) { return sum + item.price * item.qty; }, 0))}đ</span>
+            </div>
+            <button
+              style=${{ width: "100%", padding: 20, fontSize: "1.5rem", fontWeight: "bold", borderRadius: 12, background: cart.length > 0 ? "#df5d16" : "#ddd", color: "#fff", border: "none", cursor: cart.length > 0 ? "pointer" : "not-allowed" }}
+              disabled=${cart.length === 0}
+              onClick=${submitOrder}
+            >
+              GỬI ĐƠN ĐẶT MÓN
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -2665,6 +2804,7 @@
             return res.json().then(function (data) {
               if (data.ok && data.user) {
                 setCurrentUser(data.user);
+                setActiveView(getFirstAllowedView(data.user.role));
               }
               setAuthLoading(false);
             });
@@ -2728,6 +2868,7 @@
     }, [currentUser]);
 
     function getFirstAllowedView(role) {
+      if (role === "kiosk") return "kiosk";
       if (role === "inventory") return "inventory";
       if (role === "accountant") return "dashboard";
       if (role === "barista") return "kitchen";
@@ -2766,8 +2907,8 @@
         });
     }
 
-    function handleLogout() {
-      if (currentUser && currentUser.role === "cashier" && activeShift) {
+    function handleLogout(force) {
+      if (force !== true && currentUser && currentUser.role === "cashier" && activeShift) {
         window.alert(L("Bạn phải chốt ca và bàn giao két trước khi đăng xuất! / You must close the shift and hand over the register before logging out."));
         return;
       }
@@ -3702,7 +3843,7 @@
           });
 
           // ----- Sync Open/Held Orders -----
-          var heldSales = data.recentSales.filter(function (row) { return row.order_status === "held"; });
+          var heldSales = data.recentSales.filter(function (row) { return row.order_status === "held" || row.order_status === "open"; });
           var nonHeldSales = data.recentSales.filter(function (row) { return row.order_status === "completed" || row.order_status === "cancelled"; });
 
           var pulledOpenOrders = heldSales.map(mapHeldSaleToOrder);
@@ -3888,6 +4029,17 @@
       }
       if (inventorySection === "stock" && stockCheckTab === "ledger") { refreshMovements(); }
     }, [activeView, inventorySection, stockCheckTab]);
+
+    // Fast sync for POS to receive Kiosk orders in real-time
+    useEffect(function () {
+      if (activeView !== "pos") return;
+      var interval = setInterval(function () {
+        if (window.ShopFlowSync && typeof window.ShopFlowSync.pull === "function") {
+          window.ShopFlowSync.pull().catch(function () {});
+        }
+      }, 3000);
+      return function () { clearInterval(interval); };
+    }, [activeView]);
 
     // ---------- Debounced persistence of settings / templates to D1 ----------
     // We don't want to flood /api/settings with one request per keystroke,
@@ -5303,6 +5455,35 @@
           syncError: ""
         });
       });
+
+      // Send draft to server so Barista can see it before payment
+      if (hasRecipeItems) {
+        var payload = {
+          clientOpId: activeOrder.clientOpId,
+          id: activeOrder.id,
+          orderId: activeOrder.orderId || activeOrder.id,
+          customerName: activeOrder.customerName || "",
+          subtotal: 0,
+          total: 0,
+          paymentMethod: activeOrder.paymentMethod || "cash",
+          cashierName: activeOrder.cashierName || "Cashier",
+          paymentStatus: "unpaid",
+          orderStatus: "open",
+          prepStatus: "preparing",
+          note: activeOrder.note || "",
+          items: activeOrder.items.map(function(it) {
+            return {
+              productId: it.productId,
+              productName: it.productName,
+              qty: it.qty,
+              price: it.price,
+              addonsJson: JSON.stringify(it.addons || [])
+            };
+          })
+        };
+        syncApi("/sales", { method: "POST", body: payload }).catch(function(e){ console.error(e); });
+      }
+
       if (!hasRecipeItems) {
         setCheckoutPanelOpen(true);
       }
@@ -5319,6 +5500,31 @@
       updateActiveOrder(function (order) {
         return Object.assign({}, order, { status: "ready" });
       });
+
+      var payload = {
+        clientOpId: activeOrder.clientOpId,
+        id: activeOrder.id,
+        orderId: activeOrder.orderId || activeOrder.id,
+        customerName: activeOrder.customerName || "",
+        subtotal: 0,
+        total: 0,
+        paymentMethod: activeOrder.paymentMethod || "cash",
+        cashierName: activeOrder.cashierName || "Cashier",
+        paymentStatus: "unpaid",
+        orderStatus: "open",
+        prepStatus: "ready",
+        note: activeOrder.note || "",
+        items: activeOrder.items.map(function(it) {
+          return {
+            productId: it.productId,
+            productName: it.productName,
+            qty: it.qty,
+            price: it.price,
+            addonsJson: JSON.stringify(it.addons || [])
+          };
+        })
+      };
+      syncApi("/sales", { method: "POST", body: payload }).catch(function(e){ console.error(e); });
       pushToast("success", L("Đơn đã chuẩn bị xong. / Order is ready."));
     }
 
@@ -12864,10 +13070,10 @@
               <label style=${{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <span style=${{ fontSize: "0.85rem", fontWeight: "bold", color: "#5b3a20" }}>${L("Email / Tài khoản")}</span>
                 <input
-                  type="email"
+                  type="text"
                   value=${loginEmail}
                   onInput=${function (e) { setLoginEmail(e.target.value); }}
-                  placeholder="cashier@shopprogram.local"
+                  placeholder="cashier hoặc cashier@shopprogram.local"
                   required
                   style=${{ padding: "10px 12px", border: "1px solid #eedecf", borderRadius: "8px", fontSize: "0.95rem" }}
                 />
@@ -12915,11 +13121,13 @@
 
         <header className="topbar surface">
           <div className="topbar-main">
-            <button className="menu-btn" onClick=${function () { setMenuOpen(true); }} aria-label=${L("Mở menu / Open menu")}>
-              <span></span>
-              <span></span>
-              <span></span>
-            </button>
+            ${(currentUser && currentUser.role === "kiosk") ? null : html`
+              <button className="menu-btn" onClick=${function () { setMenuOpen(true); }} aria-label=${L("Mở menu / Open menu")}>
+                <span></span>
+                <span></span>
+                <span></span>
+              </button>
+            `}
             <div className="brand-block">
               <div>
                 <p className="eyebrow">${settings.brandLine || settings.storeName}</p>
@@ -13113,7 +13321,7 @@
                         setActiveShift(null);
                         setCloseShiftModalOpen(false);
                         pushToast("success", "Đã chốt ca thành công. Thu ngân đã bàn giao két.");
-                        handleLogout();
+                        handleLogout(true);
                       }
                     });
                 }}>Xác nhận Chốt ca</button>

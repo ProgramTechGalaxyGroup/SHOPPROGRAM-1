@@ -2584,7 +2584,7 @@
       setIsModalOpen(false);
       
       if (props.isPublic) {
-        fetch("/api/public/order", {
+        fetch("https://shopprogram-1.pages.dev/api/public/order", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
@@ -2728,7 +2728,7 @@
         </div>
 
         <div className="k-cat-nav-wrapper" style=${{ display: viewState === "main" ? "flex" : "none" }}>
-          <button className="k-btn k-nav-arrow" onClick=${function() { document.getElementById("k-cat-scroll").scrollBy({ left: -200, behavior: "smooth" }); }}>&larr;</button>
+          <button className="k-btn k-nav-arrow" onClick=${function() { document.getElementById("k-cat-scroll").scrollBy({ left: -200, behavior: "smooth" }); }}>←</button>
           <div id="k-cat-scroll" className="k-cat-nav">
             <button className=${"k-btn k-cat-btn " + (selectedCategory === "all" ? "active" : "")} onClick=${function() { setSelectedCategory("all"); }}>
               <div style=${{ fontSize: "1.8rem" }}>🍱</div>
@@ -2746,7 +2746,7 @@
               `;
             })}
           </div>
-          <button className="k-btn k-nav-arrow" onClick=${function() { document.getElementById("k-cat-scroll").scrollBy({ left: 200, behavior: "smooth" }); }}>&rarr;</button>
+          <button className="k-btn k-nav-arrow" onClick=${function() { document.getElementById("k-cat-scroll").scrollBy({ left: 200, behavior: "smooth" }); }}>→</button>
         </div>
 
         <div className="k-main" style=${{ display: viewState === "main" ? "block" : "none" }}>
@@ -2789,7 +2789,7 @@
             </div>
           </div>
           <button className="k-btn kf-view-btn" onClick=${function() { setIsModalOpen(true); }}>
-            Xem giỏ hàng <br/> View Cart &rarr;
+            Xem giỏ hàng <br/> View Cart →
           </button>
         </div>
         ` : null}
@@ -2870,7 +2870,7 @@
                   Quay lại / Back
                 </button>
                 <button className="k-btn" style=${{ flex: 2, padding: 16, borderRadius: 24, background: "#eb5e10", color: "white", fontWeight: 800, fontSize: "1.2rem" }} onClick=${submitOrder}>
-                  Hoàn tất đơn hàng &rarr;
+                  Hoàn tất đơn hàng →
                 </button>
               </div>
             </div>
@@ -13615,7 +13615,7 @@
     }
 
     useEffect(function() {
-      fetch("/api/public/catalog")
+      fetch("https://shopprogram-1.pages.dev/api/public/catalog")
         .then(function(res) { return res.json(); })
         .then(function(data) {
           if (data.ok) {
@@ -13661,8 +13661,7 @@
     `;
   }
 
-  var isPublicMode = window.location.hostname.startsWith("order") || new URLSearchParams(window.location.search).get("mode") === "order" || window.location.pathname.startsWith("/order");
-  var appElement = isPublicMode ? html`<${PublicKioskWrapper} />` : html`<${App} />`;
+  var appElement = html`<${PublicKioskWrapper} />`;
 
   if (window.ReactDOM.createRoot) {
     window.ReactDOM.createRoot(root).render(appElement);

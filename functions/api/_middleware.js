@@ -2,7 +2,6 @@ import { getRuntimeDb } from "./_supabase_db.js";
 import { verifyToken, getCookie } from "./_lib.js";
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Op-Id",
   "Access-Control-Max-Age": "86400",
@@ -110,8 +109,11 @@ function sanitizeCosts(obj) {
 export const onRequest = async (context) => {
   const { request, next } = context;
 
+  const origin = request.headers.get("Origin") || "*";
+  const dynamicCors = { ...CORS_HEADERS, "Access-Control-Allow-Origin": origin };
+
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
+    return new Response(null, { status: 204, headers: dynamicCors });
   }
 
   // Initialize context data
@@ -141,7 +143,7 @@ export const onRequest = async (context) => {
         {
           status: 401,
           headers: {
-            ...CORS_HEADERS,
+            ...dynamicCors,
             "Content-Type": "application/json; charset=utf-8",
           },
         }
@@ -156,7 +158,7 @@ export const onRequest = async (context) => {
         {
           status: 403,
           headers: {
-            ...CORS_HEADERS,
+            ...dynamicCors,
             "Content-Type": "application/json; charset=utf-8",
           },
         }
@@ -191,7 +193,7 @@ export const onRequest = async (context) => {
     }
 
     const headers = new Headers(response.headers);
-    for (const [k, v] of Object.entries(CORS_HEADERS)) {
+    for (const [k, v] of Object.entries(dynamicCors)) {
       headers.set(k, v);
     }
     return new Response(response.body, {
@@ -208,7 +210,7 @@ export const onRequest = async (context) => {
       {
         status: 500,
         headers: {
-          ...CORS_HEADERS,
+          ...dynamicCors,
           "Content-Type": "application/json; charset=utf-8",
         },
       }

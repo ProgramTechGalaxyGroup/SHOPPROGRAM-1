@@ -6,16 +6,16 @@ export const onRequestGet = async ({ env }) => {
     
     // Add 10 mock categories
     const categories = [
-      { id: "cat-101", label: "Trà sữa", sort_order: 1 },
-      { id: "cat-102", label: "Cà phê", sort_order: 2 },
-      { id: "cat-103", label: "Nước ép", sort_order: 3 },
-      { id: "cat-104", label: "Sinh tố", sort_order: 4 },
-      { id: "cat-105", label: "Đồ ăn vặt", sort_order: 5 },
-      { id: "cat-106", label: "Bánh ngọt", sort_order: 6 },
-      { id: "cat-107", label: "Combo Giảm Giá", sort_order: 7 },
-      { id: "cat-108", label: "Món Mới", sort_order: 8 },
-      { id: "cat-109", label: "Sữa chua", sort_order: 9 },
-      { id: "cat-110", label: "Trà trái cây", sort_order: 10 }
+      { id: "cat-101", label: "Trà sữa / Milk Tea / 奶茶", sort_order: 1 },
+      { id: "cat-102", label: "Cà phê / Coffee / 咖啡", sort_order: 2 },
+      { id: "cat-103", label: "Nước ép / Juice / 果汁", sort_order: 3 },
+      { id: "cat-104", label: "Sinh tố / Smoothie / 冰沙", sort_order: 4 },
+      { id: "cat-105", label: "Đồ ăn vặt / Snacks / 零食", sort_order: 5 },
+      { id: "cat-106", label: "Bánh ngọt / Pastry / 糕点", sort_order: 6 },
+      { id: "cat-107", label: "Combo Giảm Giá / Discount Combo / 折扣套餐", sort_order: 7 },
+      { id: "cat-108", label: "Món Mới / New Arrivals / 新品", sort_order: 8 },
+      { id: "cat-109", label: "Sữa chua / Yogurt / 酸奶", sort_order: 9 },
+      { id: "cat-110", label: "Trà trái cây / Fruit Tea / 水果茶", sort_order: 10 }
     ];
 
     for (const c of categories) {
@@ -27,11 +27,15 @@ export const onRequestGet = async ({ env }) => {
     const products = [];
     let pCount = 1;
     for (const c of categories) {
+      const cParts = c.label.split(" / ");
       for (let i = 1; i <= 4; i++) {
         const pId = "prod-" + pCount;
+        const viName = (cParts[0] || "Món") + " Loại " + i;
+        const enName = (cParts[1] || "Item") + " Type " + i;
+        const zhName = (cParts[2] || "产品") + " 类型 " + i;
         products.push({
           id: pId,
-          name: c.label + " Loại " + i,
+          name: viName + " / " + enName + " / " + zhName,
           category_id: c.id,
           price: 25000 + (i * 5000),
           stock: (i % 3 === 0) ? 0 : 50, // Some are sold out

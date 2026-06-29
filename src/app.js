@@ -2519,6 +2519,61 @@
     var [deliveryAddress, setDeliveryAddress] = useState("");
     var [paymentMethod, setPaymentMethod] = useState("cash");
     var [successOrderId, setSuccessOrderId] = useState("");
+    var [lang, setLang] = useState("vi");
+
+    var i18n = {
+      welcome: { vi: "Xin chào quý khách!", en: "Welcome!", zh: "欢迎光临!" },
+      dineIn: { vi: "Lấy tại cửa hàng", en: "Dine-in / Takeaway", zh: "店内取餐 / 外带" },
+      delivery: { vi: "Giao hàng tận nơi", en: "Delivery", zh: "外卖配送" },
+      all: { vi: "Tất cả", en: "All", zh: "全部" },
+      soldOut: { vi: "HẾT HÀNG", en: "SOLD OUT", zh: "售罄" },
+      add: { vi: "+ Thêm", en: "+ Add", zh: "+ 添加" },
+      items: { vi: "món", en: "items", zh: "件" },
+      viewCart: { vi: "Xem giỏ hàng", en: "View Cart", zh: "查看购物车" },
+      yourCart: { vi: "Giỏ hàng của bạn", en: "Your Cart", zh: "您的购物车" },
+      customerName: { vi: "Tên khách hàng", en: "Customer Name", zh: "客户姓名" },
+      customerNamePlaceholder: { vi: "Tên để nhận món...", en: "Your name...", zh: "您的姓名..." },
+      customerPhone: { vi: "Số điện thoại", en: "Phone Number", zh: "电话号码" },
+      deliveryAddress: { vi: "Địa chỉ giao hàng (*Bắt buộc)", en: "Delivery Address (*Required)", zh: "送货地址 (*必填)" },
+      deliveryAddressPlaceholder: { vi: "Số nhà, tên đường...", en: "Street, house number...", zh: "街道，门牌号..." },
+      getLocation: { vi: "📍 Lấy vị trí", en: "📍 Get Location", zh: "📍 获取位置" },
+      paymentMethod: { vi: "Phương thức thanh toán", en: "Payment Method", zh: "支付方式" },
+      cash: { vi: "Tiền mặt", en: "Cash", zh: "现金" },
+      transfer: { vi: "Chuyển khoản", en: "Bank Transfer", zh: "银行转账" },
+      back: { vi: "Quay lại", en: "Back", zh: "返回" },
+      completeOrder: { vi: "Hoàn tất đơn hàng →", en: "Complete Order →", zh: "完成订单 →" },
+      successTitle: { vi: "Cảm ơn quý khách đã đặt hàng!", en: "Thank you for your order!", zh: "感谢您的订单！" },
+      successSub: { vi: "Đơn hàng của bạn đang được chuẩn bị.", en: "Your order is being prepared.", zh: "您的订单正在准备中。" },
+      orderId: { vi: "Mã đơn", en: "Order ID", zh: "订单号" },
+      autoReturn: { vi: "Sẽ tự động quay lại sau 5 giây...", en: "Automatically returning in 5 seconds...", zh: "5秒后自动返回..." },
+      errDelivery: { vi: "Vui lòng nhập địa chỉ giao hàng.", en: "Please enter delivery address.", zh: "请输入送货地址。" },
+      errLocation: { vi: "Không thể lấy vị trí. Vui lòng bật định vị.", en: "Cannot get location. Please enable location services.", zh: "无法获取位置。请开启定位服务。" },
+      errBrowser: { vi: "Trình duyệt không hỗ trợ định vị.", en: "Browser does not support geolocation.", zh: "浏览器不支持定位。" },
+      errSend: { vi: "Lỗi gửi đơn: ", en: "Order error: ", zh: "订单错误：" },
+      guest: { vi: "Khách lẻ (Kiosk)", en: "Guest (Kiosk)", zh: "散客 (Kiosk)" }
+    };
+
+    function t(key) {
+      return i18n[key] ? (i18n[key][lang] || i18n[key].vi) : key;
+    }
+
+    function parseMultiLang(text) {
+      if (!text) return ["", ""];
+      var parts = text.split("/").map(function(s) { return s.trim(); });
+      var primary = parts[0] || "";
+      var sub = "";
+      if (lang === "vi") {
+         sub = parts[1] || "";
+      } else if (lang === "en") {
+         primary = parts[1] || parts[0] || "";
+         sub = parts[0] || "";
+      } else if (lang === "zh") {
+         primary = parts[2] || parts[1] || parts[0] || "";
+         sub = parts[0] || "";
+      }
+      return [primary, sub];
+    }
+
 
     function addToCart(product) {
       setCart(function(c) {
@@ -2559,12 +2614,12 @@
       var total = cart.reduce(function(sum, item) { return sum + item.price * item.qty; }, 0);
       var genId = "HD-" + Date.now();
       
-      var cName = customerName || "Khách lẻ (Kiosk)";
+      var cName = customerName || t("guest");
       var fullCustomerName = cName;
       if (customerPhone) fullCustomerName += " (" + customerPhone + ")";
 
       if (orderType === "delivery" && !deliveryAddress.trim()) {
-        props.pushToast("error", "Vui lòng nhập địa chỉ giao hàng.");
+        props.pushToast("error", t("errDelivery"));
         return;
       }
 
@@ -2595,7 +2650,7 @@
           setViewState("success");
           setTimeout(function() { setViewState("welcome"); }, 5000);
         }).catch(function(err) {
-          props.pushToast("error", "Lỗi gửi đơn: " + err.message);
+          props.pushToast("error", t("errSend") + err.message);
         });
       } else {
         payload.paymentStatus = "unpaid";
@@ -2607,7 +2662,7 @@
           setViewState("success");
           setTimeout(function() { setViewState("welcome"); }, 5000);
         }).catch(function(err) {
-          props.pushToast("error", "Lỗi gửi đơn: " + err);
+          props.pushToast("error", t("errSend") + err);
         });
       }
     }
@@ -2680,24 +2735,27 @@
             <div className="kiosk-welcome-content" style=${{ width: "100%", maxWidth: 600, padding: 20 }}>
               <div className="kw-logo">🍋</div>
               <div className="kw-title">Fruity Corner</div>
-              <div className="kw-sub" style=${{ marginBottom: 40 }}>Xin chào quý khách! / Welcome!</div>
+              <div className="kw-sub" style=${{ marginBottom: 40 }}>${t("welcome")}</div>
               <div style=${{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <button className="k-btn kw-start-btn" style=${{ width: "100%", padding: "20px", display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }} onClick=${function() { setOrderType("takeaway"); setViewState("main"); }}>
                   <span style=${{ fontSize: "2.5rem" }}>🏪</span>
                   <div style=${{ textAlign: "left" }}>
-                    <div style=${{ fontSize: "1.6rem", fontWeight: 800 }}>Lấy tại cửa hàng</div>
-                    <div style=${{ fontSize: "1rem", fontWeight: 500, opacity: 0.9 }}>Dine-in / Takeaway</div>
+                    <div style=${{ fontSize: "1.6rem", fontWeight: 800 }}>${t("dineIn")}</div>
                   </div>
                 </button>
                 ${props.isPublic ? html`
                   <button className="k-btn kw-start-btn" style=${{ width: "100%", padding: "20px", background: "#fff", color: "#eb5e10", border: "2px solid #eb5e10", display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }} onClick=${function() { setOrderType("delivery"); setViewState("main"); }}>
                     <span style=${{ fontSize: "2.5rem" }}>🛵</span>
                     <div style=${{ textAlign: "left" }}>
-                      <div style=${{ fontSize: "1.6rem", fontWeight: 800 }}>Giao hàng tận nơi</div>
-                      <div style=${{ fontSize: "1rem", fontWeight: 500, opacity: 0.9 }}>Delivery</div>
+                      <div style=${{ fontSize: "1.6rem", fontWeight: 800 }}>${t("delivery")}</div>
                     </div>
                   </button>
                 ` : null}
+              </div>
+              <div style=${{ display: "flex", gap: 12, justifyContent: "center", marginTop: 40 }}>
+                <button style=${{ padding: "8px 16px", borderRadius: 20, border: "none", background: lang === "vi" ? "#eb5e10" : "#eee", color: lang === "vi" ? "#fff" : "#666", fontWeight: "bold", cursor: "pointer" }} onClick=${function() { setLang("vi"); }}>VI</button>
+                <button style=${{ padding: "8px 16px", borderRadius: 20, border: "none", background: lang === "en" ? "#eb5e10" : "#eee", color: lang === "en" ? "#fff" : "#666", fontWeight: "bold", cursor: "pointer" }} onClick=${function() { setLang("en"); }}>EN</button>
+                <button style=${{ padding: "8px 16px", borderRadius: 20, border: "none", background: lang === "zh" ? "#eb5e10" : "#eee", color: lang === "zh" ? "#fff" : "#666", fontWeight: "bold", cursor: "pointer" }} onClick=${function() { setLang("zh"); }}>ZH</button>
               </div>
             </div>
           </div>
@@ -2706,12 +2764,12 @@
         ${viewState === "success" ? html`
           <div className="k-success">
             <div style=${{ fontSize: "8rem", marginBottom: 24 }}>🎉</div>
-            <div style=${{ fontSize: "3rem", fontWeight: 800, marginBottom: 16, color: "#1a1a1a" }}>Cảm ơn quý khách đã đặt hàng!</div>
-            <div style=${{ fontSize: "1.5rem", color: "#555", marginBottom: 40 }}>Đơn hàng của bạn đang được chuẩn bị.</div>
+            <div style=${{ fontSize: "3rem", fontWeight: 800, marginBottom: 16, color: "#1a1a1a" }}>${t("successTitle")}</div>
+            <div style=${{ fontSize: "1.5rem", color: "#555", marginBottom: 40 }}>${t("successSub")}</div>
             <div style=${{ fontSize: "1.8rem", fontWeight: 700, color: "#eb5e10", padding: "16px 32px", background: "#fff", borderRadius: 24, boxShadow: "0 2px 8px rgba(0,0,0,0.04)", marginBottom: 32 }}>
-              Mã đơn: ${successOrderId}
+              ${t("orderId")}: ${successOrderId}
             </div>
-            <div style=${{ color: "#888", marginTop: 20 }}>Sẽ tự động quay lại sau 5 giây...</div>
+            <div style=${{ color: "#888", marginTop: 20 }}>${t("autoReturn")}</div>
           </div>
         ` : null}
 
@@ -2724,7 +2782,11 @@
               <div style=${{ fontSize: "0.9rem", color: "#888", fontWeight: 500 }}>Fresh Fruit & Drinks</div>
             </div>
           </div>
-          <div style=${{ fontWeight: 700, color: "#888", fontSize: "1.1rem" }}><span style=${{ color: "#eb5e10" }}>VI</span> | <span>EN</span></div>
+          <div style=${{ fontWeight: 700, color: "#888", fontSize: "1.1rem", display: "flex", gap: 8 }}>
+            <span style=${{ cursor: "pointer", color: lang === "vi" ? "#eb5e10" : "inherit" }} onClick=${function() { setLang("vi"); }}>VI</span> | 
+            <span style=${{ cursor: "pointer", color: lang === "en" ? "#eb5e10" : "inherit" }} onClick=${function() { setLang("en"); }}>EN</span> | 
+            <span style=${{ cursor: "pointer", color: lang === "zh" ? "#eb5e10" : "inherit" }} onClick=${function() { setLang("zh"); }}>ZH</span>
+          </div>
         </div>
 
         <div className="k-cat-nav-wrapper" style=${{ display: viewState === "main" ? "flex" : "none" }}>
@@ -2732,16 +2794,17 @@
           <div id="k-cat-scroll" className="k-cat-nav">
             <button className=${"k-btn k-cat-btn " + (selectedCategory === "all" ? "active" : "")} onClick=${function() { setSelectedCategory("all"); }}>
               <div style=${{ fontSize: "1.8rem" }}>🍱</div>
-              <div style=${{ fontWeight: 700, fontSize: "0.95rem", textAlign: "center", lineHeight: "1.2" }}>Tất cả</div>
+              <div style=${{ fontWeight: 700, fontSize: "0.95rem", textAlign: "center", lineHeight: "1.2" }}>${t("all")}</div>
               <div className="kc-sub" style=${{ fontSize: "0.75rem", color: selectedCategory === "all" ? "rgba(255,255,255,0.8)" : "#888", fontWeight: 500, textAlign: "center" }}>All</div>
             </button>
             ${activeCategories.map(function(c) {
               var isSel = selectedCategory === c.id;
+              var parsed = parseMultiLang(c.label);
               return html`
                 <button key=${c.id} className=${"k-btn k-cat-btn " + (isSel ? "active" : "")} onClick=${function() { setSelectedCategory(c.id); }}>
                   <div style=${{ fontSize: "1.8rem" }}>${c.icon || "🍽️"}</div>
-                  <div style=${{ fontWeight: 700, fontSize: "0.95rem", textAlign: "center", lineHeight: "1.2" }}>${c.label.split(" / ")[0]}</div>
-                  <div className="kc-sub" style=${{ fontSize: "0.75rem", color: isSel ? "rgba(255,255,255,0.8)" : "#888", fontWeight: 500, textAlign: "center", lineHeight: "1.2" }}>${c.label.split(" / ")[1] || ""}</div>
+                  <div style=${{ fontWeight: 700, fontSize: "0.95rem", textAlign: "center", lineHeight: "1.2" }}>${parsed[0]}</div>
+                  <div className="kc-sub" style=${{ fontSize: "0.75rem", color: isSel ? "rgba(255,255,255,0.8)" : "#888", fontWeight: 500, textAlign: "center", lineHeight: "1.2" }}>${parsed[1]}</div>
                 </button>
               `;
             })}
@@ -2753,15 +2816,16 @@
           <div className="k-grid">
             ${displayProducts.map(function(p) {
               var isSoldOut = p.stock <= 0;
+              var parsed = parseMultiLang(p.name);
               return html`
                 <div key=${p.id} className="k-prod">
                   ${!isSoldOut && p.stock < 5 ? html`<div className="kp-badge">BEST</div>` : null}
-                  ${isSoldOut ? html`<div className="kp-badge" style=${{ background: "#ef4444" }}>HẾT HÀNG</div>` : null}
+                  ${isSoldOut ? html`<div className="kp-badge" style=${{ background: "#ef4444" }}>${t("soldOut")}</div>` : null}
                   <div className="kp-img">${p.icon || "🥤"}</div>
-                  <div style=${{ fontSize: "1.15rem", fontWeight: 700, marginBottom: 4 }}>${p.name.split(" / ")[0]}</div>
-                  <div style=${{ fontSize: "0.85rem", color: "#888", marginBottom: 12 }}>${p.name.split(" / ")[1] || ""}</div>
+                  <div style=${{ fontSize: "1.15rem", fontWeight: 700, marginBottom: 4 }}>${parsed[0]}</div>
+                  <div style=${{ fontSize: "0.85rem", color: "#888", marginBottom: 12 }}>${parsed[1]}</div>
                   <div style=${{ fontSize: "1.25rem", fontWeight: 800, color: "#eb5e10", marginBottom: 16 }}>${formatCurrency(p.price)}đ</div>
-                  <button className="k-btn kp-add" disabled=${isSoldOut} onClick=${function() { addToCart(p); }}>+ Thêm / Add</button>
+                  <button className="k-btn kp-add" disabled=${isSoldOut} onClick=${function() { addToCart(p); }}>${t("add")}</button>
                 </div>
               `;
             })}
@@ -2776,7 +2840,7 @@
               <div style=${{ position: "absolute", top: -4, right: -4, background: "#fff", color: "#eb5e10", width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.9rem", border: "2px solid #eb5e10" }}>${cartTotalItems}</div>
             </div>
             <div style=${{ display: "flex", flexDirection: "column" }}>
-              <div style=${{ fontWeight: 700, fontSize: "1.2rem" }}>${cartTotalItems} món / items</div>
+              <div style=${{ fontWeight: 700, fontSize: "1.2rem" }}>${cartTotalItems} ${t("items")}</div>
               <div style=${{ fontWeight: 800, fontSize: "1.5rem", color: "#1a1a1a", marginTop: 4 }}>${formatCurrency(cartTotalPrice)}đ</div>
             </div>
             <div style=${{ display: "flex", gap: 8, alignItems: "center", paddingLeft: 16, borderLeft: "2px solid #eaeaea", height: 48 }}>
@@ -2789,7 +2853,7 @@
             </div>
           </div>
           <button className="k-btn kf-view-btn" onClick=${function() { setIsModalOpen(true); }}>
-            Xem giỏ hàng <br/> View Cart →
+            ${t("viewCart")} →
           </button>
         </div>
         ` : null}
@@ -2798,14 +2862,15 @@
           <div className="k-modal-overlay">
             <div className="k-modal">
               <div style=${{ fontSize: "1.5rem", fontWeight: 800, marginBottom: 16, textAlign: "center", borderBottom: "1px solid #eaeaea", paddingBottom: 16 }}>
-                Giỏ hàng của bạn / Your Cart
+                ${t("yourCart")}
               </div>
               <div style=${{ flex: 1, overflowY: "auto", marginBottom: 16 }}>
                 ${cart.map(function(item) {
+                  var pParsed = parseMultiLang(item.productName);
                   return html`
                     <div key=${item.productId} className="km-item">
                       <div>
-                        <div style=${{ fontWeight: 700, fontSize: "1.1rem" }}>${item.productName}</div>
+                        <div style=${{ fontWeight: 700, fontSize: "1.1rem" }}>${pParsed[0]}</div>
                         <div style=${{ color: "#eb5e10", fontWeight: 700 }}>${formatCurrency(item.price)}đ</div>
                       </div>
                       <div className="km-qty-ctrl">
@@ -2821,19 +2886,19 @@
               <div className="k-form">
                 <div style=${{ display: "flex", gap: 16, marginBottom: 12 }}>
                   <div style=${{ flex: 1, display: "flex", flexDirection: "column" }}>
-                    <label style=${{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 6, color: "#1a1a1a" }}>Tên khách hàng</label>
-                    <input className="k-input" type="text" placeholder="Tên để nhận món..." value=${customerName} onInput=${function(e) { setCustomerName(e.target.value); }} />
+                    <label style=${{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 6, color: "#1a1a1a" }}>${t("customerName")}</label>
+                    <input className="k-input" type="text" placeholder=${t("customerNamePlaceholder")} value=${customerName} onInput=${function(e) { setCustomerName(e.target.value); }} />
                   </div>
                   <div style=${{ flex: 1, display: "flex", flexDirection: "column" }}>
-                    <label style=${{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 6, color: "#1a1a1a" }}>Số điện thoại</label>
+                    <label style=${{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 6, color: "#1a1a1a" }}>${t("customerPhone")}</label>
                     <input className="k-input" type="text" placeholder="09xxxx..." value=${customerPhone} onInput=${function(e) { setCustomerPhone(e.target.value); }} />
                   </div>
                 </div>
                 ${orderType === "delivery" ? html`
                   <div style=${{ display: "flex", flexDirection: "column", marginBottom: 12 }}>
-                    <label style=${{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 6, color: "#1a1a1a" }}>Địa chỉ giao hàng (*Bắt buộc)</label>
+                    <label style=${{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 6, color: "#1a1a1a" }}>${t("deliveryAddress")}</label>
                     <div style=${{ display: "flex", gap: 8 }}>
-                      <input className="k-input" style=${{ flex: 1 }} type="text" placeholder="Số nhà, tên đường..." value=${deliveryAddress} onInput=${function(e) { setDeliveryAddress(e.target.value); }} />
+                      <input className="k-input" style=${{ flex: 1 }} type="text" placeholder=${t("deliveryAddressPlaceholder")} value=${deliveryAddress} onInput=${function(e) { setDeliveryAddress(e.target.value); }} />
                       <button className="k-btn" style=${{ background: "#f0ebe1", color: "#eb5e10", border: "1px solid #eb5e10", borderRadius: 12, padding: "0 16px", fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 }} onClick=${function() {
                         if (navigator.geolocation) {
                           navigator.geolocation.getCurrentPosition(function(position) {
@@ -2841,25 +2906,25 @@
                             var lon = position.coords.longitude;
                             setDeliveryAddress("https://maps.google.com/?q=" + lat + "," + lon);
                           }, function() {
-                            props.pushToast("error", "Không thể lấy vị trí. Vui lòng bật định vị.");
+                            props.pushToast("error", t("errLocation"));
                           });
                         } else {
-                          props.pushToast("error", "Trình duyệt không hỗ trợ định vị.");
+                          props.pushToast("error", t("errBrowser"));
                         }
                       }}>
-                        📍 Lấy vị trí
+                        ${t("getLocation")}
                       </button>
                     </div>
                   </div>
                 ` : null}
                 <div style=${{ display: "flex", flexDirection: "column" }}>
-                  <label style=${{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 6, color: "#1a1a1a" }}>Phương thức thanh toán / Payment</label>
+                  <label style=${{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 6, color: "#1a1a1a" }}>${t("paymentMethod")}</label>
                   <div style=${{ display: "flex", gap: 12 }}>
                     <button className=${"k-pay-btn " + (paymentMethod === "cash" ? "active" : "")} onClick=${function() { setPaymentMethod("cash"); }}>
-                      <span style=${{ fontSize: "1.2rem" }}>💵</span> Tiền mặt
+                      <span style=${{ fontSize: "1.2rem" }}>💵</span> ${t("cash")}
                     </button>
                     <button className=${"k-pay-btn " + (paymentMethod === "transfer" ? "active" : "")} onClick=${function() { setPaymentMethod("transfer"); }}>
-                      <span style=${{ fontSize: "1.2rem" }}>💳</span> Chuyển khoản
+                      <span style=${{ fontSize: "1.2rem" }}>💳</span> ${t("transfer")}
                     </button>
                   </div>
                 </div>
@@ -2867,10 +2932,10 @@
 
               <div style=${{ display: "flex", gap: 16 }}>
                 <button className="k-btn" style=${{ flex: 1, padding: 16, borderRadius: 24, background: "#f5f5f5", fontWeight: 700, fontSize: "1.1rem" }} onClick=${function() { setIsModalOpen(false); }}>
-                  Quay lại / Back
+                  ${t("back")}
                 </button>
                 <button className="k-btn" style=${{ flex: 2, padding: 16, borderRadius: 24, background: "#eb5e10", color: "white", fontWeight: 800, fontSize: "1.2rem" }} onClick=${submitOrder}>
-                  Hoàn tất đơn hàng →
+                  ${t("completeOrder")}
                 </button>
               </div>
             </div>

@@ -26,7 +26,7 @@ export const onRequestPost = async ({ request, env }) => {
       return json({ ok: false, error: "Missing delivery address" }, { status: 400 });
     }
 
-    const timestamp = new Date().toISOString();
+    const createdAt = Date.now();
     
     // Construct customer note
     let fullNote = "";
@@ -38,38 +38,48 @@ export const onRequestPost = async ({ request, env }) => {
 
     const db = env.DB;
     
+    // Generate a human-readable order ID
+    const dateObj = new Date(createdAt);
+    const dd = String(dateObj.getDate()).padStart(2, '0');
+    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const yyyy = dateObj.getFullYear();
+    const shortId = id.substring(0, 4).toUpperCase();
+    const orderId = `${dd}/${mm}/${yyyy}-${shortId}-KIOSK`;
+
     // Insert into sales table
-    // We set status='held' and prep_status='pending' so it appears on POS/Kitchen as an incoming order to be confirmed.
+    // We set order_status='held' and payment_status='pending' so it appears on POS/Kitchen as an incoming order to be confirmed.
     await db.prepare(
       `INSERT INTO sales 
-       (id, shift_id, start_time, end_time, subtotal, discount, total, payment_method, status, prep_status, customer_name, customer_note, cashier_id, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       (id, order_id, customer_name, subtotal, vat_amount, discount, total, paid, change_amount, payment_method, cashier_name, payment_status, order_status, note, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       id,
-      "public-order", // Dummy shift ID for online orders
-      timestamp,
-      null, // Not ended yet
-      subtotal || total,
-      0,
-      total,
-      paymentMethod || "cash",
-      "held", 
-      "pending",
+      orderId,
       customerName,
+      subtotal || total,
+      0, // vat_amount
+      0, // discount
+      total,
+      0, // paid
+      0, // change_amount
+      paymentMethod || "cash",
+      "Online Kiosk", // cashier_name
+      "pending", // payment_status
+      "held", // order_status
       fullNote,
-      "online-kiosk", // Dummy cashier ID
-      timestamp
+      createdAt
     ).run();
 
     // Insert sale_items
     const stmt = db.prepare(
       `INSERT INTO sale_items 
-       (id, sale_id, product_id, product_name, qty, price, note, options, status, updated_at)
+       (id, sale_id, product_id, product_name, qty, unit_price, addons_json, addons_total, line_total, unit_cost)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
 
     const batch = [];
     for (const item of items) {
+      const lineTotal = (item.price || 0) * (item.qty || 1);
       batch.push(
         stmt.bind(
           item.id || crypto.randomUUID(),
@@ -77,11 +87,11 @@ export const onRequestPost = async ({ request, env }) => {
           item.productId,
           item.productName,
           item.qty,
-          item.price,
-          item.note || "",
+          item.price || 0,
           JSON.stringify(item.options || []),
-          "pending",
-          timestamp
+          0, // addons_total (handled in base price for kiosk currently)
+          lineTotal,
+          null // unit_cost
         )
       );
     }

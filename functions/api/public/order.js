@@ -28,13 +28,16 @@ export const onRequestPost = async ({ request, env }) => {
 
     const createdAt = Date.now();
     
-    // Construct customer note
+    // Construct customer note with prep status encoded
     let fullNote = "";
     if (orderType === "delivery") {
       fullNote = `Giao hàng (Ship đi)\nSĐT: ${customerPhone || "Không có"}\nĐịa chỉ: ${deliveryAddress}`;
     } else {
       fullNote = `Lấy tại quán\nSĐT: ${customerPhone || "Không có"}`;
     }
+    
+    // Add the magic tag for prep_status parsing in sync/pull
+    fullNote += " [PREP:pending]";
 
     const db = env.DB;
     
